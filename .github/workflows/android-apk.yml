@@ -31,12 +31,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          check-latest: true
 
-      - name: Verify Java and Node
+      - name: Force Java 21
         run: |
+          echo "JAVA_HOME=$JAVA_HOME"
           java -version
-          node -v
-          npm -v
+          javac -version
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm install
@@ -50,9 +52,13 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Verify Gradle Java
+        working-directory: android
+        run: ./gradlew --version
+
       - name: Build Debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --stacktrace --info
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
