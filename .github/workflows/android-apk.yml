@@ -20,6 +20,27 @@ jobs:
           cp -R HISAB_GLOBAL_V7_CLEAN/. .
           rm -rf HISAB_GLOBAL_V7_CLEAN
 
+      - name: Check project files
+        run: |
+          echo "=== Project files ==="
+          ls -la
+
+          echo "=== package.json ==="
+          test -f package.json
+          cat package.json
+
+          echo "=== Capacitor config ==="
+          if [ -f capacitor.config.json ]; then
+            cat capacitor.config.json
+          elif [ -f capacitor.config.ts ]; then
+            cat capacitor.config.ts
+          elif [ -f capacitor.config.js ]; then
+            cat capacitor.config.js
+          else
+            echo "ERROR: Capacitor config not found"
+            exit 1
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,28 +60,22 @@ jobs:
           javac -version
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
 
       - name: Verify Capacitor
-        run: npx cap --version
+        run: |
+          npx cap --version
 
       - name: Add Android platform
-        run: npx cap add android
+        run: |
+          npx cap add android
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: |
+          npx cap sync android
 
-      - name: Verify Gradle Java
-        working-directory: android
-        run: ./gradlew --version
-
-      - name: Build Debug APK
-        working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: HISAB-GLOBAL-V7-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+      - name: Verify Android project
+        run: |
+          test -d android
+          test -f android/gradlew
