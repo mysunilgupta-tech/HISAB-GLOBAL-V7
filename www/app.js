@@ -1,34 +1,69 @@
-const KEY = "hisab_v7_data";
+/* =========================================================
+   HISAB — Money Manager V7
+   Personal + Business
+   Offline / Local Storage
+   ========================================================= */
+
+"use strict";
+
+/* =========================================================
+   STORAGE
+   ========================================================= */
+
+const STORAGE_KEY = "hisab_global_v7_data";
 
 const defaultData = {
   mode: "personal",
-  currency: "₹",
-  transactions: [],
-  lendDen: [],
+
+  personal: {
+    income: [],
+    expense: [],
+    lend: []
+  },
+
+  business: {
+    income: [],
+    expense: [],
+    lend: []
+  },
+
   savings: [],
-  goals: [],
+  budgets: [],
   bills: [],
-  loans: [],
-  budget: 0
+  emis: [],
+  goals: [],
+  settings: {
+    currency: "₹"
+  }
 };
 
-let data = loadData();
+let appData = loadData();
 
 function loadData() {
   try {
-    const saved = localStorage.getItem(KEY);
-    if (!saved) return structuredClone(defaultData);
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) {
+      return structuredClone(defaultData);
+    }
 
     const parsed = JSON.parse(saved);
+
     return {
       ...structuredClone(defaultData),
       ...parsed,
-      transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
-      lendDen: Array.isArray(parsed.lendDen) ? parsed.lendDen : [],
-      savings: Array.isArray(parsed.savings) ? parsed.savings : [],
-      goals: Array.isArray(parsed.goals) ? parsed.goals : [],
-      bills: Array.isArray(parsed.bills) ? parsed.bills : [],
-      loans: Array.isArray(parsed.loans) ? parsed.loans : []
+      personal: {
+        ...defaultData.personal,
+        ...(parsed.personal || {})
+      },
+      business: {
+        ...defaultData.business,
+        ...(parsed.business || {})
+      },
+      settings: {
+        ...defaultData.settings,
+        ...(parsed.settings || {})
+      }
     };
   } catch (error) {
     console.error("HISAB data load error:", error);
@@ -37,10 +72,49 @@ function loadData() {
 }
 
 function saveData() {
-  localStorage.setItem(KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  } catch (error) {
+    console.error("HISAB data save error:", error);
+  }
 }
 
-function safe(value) {
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function formatMoney(value) {
+  const number = Number(value) || 0;
+  const currency = appData.settings.currency || "₹";
+
+  return (
+    currency +
+    number.toLocaleString("en-IN", {
+      maximumFractionDigits: 2
+    })
+  );
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function currentTime() {
+  return new Date().toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function makeId() {
+  return Date.now().toString() + Math.random().toString(36).slice(2);
+}
+
+function escapeHTML(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -49,894 +123,913 @@ function safe(value) {
     .replace(/'/g, "&#039;");
 }
 
-function money(value) {
-  const amount = Number(value) || 0;
-
-  return `${data.currency || "₹"} ${amount.toLocaleString("en-IN", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  })}`;
+function getCurrentAccount() {
+  return appData[appData.mode];
 }
 
-function today() {
-  return new Date().toISOString().split("T")[0];
+function getTransactions() {
+  const account = getCurrentAccount();
+
+  return [
+    ...(account.income || []).map(item => ({
+      ...item,
+      type: "income"
+    })),
+
+    ...(account.expense || []).map(item => ({
+      ...item,
+      type: "expense"
+    })),
+
+    ...(account.lend || []).map(item => ({
+      ...item,
+      type: item.direction === "given" ? "given" : "received"
+    }))
+  ].sort((a, b) => {
+    const dateA = new Date(`${a.date || "1970-01-01"}T${a.time || "00:00"}`);
+    const dateB = new Date(`${b.date || "1970-01-01"}T${b.time || "00:00"}`);
+
+    return dateB - dateA;
+  });
 }
 
-function getEl(id) {
-  return document.getElementById(id);
-}
+/* =========================================================
+   SCREEN CONTROL
+   ========================================================= */
 
-function show(id) {
-  const el = getEl(id);
-  if (el) el.style.display = "";
-}
-
-function hide(id) {
-  const el = getEl(id);
-  if (el) el.style.display = "none";
-}
-
-function modal(title, content) {
-  const modalEl = getEl("modal");
-
-  if (!modalEl) return;
-
-  modalEl.innerHTML = `
-    <div class="modal-backdrop" onclick="closeModal()">
-      <div class="modal-box" onclick="event.stopPropagation()">
-        <div class="modal-header">
-          <h3>${safe(title)}</h3>
-          <button class="modal-close" onclick="closeModal()">×</button>
-        </div>
-        <div class="modal-content">
-          ${content}
-        </div>
-      </div>
-    </div>
-  `;
-
-  modalEl.style.display = "block";
-}
-
-function closeModal() {
-  const modalEl = getEl("modal");
-  if (modalEl) {
-    modalEl.innerHTML = "";
-    modalEl.style.display = "none";
-  }
-}
-
-function toast(message) {
-  let toastEl = getEl("toast");
-
-  if (!toastEl) {
-    toastEl = document.createElement("div");
-    toastEl.id = "toast";
-    toastEl.className = "toast";
-    document.body.appendChild(toastEl);
-  }
-
-  toastEl.textContent = message;
-  toastEl.classList.add("show");
-
-  setTimeout(() => {
-    toastEl.classList.remove("show");
-  }, 2200);
-}
-
-function setMode(mode) {
-  data.mode = mode;
-  saveData();
-
-  document.querySelectorAll("[data-mode]").forEach(button => {
-    button.classList.toggle("active", button.dataset.mode === mode);
+function showScreen(screenId) {
+  document.querySelectorAll(".screen").forEach(screen => {
+    screen.classList.remove("active");
   });
 
-  updateDashboard();
-  toast(`${mode === "personal" ? "Personal" : "Business"} mode selected`);
-}
+  const target = $(screenId);
 
-function calculateBalance() {
-  let income = 0;
-  let expense = 0;
-
-  data.transactions.forEach(item => {
-    if (item.type === "income") {
-      income += Number(item.amount) || 0;
-    } else if (item.type === "expense") {
-      expense += Number(item.amount) || 0;
-    }
-  });
-
-  return {
-    income,
-    expense,
-    balance: income - expense
-  };
-}
-
-function calculateLendDen() {
-  let given = 0;
-  let received = 0;
-
-  data.lendDen.forEach(item => {
-    if (item.type === "given") {
-      given += Number(item.amount) || 0;
-    } else if (item.type === "received") {
-      received += Number(item.amount) || 0;
-    }
-  });
-
-  return {
-    given,
-    received,
-    balance: given - received
-  };
-}
-
-function updateDashboard() {
-  const totals = calculateBalance();
-  const lend = calculateLendDen();
-
-  const balanceEl = getEl("balance");
-  const incomeEl = getEl("incomeTotal");
-  const expenseEl = getEl("expenseTotal");
-  const lendEl = getEl("lendTotal");
-
-  if (balanceEl) balanceEl.textContent = money(totals.balance);
-  if (incomeEl) incomeEl.textContent = money(totals.income);
-  if (expenseEl) expenseEl.textContent = money(totals.expense);
-  if (lendEl) lendEl.textContent = money(lend.balance);
-
-  const modeEl = getEl("currentMode");
-  if (modeEl) {
-    modeEl.textContent =
-      data.mode === "personal" ? "Personal" : "Business";
+  if (target) {
+    target.classList.add("active");
   }
 
-  renderRecentActivity();
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 }
 
-function renderRecentActivity() {
-  const container = getEl("recentActivity");
+/* =========================================================
+   SPLASH
+   ========================================================= */
 
-  if (!container) return;
+function startSplash() {
+  const splash = $("splashScreen");
 
-  const items = [...data.transactions]
-    .sort((a, b) => {
-      return String(b.date || "").localeCompare(String(a.date || ""));
-    })
-    .slice(0, 5);
-
-  if (!items.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">₹</div>
-        <h4>No transactions yet</h4>
-        <p>Add your first income or expense.</p>
-      </div>
-    `;
+  if (!splash) {
+    showScreen("welcomeScreen");
     return;
   }
 
-  container.innerHTML = items.map(item => `
-    <div class="activity-row">
-      <div>
-        <strong>${safe(item.title || item.category || "Transaction")}</strong>
-        <small>${safe(item.date || "")}</small>
-      </div>
-      <strong class="${item.type === "income" ? "income-text" : "expense-text"}">
-        ${item.type === "income" ? "+" : "-"}${money(item.amount)}
-      </strong>
-    </div>
-  `).join("");
+  setTimeout(() => {
+    showScreen("welcomeScreen");
+  }, 1400);
 }
 
-function addTransaction(type) {
-  modal(
-    type === "income" ? "Add Income" : "Add Expense",
-    `
-      <form id="transactionForm">
-        <label>Amount</label>
-        <input id="transactionAmount" type="number" min="0" step="0.01" required>
+/* =========================================================
+   HOME
+   ========================================================= */
 
-        <label>Category / Title</label>
-        <input id="transactionTitle" type="text" placeholder="e.g. Salary, Food" required>
+function updateHome() {
+  const account = getCurrentAccount();
 
-        <label>Date</label>
-        <input id="transactionDate" type="date" value="${today()}" required>
-
-        <label>Note</label>
-        <textarea id="transactionNote" placeholder="Optional note"></textarea>
-
-        <button class="primary-btn" type="submit">
-          Save ${type === "income" ? "Income" : "Expense"}
-        </button>
-      </form>
-    `
-  );
-
-  const form = getEl("transactionForm");
-
-  if (!form) return;
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    const amount = Number(getEl("transactionAmount")?.value || 0);
-    const title = getEl("transactionTitle")?.value.trim() || "";
-    const date = getEl("transactionDate")?.value || today();
-    const note = getEl("transactionNote")?.value.trim() || "";
-
-    if (amount <= 0 || !title) {
-      toast("Please enter valid details");
-      return;
-    }
-
-    data.transactions.push({
-      id: Date.now(),
-      mode: data.mode,
-      type,
-      amount,
-      title,
-      date,
-      note,
-      createdAt: new Date().toISOString()
-    });
-
-    saveData();
-    closeModal();
-    updateDashboard();
-    toast(`${type === "income" ? "Income" : "Expense"} added`);
-  });
-}
-
-function addLendDen(type) {
-  modal(
-    type === "given" ? "Paisa Diya" : "Paisa Mila",
-    `
-      <form id="lendForm">
-        <label>Person Name</label>
-        <input id="lendPerson" type="text" placeholder="Name" required>
-
-        <label>Amount</label>
-        <input id="lendAmount" type="number" min="0" step="0.01" required>
-
-        <label>Date</label>
-        <input id="lendDate" type="date" value="${today()}" required>
-
-        <label>Note</label>
-        <textarea id="lendNote" placeholder="Optional note"></textarea>
-
-        <button class="primary-btn" type="submit">
-          Save
-        </button>
-      </form>
-    `
-  );
-
-  const form = getEl("lendForm");
-
-  if (!form) return;
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    const person = getEl("lendPerson")?.value.trim() || "";
-    const amount = Number(getEl("lendAmount")?.value || 0);
-    const date = getEl("lendDate")?.value || today();
-    const note = getEl("lendNote")?.value.trim() || "";
-
-    if (!person || amount <= 0) {
-      toast("Please enter valid details");
-      return;
-    }
-
-    data.lendDen.push({
-      id: Date.now(),
-      mode: data.mode,
-      type,
-      person,
-      amount,
-      date,
-      note,
-      createdAt: new Date().toISOString()
-    });
-
-    saveData();
-    closeModal();
-    updateDashboard();
-    toast("Paisa Len-Den saved");
-  });
-}
-
-function showLendDen() {
-  const totals = calculateLendDen();
-
-  const rows = [...data.lendDen]
-    .sort((a, b) =>
-      String(b.date || "").localeCompare(String(a.date || ""))
-    );
-
-  modal(
-    "Paisa Len-Den",
-    `
-      <div class="summary-grid">
-        <div>
-          <small>Diya</small>
-          <strong>${money(totals.given)}</strong>
-        </div>
-        <div>
-          <small>Mila</small>
-          <strong>${money(totals.received)}</strong>
-        </div>
-        <div>
-          <small>Net</small>
-          <strong>${money(totals.balance)}</strong>
-        </div>
-      </div>
-
-      <div class="action-row">
-        <button class="primary-btn" onclick="addLendDen('given')">
-          + Paisa Diya
-        </button>
-        <button class="secondary-btn" onclick="addLendDen('received')">
-          + Paisa Mila
-        </button>
-      </div>
-
-      <div class="ledger-list">
-        ${
-          rows.length
-            ? rows.map(item => `
-              <div class="ledger-row">
-                <div>
-                  <strong>${safe(item.person)}</strong>
-                  <small>${safe(item.date)}${item.note ? " • " + safe(item.note) : ""}</small>
-                </div>
-                <strong>
-                  ${item.type === "given" ? "-" : "+"}${money(item.amount)}
-                </strong>
-              </div>
-            `).join("")
-            : `
-              <div class="empty-state">
-                <h4>No records yet</h4>
-                <p>Add money given or received.</p>
-              </div>
-            `
-        }
-      </div>
-    `
-  );
-}
-
-function addSavings() {
-  modal(
-    "Add Savings",
-    `
-      <form id="savingsForm">
-        <label>Purpose</label>
-        <input id="savingPurpose" type="text" placeholder="Car, Emergency, etc." required>
-
-        <label>Amount</label>
-        <input id="savingAmount" type="number" min="0" step="0.01" required>
-
-        <label>Date</label>
-        <input id="savingDate" type="date" value="${today()}" required>
-
-        <button class="primary-btn" type="submit">Save</button>
-      </form>
-    `
-  );
-
-  const form = getEl("savingsForm");
-
-  if (!form) return;
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    const purpose = getEl("savingPurpose")?.value.trim() || "";
-    const amount = Number(getEl("savingAmount")?.value || 0);
-    const date = getEl("savingDate")?.value || today();
-
-    if (!purpose || amount <= 0) {
-      toast("Please enter valid details");
-      return;
-    }
-
-    data.savings.push({
-      id: Date.now(),
-      mode: data.mode,
-      purpose,
-      amount,
-      date
-    });
-
-    saveData();
-    closeModal();
-    toast("Savings added");
-  });
-}
-
-function showSavings() {
-  const total = data.savings.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
+  const income = (account.income || []).reduce(
+    (sum, item) => sum + Number(item.amount || 0),
     0
   );
 
-  modal(
-    "Savings",
-    `
-      <div class="feature-summary">
-        <span>Total Savings</span>
-        <strong>${money(total)}</strong>
-      </div>
-
-      <button class="primary-btn" onclick="addSavings()">+ Add Savings</button>
-
-      <div class="ledger-list">
-        ${
-          data.savings.length
-            ? data.savings.map(item => `
-              <div class="ledger-row">
-                <div>
-                  <strong>${safe(item.purpose)}</strong>
-                  <small>${safe(item.date)}</small>
-                </div>
-                <strong>${money(item.amount)}</strong>
-              </div>
-            `).join("")
-            : `<div class="empty-state"><p>No savings added yet.</p></div>`
-        }
-      </div>
-    `
+  const expense = (account.expense || []).reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
   );
+
+  const balance = income - expense;
+
+  if ($("totalBalance")) {
+    $("totalBalance").textContent = formatMoney(balance);
+  }
+
+  if ($("totalIncome")) {
+    $("totalIncome").textContent = formatMoney(income);
+  }
+
+  if ($("totalExpense")) {
+    $("totalExpense").textContent = formatMoney(expense);
+  }
+
+  if ($("currencyLabel")) {
+    $("currencyLabel").textContent =
+      appData.settings.currency || "₹";
+  }
+
+  updateModeButtons();
+  renderRecentActivity();
 }
+
+function updateModeButtons() {
+  const personalBtn = $("personalBtn");
+  const businessBtn = $("businessBtn");
+
+  if (personalBtn) {
+    personalBtn.classList.toggle(
+      "active",
+      appData.mode === "personal"
+    );
+  }
+
+  if (businessBtn) {
+    businessBtn.classList.toggle(
+      "active",
+      appData.mode === "business"
+    );
+  }
+}
+
+/* =========================================================
+   RECENT ACTIVITY
+   ========================================================= */
+
+function renderRecentActivity() {
+  const container = $("recentActivity");
+
+  if (!container) {
+    return;
+  }
+
+  const transactions = getTransactions().slice(0, 5);
+
+  if (!transactions.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div>💰</div>
+        <strong>No transactions yet</strong>
+        <p>Add your first income or expense.</p>
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = transactions
+    .map(item => {
+      let icon = "💰";
+      let label = "Income";
+      let sign = "+";
+
+      if (item.type === "expense") {
+        icon = "💸";
+        label = "Expense";
+        sign = "-";
+      }
+
+      if (item.type === "given") {
+        icon = "🤝";
+        label = "Given";
+        sign = "-";
+      }
+
+      if (item.type === "received") {
+        icon = "🤝";
+        label = "Received";
+        sign = "+";
+      }
+
+      return `
+        <div class="activity-row">
+          <div class="activity-icon">${icon}</div>
+
+          <div class="activity-info">
+            <strong>${escapeHTML(item.title || label)}</strong>
+            <small>
+              ${escapeHTML(item.date || "")}
+              ${item.time ? " • " + escapeHTML(item.time) : ""}
+            </small>
+          </div>
+
+          <strong class="activity-amount">
+            ${sign}${formatMoney(item.amount)}
+          </strong>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+function openModal(content) {
+  const modal = $("modal");
+  const modalContent = $("modalContent");
+
+  if (!modal || !modalContent) {
+    return;
+  }
+
+  modalContent.innerHTML = content;
+  modal.classList.remove("hidden");
+
+  document.body.classList.add("modal-open");
+}
+
+function closeModal() {
+  const modal = $("modal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+/* =========================================================
+   INCOME
+   ========================================================= */
+
+function showIncomeForm() {
+  openModal(`
+    <div class="modal-form">
+      <h2>Add Income</h2>
+      <p>Record money received.</p>
+
+      <label>Amount</label>
+      <input id="incomeAmount" type="number" inputmode="decimal"
+        placeholder="Enter amount">
+
+      <label>Source</label>
+      <input id="incomeSource" type="text"
+        placeholder="Salary, business, freelance...">
+
+      <label>Date</label>
+      <input id="incomeDate" type="date" value="${today()}">
+
+      <label>Note</label>
+      <textarea id="incomeNote"
+        placeholder="Optional note"></textarea>
+
+      <button id="saveIncomeBtn" class="primary-btn">
+        Save Income
+      </button>
+    </div>
+  `);
+
+  const saveBtn = $("saveIncomeBtn");
+
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveIncome);
+  }
+}
+
+function saveIncome() {
+  const amount = Number($("incomeAmount")?.value || 0);
+  const source = $("incomeSource")?.value.trim() || "Income";
+  const date = $("incomeDate")?.value || today();
+  const note = $("incomeNote")?.value.trim() || "";
+
+  if (amount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
+
+  getCurrentAccount().income.push({
+    id: makeId(),
+    amount,
+    title: source,
+    date,
+    time: currentTime(),
+    note
+  });
+
+  saveData();
+  closeModal();
+  updateHome();
+}
+
+/* =========================================================
+   EXPENSE
+   ========================================================= */
+
+function showExpenseForm() {
+  openModal(`
+    <div class="modal-form">
+      <h2>Add Expense</h2>
+      <p>Record money spent.</p>
+
+      <label>Amount</label>
+      <input id="expenseAmount" type="number" inputmode="decimal"
+        placeholder="Enter amount">
+
+      <label>Category</label>
+      <input id="expenseCategory" type="text"
+        placeholder="Food, travel, shopping...">
+
+      <label>Date</label>
+      <input id="expenseDate" type="date" value="${today()}">
+
+      <label>Note</label>
+      <textarea id="expenseNote"
+        placeholder="Optional note"></textarea>
+
+      <button id="saveExpenseBtn" class="primary-btn">
+        Save Expense
+      </button>
+    </div>
+  `);
+
+  const saveBtn = $("saveExpenseBtn");
+
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveExpense);
+  }
+}
+
+function saveExpense() {
+  const amount = Number($("expenseAmount")?.value || 0);
+  const category =
+    $("expenseCategory")?.value.trim() || "Expense";
+  const date = $("expenseDate")?.value || today();
+  const note = $("expenseNote")?.value.trim() || "";
+
+  if (amount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
+
+  getCurrentAccount().expense.push({
+    id: makeId(),
+    amount,
+    title: category,
+    date,
+    time: currentTime(),
+    note
+  });
+
+  saveData();
+  closeModal();
+  updateHome();
+}
+
+/* =========================================================
+   PAISA LEN-DEN
+   ========================================================= */
+
+function showLendForm() {
+  openModal(`
+    <div class="modal-form">
+      <h2>Paisa Len-Den</h2>
+      <p>Record money given or received.</p>
+
+      <label>Type</label>
+      <select id="lendDirection">
+        <option value="given">Money Given</option>
+        <option value="received">Money Received</option>
+      </select>
+
+      <label>Person</label>
+      <input id="lendPerson" type="text"
+        placeholder="Person name">
+
+      <label>Amount</label>
+      <input id="lendAmount" type="number"
+        inputmode="decimal"
+        placeholder="Enter amount">
+
+      <label>Date</label>
+      <input id="lendDate" type="date" value="${today()}">
+
+      <label>Note</label>
+      <textarea id="lendNote"
+        placeholder="Optional note"></textarea>
+
+      <button id="saveLendBtn" class="primary-btn">
+        Save Record
+      </button>
+    </div>
+  `);
+
+  $("saveLendBtn")?.addEventListener("click", saveLend);
+}
+
+function saveLend() {
+  const direction = $("lendDirection")?.value || "given";
+  const person = $("lendPerson")?.value.trim() || "Person";
+  const amount = Number($("lendAmount")?.value || 0);
+  const date = $("lendDate")?.value || today();
+  const note = $("lendNote")?.value.trim() || "";
+
+  if (amount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
+
+  getCurrentAccount().lend.push({
+    id: makeId(),
+    direction,
+    person,
+    title: person,
+    amount,
+    date,
+    time: currentTime(),
+    note
+  });
+
+  saveData();
+  closeModal();
+  updateHome();
+}
+
+/* =========================================================
+   SAVINGS
+   ========================================================= */
+
+function showSavings() {
+  const totalSavings = appData.savings.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
+  );
+
+  openModal(`
+    <div class="modal-form">
+      <h2>🏦 Savings</h2>
+
+      <p>
+        Total saved:
+        <strong>${formatMoney(totalSavings)}</strong>
+      </p>
+
+      <label>Saving Amount</label>
+      <input id="savingAmount" type="number"
+        inputmode="decimal"
+        placeholder="Enter amount">
+
+      <label>Purpose</label>
+      <input id="savingPurpose" type="text"
+        placeholder="Car, emergency, education...">
+
+      <button id="saveSavingBtn" class="primary-btn">
+        Add Savings
+      </button>
+    </div>
+  `);
+
+  $("saveSavingBtn")?.addEventListener("click", () => {
+    const amount = Number($("savingAmount")?.value || 0);
+    const purpose =
+      $("savingPurpose")?.value.trim() || "Savings";
+
+    if (amount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    appData.savings.push({
+      id: makeId(),
+      amount,
+      purpose,
+      date: today()
+    });
+
+    saveData();
+    closeModal();
+  });
+}
+
+/* =========================================================
+   BUDGET
+   ========================================================= */
 
 function showBudget() {
-  modal(
-    "Budget",
-    `
-      <form id="budgetForm">
-        <label>Monthly Budget</label>
-        <input id="budgetAmount" type="number" min="0" step="0.01"
-          value="${Number(data.budget) || 0}">
-
-        <button class="primary-btn" type="submit">Save Budget</button>
-      </form>
-
-      <div class="feature-summary">
-        <span>Current Budget</span>
-        <strong>${money(data.budget)}</strong>
-      </div>
-    `
+  const totalBudget = appData.budgets.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
   );
 
-  const form = getEl("budgetForm");
+  openModal(`
+    <div class="modal-form">
+      <h2>📊 Budget</h2>
 
-  if (!form) return;
+      <p>
+        Total planned budget:
+        <strong>${formatMoney(totalBudget)}</strong>
+      </p>
 
-  form.addEventListener("submit", event => {
-    event.preventDefault();
+      <label>Budget Amount</label>
+      <input id="budgetAmount" type="number"
+        inputmode="decimal"
+        placeholder="Monthly budget">
 
-    data.budget = Number(getEl("budgetAmount")?.value || 0);
-    saveData();
-    closeModal();
-    toast("Budget saved");
-  });
-}
+      <label>Category</label>
+      <input id="budgetCategory" type="text"
+        placeholder="Food, shopping, travel...">
 
-function addGoal() {
-  modal(
-    "Add Goal",
-    `
-      <form id="goalForm">
-        <label>Goal Name</label>
-        <input id="goalName" type="text" placeholder="New Bike, Car, etc." required>
+      <button id="saveBudgetBtn" class="primary-btn">
+        Save Budget
+      </button>
+    </div>
+  `);
 
-        <label>Target Amount</label>
-        <input id="goalTarget" type="number" min="0" step="0.01" required>
+  $("saveBudgetBtn")?.addEventListener("click", () => {
+    const amount = Number($("budgetAmount")?.value || 0);
+    const category =
+      $("budgetCategory")?.value.trim() || "Monthly Budget";
 
-        <label>Saved Amount</label>
-        <input id="goalSaved" type="number" min="0" step="0.01" value="0">
-
-        <button class="primary-btn" type="submit">Save Goal</button>
-      </form>
-    `
-  );
-
-  const form = getEl("goalForm");
-
-  if (!form) return;
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    const name = getEl("goalName")?.value.trim() || "";
-    const target = Number(getEl("goalTarget")?.value || 0);
-    const saved = Number(getEl("goalSaved")?.value || 0);
-
-    if (!name || target <= 0) {
-      toast("Please enter valid details");
+    if (amount <= 0) {
+      alert("Please enter a valid amount.");
       return;
     }
 
-    data.goals.push({
-      id: Date.now(),
-      mode: data.mode,
-      name,
-      target,
-      saved
-    });
-
-    saveData();
-    closeModal();
-    toast("Goal added");
-  });
-}
-
-function showGoals() {
-  modal(
-    "Goals",
-    `
-      <button class="primary-btn" onclick="addGoal()">+ Add Goal</button>
-
-      <div class="goal-list">
-        ${
-          data.goals.length
-            ? data.goals.map(goal => {
-                const target = Number(goal.target) || 0;
-                const saved = Number(goal.saved) || 0;
-                const percent = target
-                  ? Math.min(100, Math.round((saved / target) * 100))
-                  : 0;
-
-                return `
-                  <div class="goal-card">
-                    <strong>${safe(goal.name)}</strong>
-                    <div class="goal-amount">
-                      ${money(saved)} / ${money(target)}
-                    </div>
-                    <div class="progress">
-                      <div class="progress-bar" style="width:${percent}%"></div>
-                    </div>
-                    <small>${percent}% completed</small>
-                  </div>
-                `;
-              }).join("")
-            : `<div class="empty-state"><p>No goals added yet.</p></div>`
-        }
-      </div>
-    `
-  );
-}
-
-function addBill() {
-  modal(
-    "Add Bill",
-    `
-      <form id="billForm">
-        <label>Bill Name</label>
-        <input id="billName" type="text" placeholder="Electricity, Rent, etc." required>
-
-        <label>Amount</label>
-        <input id="billAmount" type="number" min="0" step="0.01" required>
-
-        <label>Due Date</label>
-        <input id="billDate" type="date" required>
-
-        <button class="primary-btn" type="submit">Save Bill</button>
-      </form>
-    `
-  );
-
-  const form = getEl("billForm");
-
-  if (!form) return;
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    const name = getEl("billName")?.value.trim() || "";
-    const amount = Number(getEl("billAmount")?.value || 0);
-    const dueDate = getEl("billDate")?.value || "";
-
-    if (!name || amount <= 0 || !dueDate) {
-      toast("Please enter valid details");
-      return;
-    }
-
-    data.bills.push({
-      id: Date.now(),
-      mode: data.mode,
-      name,
+    appData.budgets.push({
+      id: makeId(),
       amount,
-      dueDate,
-      paid: false
+      category,
+      date: today()
     });
 
     saveData();
     closeModal();
-    toast("Bill added");
   });
 }
+
+/* =========================================================
+   BILLS
+   ========================================================= */
 
 function showBills() {
-  modal(
-    "Bills & Payments",
-    `
-      <button class="primary-btn" onclick="addBill()">+ Add Bill</button>
+  openModal(`
+    <div class="modal-form">
+      <h2>🧾 Bills & Payments</h2>
 
-      <div class="ledger-list">
-        ${
-          data.bills.length
-            ? data.bills.map(bill => `
-              <div class="ledger-row">
-                <div>
-                  <strong>${safe(bill.name)}</strong>
-                  <small>Due: ${safe(bill.dueDate)}</small>
-                </div>
-                <div>
-                  <strong>${money(bill.amount)}</strong>
-                  <button class="small-btn" onclick="toggleBill(${bill.id})">
-                    ${bill.paid ? "Paid" : "Mark Paid"}
-                  </button>
-                </div>
-              </div>
-            `).join("")
-            : `<div class="empty-state"><p>No bills added yet.</p></div>`
-        }
-      </div>
-    `
-  );
-}
+      <label>Bill Name</label>
+      <input id="billName" type="text"
+        placeholder="Electricity, mobile, rent...">
 
-function toggleBill(id) {
-  const bill = data.bills.find(item => item.id === id);
+      <label>Amount</label>
+      <input id="billAmount" type="number"
+        inputmode="decimal"
+        placeholder="Bill amount">
 
-  if (!bill) return;
+      <label>Due Date</label>
+      <input id="billDate" type="date">
 
-  bill.paid = !bill.paid;
-  saveData();
-  showBills();
-}
+      <button id="saveBillBtn" class="primary-btn">
+        Save Bill
+      </button>
+    </div>
+  `);
 
-function addLoan() {
-  modal(
-    "Add Loan / EMI",
-    `
-      <form id="loanForm">
-        <label>Loan Name</label>
-        <input id="loanName" type="text" placeholder="Home Loan, Bike Loan" required>
+  $("saveBillBtn")?.addEventListener("click", () => {
+    const name = $("billName")?.value.trim() || "Bill";
+    const amount = Number($("billAmount")?.value || 0);
+    const dueDate = $("billDate")?.value || today();
 
-        <label>Loan Amount</label>
-        <input id="loanAmount" type="number" min="0" step="0.01" required>
-
-        <label>EMI Amount</label>
-        <input id="loanEmi" type="number" min="0" step="0.01" required>
-
-        <label>Due Date</label>
-        <input id="loanDate" type="date" required>
-
-        <button class="primary-btn" type="submit">Save Loan</button>
-      </form>
-    `
-  );
-
-  const form = getEl("loanForm");
-
-  if (!form) return;
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    const name = getEl("loanName")?.value.trim() || "";
-    const amount = Number(getEl("loanAmount")?.value || 0);
-    const emi = Number(getEl("loanEmi")?.value || 0);
-    const dueDate = getEl("loanDate")?.value || "";
-
-    if (!name || amount <= 0 || emi <= 0 || !dueDate) {
-      toast("Please enter valid details");
+    if (amount <= 0) {
+      alert("Please enter a valid amount.");
       return;
     }
 
-    data.loans.push({
-      id: Date.now(),
-      mode: data.mode,
+    appData.bills.push({
+      id: makeId(),
       name,
       amount,
-      emi,
       dueDate,
       paid: false
     });
 
     saveData();
     closeModal();
-    toast("Loan / EMI added");
   });
 }
 
-function showLoans() {
-  modal(
-    "Loans & EMI",
-    `
-      <button class="primary-btn" onclick="addLoan()">+ Add Loan / EMI</button>
+/* =========================================================
+   EMI
+   ========================================================= */
 
-      <div class="ledger-list">
-        ${
-          data.loans.length
-            ? data.loans.map(loan => `
-              <div class="ledger-row">
-                <div>
-                  <strong>${safe(loan.name)}</strong>
-                  <small>Due: ${safe(loan.dueDate)}</small>
-                </div>
-                <div>
-                  <strong>EMI ${money(loan.emi)}</strong>
-                  <small>Total ${money(loan.amount)}</small>
-                </div>
-              </div>
-            `).join("")
-            : `<div class="empty-state"><p>No loans / EMI added yet.</p></div>`
-        }
-      </div>
-    `
-  );
+function showEMI() {
+  openModal(`
+    <div class="modal-form">
+      <h2>🏠 Loans & EMI</h2>
+
+      <label>Loan / Bank Name</label>
+      <input id="emiName" type="text"
+        placeholder="Bank or finance company">
+
+      <label>EMI Amount</label>
+      <input id="emiAmount" type="number"
+        inputmode="decimal"
+        placeholder="Monthly EMI">
+
+      <label>Due Date</label>
+      <input id="emiDate" type="date">
+
+      <label>Total Tenure</label>
+      <input id="emiTenure" type="number"
+        placeholder="Months">
+
+      <button id="saveEMIBtn" class="primary-btn">
+        Save EMI
+      </button>
+    </div>
+  `);
+
+  $("saveEMIBtn")?.addEventListener("click", () => {
+    const name = $("emiName")?.value.trim() || "Loan";
+    const amount = Number($("emiAmount")?.value || 0);
+    const dueDate = $("emiDate")?.value || today();
+    const tenure = Number($("emiTenure")?.value || 0);
+
+    if (amount <= 0) {
+      alert("Please enter a valid EMI amount.");
+      return;
+    }
+
+    appData.emis.push({
+      id: makeId(),
+      name,
+      amount,
+      dueDate,
+      tenure,
+      paid: false
+    });
+
+    saveData();
+    closeModal();
+  });
 }
 
-function showReports() {
-  const totals = calculateBalance();
-  const lend = calculateLendDen();
+/* =========================================================
+   GOALS
+   ========================================================= */
 
-  modal(
-    "Reports",
-    `
-      <div class="report-grid">
-        <div>
-          <span>Income</span>
-          <strong>${money(totals.income)}</strong>
-        </div>
+function showGoals() {
+  const goals = appData.goals || [];
 
-        <div>
-          <span>Expense</span>
-          <strong>${money(totals.expense)}</strong>
-        </div>
+  openModal(`
+    <div class="modal-form">
+      <h2>🎯 Goals</h2>
 
-        <div>
-          <span>Balance</span>
-          <strong>${money(totals.balance)}</strong>
-        </div>
-
-        <div>
-          <span>Paisa Len-Den</span>
-          <strong>${money(lend.balance)}</strong>
-        </div>
-      </div>
-
-      <h4>Transactions</h4>
-      <p>Total: ${data.transactions.length}</p>
-
-      <h4>Savings</h4>
-      <p>Total entries: ${data.savings.length}</p>
-
-      <h4>Goals</h4>
-      <p>Total goals: ${data.goals.length}</p>
-
-      <h4>Bills</h4>
-      <p>Total bills: ${data.bills.length}</p>
-
-      <h4>Loans / EMI</h4>
-      <p>Total loans: ${data.loans.length}</p>
-    `
-  );
-}
-
-function showAllTransactions() {
-  const items = [...data.transactions]
-    .sort((a, b) =>
-      String(b.date || "").localeCompare(String(a.date || ""))
-    );
-
-  modal(
-    "All Transactions",
-    `
-      <div class="ledger-list">
-        ${
-          items.length
-            ? items.map(item => `
-              <div class="ledger-row">
-                <div>
-                  <strong>${safe(item.title)}</strong>
-                  <small>${safe(item.date)}${item.note ? " • " + safe(item.note) : ""}</small>
-                </div>
-                <strong>
-                  ${item.type === "income" ? "+" : "-"}${money(item.amount)}
-                </strong>
-              </div>
-            `).join("")
-            : `<div class="empty-state"><p>No transactions yet.</p></div>`
-        }
-      </div>
-    `
-  );
-}
-
-function showSettings() {
-  modal(
-    "Settings",
-    `
-      <form id="settingsForm">
-        <label>Currency</label>
-        <select id="currencySelect">
-          <option value="₹" ${data.currency === "₹" ? "selected" : ""}>₹ Indian Rupee</option>
-          <option value="$" ${data.currency === "$" ? "selected" : ""}>$ US Dollar</option>
-          <option value="€" ${data.currency === "€" ? "selected" : ""}>€ Euro</option>
-          <option value="£" ${data.currency === "£" ? "selected" : ""}>£ Pound</option>
-          <option value="¥" ${data.currency === "¥" ? "selected" : ""}>¥ Yen</option>
-        </select>
-
-        <button class="primary-btn" type="submit">
-          Save Settings
-        </button>
-      </form>
+      ${
+        goals.length
+          ? goals
+              .map(
+                goal => `
+                  <div class="goal-row">
+                    <strong>${escapeHTML(goal.name)}</strong>
+                    <small>
+                      ${formatMoney(goal.saved)}
+                      / ${formatMoney(goal.target)}
+                    </small>
+                  </div>
+                `
+              )
+              .join("")
+          : `
+            <p>No goals created yet.</p>
+          `
+      }
 
       <hr>
 
-      <button class="danger-btn" onclick="clearAllData()">
-        Clear All Data
+      <label>Goal Name</label>
+      <input id="goalName" type="text"
+        placeholder="New car, bike, emergency fund...">
+
+      <label>Target Amount</label>
+      <input id="goalTarget" type="number"
+        inputmode="decimal"
+        placeholder="Target amount">
+
+      <button id="saveGoalBtn" class="primary-btn">
+        Create Goal
       </button>
-    `
-  );
+    </div>
+  `);
 
-  const form = getEl("settingsForm");
+  $("saveGoalBtn")?.addEventListener("click", () => {
+    const name = $("goalName")?.value.trim();
+    const target = Number($("goalTarget")?.value || 0);
 
-  if (!form) return;
+    if (!name) {
+      alert("Please enter a goal name.");
+      return;
+    }
 
-  form.addEventListener("submit", event => {
-    event.preventDefault();
+    if (target <= 0) {
+      alert("Please enter a valid target amount.");
+      return;
+    }
 
-    const currency = getEl("currencySelect")?.value || "₹";
+    appData.goals.push({
+      id: makeId(),
+      name,
+      target,
+      saved: 0,
+      date: today()
+    });
 
-    data.currency = currency;
     saveData();
     closeModal();
-    updateDashboard();
-    toast("Settings saved");
   });
 }
 
-function clearAllData() {
-  const confirmed = confirm(
-    "Are you sure? All HISAB data stored on this device will be deleted."
+/* =========================================================
+   REPORTS
+   ========================================================= */
+
+function showReports() {
+  const account = getCurrentAccount();
+
+  const income = (account.income || []).reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
   );
 
-  if (!confirmed) return;
+  const expense = (account.expense || []).reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
+  );
 
-  localStorage.removeItem(KEY);
-  data = structuredClone(defaultData);
+  const balance = income - expense;
 
-  closeModal();
-  updateDashboard();
+  openModal(`
+    <div class="modal-form">
+      <h2>📈 Reports</h2>
 
-  toast("All data cleared");
+      <div class="report-box">
+        <span>Total Income</span>
+        <strong>${formatMoney(income)}</strong>
+      </div>
+
+      <div class="report-box">
+        <span>Total Expense</span>
+        <strong>${formatMoney(expense)}</strong>
+      </div>
+
+      <div class="report-box">
+        <span>Balance</span>
+        <strong>${formatMoney(balance)}</strong>
+      </div>
+
+      <div class="report-box">
+        <span>Transactions</span>
+        <strong>${getTransactions().length}</strong>
+      </div>
+    </div>
+  `);
 }
+
+/* =========================================================
+   VIEW ALL
+   ========================================================= */
+
+function showAllTransactions() {
+  const transactions = getTransactions();
+
+  if (!transactions.length) {
+    openModal(`
+      <div class="modal-form">
+        <h2>Recent Activity</h2>
+        <p>No transactions yet.</p>
+      </div>
+    `);
+
+    return;
+  }
+
+  openModal(`
+    <div class="modal-form">
+      <h2>All Transactions</h2>
+
+      ${transactions
+        .map(item => {
+          let type = "Income";
+          let sign = "+";
+
+          if (item.type === "expense") {
+            type = "Expense";
+            sign = "-";
+          }
+
+          if (item.type === "given") {
+            type = "Given";
+            sign = "-";
+          }
+
+          if (item.type === "received") {
+            type = "Received";
+            sign = "+";
+          }
+
+          return `
+            <div class="transaction-row">
+              <div>
+                <strong>
+                  ${escapeHTML(item.title || type)}
+                </strong>
+
+                <small>
+                  ${type} • ${escapeHTML(item.date || "")}
+                </small>
+              </div>
+
+              <strong>
+                ${sign}${formatMoney(item.amount)}
+              </strong>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `);
+}
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+
+function showSettings() {
+  openModal(`
+    <div class="modal-form">
+      <h2>⚙️ Settings</h2>
+
+      <label>Currency</label>
+
+      <select id="currencySelect">
+        <option value="₹">₹ Indian Rupee</option>
+        <option value="$">$ US Dollar</option>
+        <option value="€">€ Euro</option>
+        <option value="£">£ Pound</option>
+      </select>
+
+      <button id="saveSettingsBtn" class="primary-btn">
+        Save Settings
+      </button>
+
+      <hr>
+
+      <button id="clearDataBtn" class="secondary-btn">
+        Clear All Data
+      </button>
+    </div>
+  `);
+
+  const currencySelect = $("currencySelect");
+
+  if (currencySelect) {
+    currencySelect.value =
+      appData.settings.currency || "₹";
+  }
+
+  $("saveSettingsBtn")?.addEventListener("click", () => {
+    appData.settings.currency =
+      $("currencySelect")?.value || "₹";
+
+    saveData();
+    closeModal();
+    updateHome();
+  });
+
+  $("clearDataBtn")?.addEventListener("click", () => {
+    const confirmClear = confirm(
+      "Are you sure you want to delete all HISAB data?"
+    );
+
+    if (!confirmClear) {
+      return;
+    }
+
+    appData = structuredClone(defaultData);
+    saveData();
+
+    closeModal();
+    updateHome();
+
+    alert("All data has been cleared.");
+  });
+}
+
+/* =========================================================
+   ACTION ROUTER
+   ========================================================= */
 
 function handleAction(action) {
   switch (action) {
     case "income":
-      addTransaction("income");
+      showIncomeForm();
       break;
 
     case "expense":
-      addTransaction("expense");
+      showExpenseForm();
       break;
 
     case "lend":
-    case "lendden":
-    case "paisa":
-      showLendDen();
+      showLendForm();
       break;
 
     case "savings":
@@ -951,9 +1044,8 @@ function handleAction(action) {
       showBills();
       break;
 
-    case "loans":
     case "emi":
-      showLoans();
+      showEMI();
       break;
 
     case "goals":
@@ -964,60 +1056,65 @@ function handleAction(action) {
       showReports();
       break;
 
-    case "all":
-    case "transactions":
-      showAllTransactions();
-      break;
-
-    case "settings":
-      showSettings();
-      break;
-
     default:
-      toast("Feature opening soon");
+      console.log("Unknown action:", action);
   }
 }
 
-function bindActions() {
-  document.addEventListener("click", event => {
-    const actionButton = event.target.closest("[data-action]");
+/* =========================================================
+   EVENT LISTENERS
+   ========================================================= */
 
-    if (actionButton) {
-      event.preventDefault();
-      handleAction(actionButton.dataset.action);
-      return;
-    }
+function setupEvents() {
 
-    const modeButton = event.target.closest("[data-mode]");
-
-    if (modeButton) {
-      event.preventDefault();
-      setMode(modeButton.dataset.mode);
-    }
-
-    if (
-      event.target.matches(".modal-close") ||
-      event.target.closest(".modal-close")
-    ) {
-      closeModal();
-    }
+  /* Continue */
+  $("continueBtn")?.addEventListener("click", () => {
+    showScreen("homeScreen");
+    updateHome();
   });
-}
 
-function setupContinueButton() {
-  const button = getEl("continueBtn");
-
-  if (!button) return;
-
-  button.addEventListener("click", () => {
-    hide("welcomeScreen");
-    show("homeScreen");
-
-    updateDashboard();
+  /* Personal */
+  $("personalBtn")?.addEventListener("click", () => {
+    appData.mode = "personal";
+    saveData();
+    updateHome();
   });
-}
 
-function setupCloseButtons() {
+  /* Business */
+  $("businessBtn")?.addEventListener("click", () => {
+    appData.mode = "business";
+    saveData();
+    updateHome();
+  });
+
+  /* Settings */
+  $("settingsBtn")?.addEventListener("click", showSettings);
+
+  /* View All */
+  $("viewAllBtn")?.addEventListener(
+    "click",
+    showAllTransactions
+  );
+
+  /* All action cards */
+  document
+    .querySelectorAll("[data-action]")
+    .forEach(element => {
+      element.addEventListener("click", () => {
+        const action = element.dataset.action;
+        handleAction(action);
+      });
+    });
+
+  /* Close modal */
+  $("closeModal")?.addEventListener("click", closeModal);
+
+  $("modalOverlay")?.addEventListener(
+    "click",
+    closeModal
+  );
+
+  /* Escape key */
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
       closeModal();
@@ -1025,23 +1122,26 @@ function setupCloseButtons() {
   });
 }
 
-function init() {
-  bindActions();
-  setupContinueButton();
-  setupCloseButtons();
+/* =========================================================
+   APP START
+   ========================================================= */
 
-  const welcome = getEl("welcomeScreen");
-  const home = getEl("homeScreen");
+function startApp() {
+  console.log("HISAB V7 starting...");
 
-  if (welcome && home) {
-    home.style.display = "none";
-  }
+  setupEvents();
 
-  updateDashboard();
+  updateHome();
+
+  startSplash();
 }
 
+/* =========================================================
+   DOM READY
+   ========================================================= */
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", startApp);
 } else {
-  init();
+  startApp();
 }
