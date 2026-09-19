@@ -19,19 +19,16 @@ jobs:
           echo "=== Repository files ==="
           ls -la
 
-          echo "=== www files ==="
-          ls -la www
-
-          test -f www/index.html
-          test -f www/app.js
-          test -f www/style.css
+          test -f index.html
+          test -f app.js
+          test -f style.css
           test -f package.json
 
           test -f capacitor.config.ts || \
           test -f capacitor.config.js || \
           test -f capacitor.config.json
 
-          echo "All required files found."
+          echo "Source files found."
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -55,6 +52,19 @@ jobs:
         run: |
           npm install
 
+      - name: Build Web Assets
+        run: |
+          npm run build
+
+          echo "=== Built www files ==="
+          ls -lh www/
+
+          test -f www/index.html
+          test -f www/app.js
+          test -f www/style.css
+
+          echo "Web assets built successfully."
+
       - name: Verify Capacitor
         run: |
           npx cap --version
@@ -71,6 +81,7 @@ jobs:
         run: |
           test -d android
           test -f android/gradlew
+
           test -f android/app/build.gradle || \
           test -f android/app/build.gradle.kts
 
