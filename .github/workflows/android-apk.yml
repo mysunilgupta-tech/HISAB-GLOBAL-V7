@@ -26,7 +26,10 @@ jobs:
           test -f www/app.js
           test -f www/style.css
           test -f package.json
-          test -f Capacitor.config.ts
+
+          test -f capacitor.config.ts || \
+          test -f capacitor.config.js || \
+          test -f capacitor.config.json
 
           echo "All required files found."
 
@@ -68,7 +71,8 @@ jobs:
         run: |
           test -d android
           test -f android/gradlew
-          test -f android/app/build.gradle || test -f android/app/build.gradle.kts
+          test -f android/app/build.gradle || \
+          test -f android/app/build.gradle.kts
 
           echo "Android project verified."
 
