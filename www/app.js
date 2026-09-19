@@ -2,15 +2,14 @@
    HISAB — Money Manager V7
    Personal + Business
    Offline / Local Storage
+   Android WebView Compatible
    ========================================================= */
 
 "use strict";
 
-/* =========================================================
-   STORAGE
-   ========================================================= */
-
 const STORAGE_KEY = "hisab_global_v7_data";
+
+/* ---------- DEFAULT DATA ---------- */
 
 const defaultData = {
   mode: "personal",
@@ -32,64 +31,82 @@ const defaultData = {
   bills: [],
   emis: [],
   goals: [],
+
   settings: {
     currency: "₹"
   }
 };
 
-let appData = loadData();
+/* ---------- SAFE CLONE ---------- */
+
+function cloneDefaultData() {
+  return JSON.parse(JSON.stringify(defaultData));
+}
+
+/* ---------- LOAD DATA ---------- */
 
 function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
 
     if (!saved) {
-      return structuredClone(defaultData);
+      return cloneDefaultData();
     }
 
     const parsed = JSON.parse(saved);
 
     return {
-      ...structuredClone(defaultData),
+      ...cloneDefaultData(),
       ...parsed,
+
       personal: {
         ...defaultData.personal,
         ...(parsed.personal || {})
       },
+
       business: {
         ...defaultData.business,
         ...(parsed.business || {})
       },
+
       settings: {
         ...defaultData.settings,
         ...(parsed.settings || {})
       }
     };
+
   } catch (error) {
-    console.error("HISAB data load error:", error);
-    return structuredClone(defaultData);
+    console.error("HISAB load error:", error);
+    return cloneDefaultData();
   }
 }
+
+let appData = loadData();
+
+/* ---------- SAVE DATA ---------- */
 
 function saveData() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(appData)
+    );
   } catch (error) {
-    console.error("HISAB data save error:", error);
+    console.error("HISAB save error:", error);
   }
 }
 
-/* =========================================================
-   HELPERS
-   ========================================================= */
+/* ---------- HELPERS ---------- */
 
 function $(id) {
   return document.getElementById(id);
 }
 
-function formatMoney(value) {
-  const number = Number(value) || 0;
-  const currency = appData.settings.currency || "₹";
+function formatMoney(amount) {
+  const currency =
+    appData.settings?.currency || "₹";
+
+  const number = Number(amount) || 0;
 
   return (
     currency +
@@ -100,7 +117,9 @@ function formatMoney(value) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+
+  return d.toLocaleDateString("en-IN");
 }
 
 function currentTime() {
@@ -111,7 +130,10 @@ function currentTime() {
 }
 
 function makeId() {
-  return Date.now().toString() + Math.random().toString(36).slice(2);
+  return (
+    Date.now().toString(36) +
+    Math.random().toString(36).substring(2)
+  );
 }
 
 function escapeHTML(value) {
@@ -122,6 +144,8 @@ function escapeHTML(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+/* ---------- CURRENT ACCOUNT ---------- */
 
 function getCurrentAccount() {
   return appData[appData.mode];
@@ -143,24 +167,21 @@ function getTransactions() {
 
     ...(account.lend || []).map(item => ({
       ...item,
-      type: item.direction === "given" ? "given" : "received"
+      type: "lend"
     }))
   ].sort((a, b) => {
-    const dateA = new Date(`${a.date || "1970-01-01"}T${a.time || "00:00"}`);
-    const dateB = new Date(`${b.date || "1970-01-01"}T${b.time || "00:00"}`);
-
-    return dateB - dateA;
+    return (b.createdAt || 0) - (a.createdAt || 0);
   });
 }
 
-/* =========================================================
-   SCREEN CONTROL
-   ========================================================= */
+/* ---------- SCREEN ---------- */
 
 function showScreen(screenId) {
-  document.querySelectorAll(".screen").forEach(screen => {
-    screen.classList.remove("active");
-  });
+  document
+    .querySelectorAll(".screen")
+    .forEach(screen => {
+      screen.classList.remove("active");
+    });
 
   const target = $(screenId);
 
@@ -168,68 +189,63 @@ function showScreen(screenId) {
     target.classList.add("active");
   }
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
+  window.scrollTo(0, 0);
 }
 
-/* =========================================================
-   SPLASH
-   ========================================================= */
+/* ---------- SPLASH ---------- */
 
 function startSplash() {
-  const splash = $("splashScreen");
-
-  if (!splash) {
-    showScreen("welcomeScreen");
-    return;
-  }
-
   setTimeout(() => {
     showScreen("welcomeScreen");
-  }, 1400);
+  }, 1200);
 }
 
-/* =========================================================
-   HOME
-   ========================================================= */
+/* ---------- HOME ---------- */
 
 function updateHome() {
   const account = getCurrentAccount();
 
-  const income = (account.income || []).reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
+  const income =
+    (account.income || []).reduce(
+      (sum, item) =>
+        sum + Number(item.amount || 0),
+      0
+    );
 
-  const expense = (account.expense || []).reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
+  const expense =
+    (account.expense || []).reduce(
+      (sum, item) =>
+        sum + Number(item.amount || 0),
+      0
+    );
 
   const balance = income - expense;
 
-  if ($("totalBalance")) {
-    $("totalBalance").textContent = formatMoney(balance);
+  if ($("currencyLabel")) {
+    $("currencyLabel").textContent =
+      appData.settings.currency;
   }
 
   if ($("totalIncome")) {
-    $("totalIncome").textContent = formatMoney(income);
+    $("totalIncome").textContent =
+      formatMoney(income);
   }
 
   if ($("totalExpense")) {
-    $("totalExpense").textContent = formatMoney(expense);
+    $("totalExpense").textContent =
+      formatMoney(expense);
   }
 
-  if ($("currencyLabel")) {
-    $("currencyLabel").textContent =
-      appData.settings.currency || "₹";
+  if ($("totalBalance")) {
+    $("totalBalance").textContent =
+      formatMoney(balance);
   }
 
   updateModeButtons();
   renderRecentActivity();
 }
+
+/* ---------- MODE BUTTONS ---------- */
 
 function updateModeButtons() {
   const personalBtn = $("personalBtn");
@@ -250,18 +266,15 @@ function updateModeButtons() {
   }
 }
 
-/* =========================================================
-   RECENT ACTIVITY
-   ========================================================= */
+/* ---------- RECENT ACTIVITY ---------- */
 
 function renderRecentActivity() {
   const container = $("recentActivity");
 
-  if (!container) {
-    return;
-  }
+  if (!container) return;
 
-  const transactions = getTransactions().slice(0, 5);
+  const transactions =
+    getTransactions().slice(0, 5);
 
   if (!transactions.length) {
     container.innerHTML = `
@@ -275,325 +288,292 @@ function renderRecentActivity() {
     return;
   }
 
-  container.innerHTML = transactions
-    .map(item => {
-      let icon = "💰";
-      let label = "Income";
-      let sign = "+";
+  container.innerHTML =
+    transactions
+      .map(item => {
 
-      if (item.type === "expense") {
-        icon = "💸";
-        label = "Expense";
-        sign = "-";
-      }
+        let icon = "💰";
+        let title = item.title || "Transaction";
 
-      if (item.type === "given") {
-        icon = "🤝";
-        label = "Given";
-        sign = "-";
-      }
+        if (item.type === "expense") {
+          icon = "💸";
+        }
 
-      if (item.type === "received") {
-        icon = "🤝";
-        label = "Received";
-        sign = "+";
-      }
+        if (item.type === "lend") {
+          icon = "🤝";
+        }
 
-      return `
-        <div class="activity-row">
-          <div class="activity-icon">${icon}</div>
+        return `
+          <div class="activity-item">
+            <div class="activity-icon">
+              ${icon}
+            </div>
 
-          <div class="activity-info">
-            <strong>${escapeHTML(item.title || label)}</strong>
-            <small>
-              ${escapeHTML(item.date || "")}
-              ${item.time ? " • " + escapeHTML(item.time) : ""}
-            </small>
+            <div class="activity-info">
+              <strong>
+                ${escapeHTML(title)}
+              </strong>
+
+              <small>
+                ${escapeHTML(item.date || today())}
+                •
+                ${escapeHTML(item.time || "")}
+              </small>
+            </div>
+
+            <strong class="activity-amount">
+              ${formatMoney(item.amount)}
+            </strong>
           </div>
-
-          <strong class="activity-amount">
-            ${sign}${formatMoney(item.amount)}
-          </strong>
-        </div>
-      `;
-    })
-    .join("");
+        `;
+      })
+      .join("");
 }
 
-/* =========================================================
-   MODAL
-   ========================================================= */
+/* ---------- MODAL ---------- */
 
 function openModal(content) {
   const modal = $("modal");
   const modalContent = $("modalContent");
 
-  if (!modal || !modalContent) {
-    return;
-  }
+  if (!modal || !modalContent) return;
 
   modalContent.innerHTML = content;
-  modal.classList.remove("hidden");
 
-  document.body.classList.add("modal-open");
+  modal.classList.remove("hidden");
 }
 
 function closeModal() {
   const modal = $("modal");
 
-  if (!modal) {
-    return;
+  if (modal) {
+    modal.classList.add("hidden");
   }
-
-  modal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
 }
 
-/* =========================================================
-   INCOME
-   ========================================================= */
+/* ---------- INCOME ---------- */
 
-function showIncomeForm() {
+function showIncome() {
   openModal(`
-    <div class="modal-form">
-      <h2>Add Income</h2>
-      <p>Record money received.</p>
+    <h2>Add Income</h2>
+
+    <form id="incomeForm">
+
+      <label>Income Name</label>
+      <input
+        id="incomeTitle"
+        type="text"
+        placeholder="Salary / Business / Other"
+        required
+      >
 
       <label>Amount</label>
-      <input id="incomeAmount" type="number" inputmode="decimal"
-        placeholder="Enter amount">
+      <input
+        id="incomeAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Amount"
+        required
+      >
 
-      <label>Source</label>
-      <input id="incomeSource" type="text"
-        placeholder="Salary, business, freelance...">
-
-      <label>Date</label>
-      <input id="incomeDate" type="date" value="${today()}">
-
-      <label>Note</label>
-      <textarea id="incomeNote"
-        placeholder="Optional note"></textarea>
-
-      <button id="saveIncomeBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save Income
       </button>
-    </div>
+
+    </form>
   `);
 
-  const saveBtn = $("saveIncomeBtn");
+  $("incomeForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-  if (saveBtn) {
-    saveBtn.addEventListener("click", saveIncome);
-  }
-}
+    const title = $("incomeTitle").value.trim();
+    const amount = Number($("incomeAmount").value);
 
-function saveIncome() {
-  const amount = Number($("incomeAmount")?.value || 0);
-  const source = $("incomeSource")?.value.trim() || "Income";
-  const date = $("incomeDate")?.value || today();
-  const note = $("incomeNote")?.value.trim() || "";
+    if (!title || amount <= 0) return;
 
-  if (amount <= 0) {
-    alert("Please enter a valid amount.");
-    return;
-  }
+    getCurrentAccount().income.push({
+      id: makeId(),
+      title,
+      amount,
+      date: today(),
+      time: currentTime(),
+      createdAt: Date.now()
+    });
 
-  getCurrentAccount().income.push({
-    id: makeId(),
-    amount,
-    title: source,
-    date,
-    time: currentTime(),
-    note
+    saveData();
+    closeModal();
+    updateHome();
   });
-
-  saveData();
-  closeModal();
-  updateHome();
 }
 
-/* =========================================================
-   EXPENSE
-   ========================================================= */
+/* ---------- EXPENSE ---------- */
 
-function showExpenseForm() {
+function showExpense() {
   openModal(`
-    <div class="modal-form">
-      <h2>Add Expense</h2>
-      <p>Record money spent.</p>
+    <h2>Add Expense</h2>
+
+    <form id="expenseForm">
+
+      <label>Expense Name</label>
+      <input
+        id="expenseTitle"
+        type="text"
+        placeholder="Food / Travel / Shopping"
+        required
+      >
 
       <label>Amount</label>
-      <input id="expenseAmount" type="number" inputmode="decimal"
-        placeholder="Enter amount">
+      <input
+        id="expenseAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Amount"
+        required
+      >
 
-      <label>Category</label>
-      <input id="expenseCategory" type="text"
-        placeholder="Food, travel, shopping...">
-
-      <label>Date</label>
-      <input id="expenseDate" type="date" value="${today()}">
-
-      <label>Note</label>
-      <textarea id="expenseNote"
-        placeholder="Optional note"></textarea>
-
-      <button id="saveExpenseBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save Expense
       </button>
-    </div>
+
+    </form>
   `);
 
-  const saveBtn = $("saveExpenseBtn");
+  $("expenseForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-  if (saveBtn) {
-    saveBtn.addEventListener("click", saveExpense);
-  }
-}
+    const title = $("expenseTitle").value.trim();
+    const amount = Number($("expenseAmount").value);
 
-function saveExpense() {
-  const amount = Number($("expenseAmount")?.value || 0);
-  const category =
-    $("expenseCategory")?.value.trim() || "Expense";
-  const date = $("expenseDate")?.value || today();
-  const note = $("expenseNote")?.value.trim() || "";
+    if (!title || amount <= 0) return;
 
-  if (amount <= 0) {
-    alert("Please enter a valid amount.");
-    return;
-  }
+    getCurrentAccount().expense.push({
+      id: makeId(),
+      title,
+      amount,
+      date: today(),
+      time: currentTime(),
+      createdAt: Date.now()
+    });
 
-  getCurrentAccount().expense.push({
-    id: makeId(),
-    amount,
-    title: category,
-    date,
-    time: currentTime(),
-    note
+    saveData();
+    closeModal();
+    updateHome();
   });
-
-  saveData();
-  closeModal();
-  updateHome();
 }
 
-/* =========================================================
-   PAISA LEN-DEN
-   ========================================================= */
+/* ---------- PAISA LEN-DEN ---------- */
 
-function showLendForm() {
+function showLend() {
   openModal(`
-    <div class="modal-form">
-      <h2>Paisa Len-Den</h2>
-      <p>Record money given or received.</p>
+    <h2>Paisa Len-Den</h2>
 
-      <label>Type</label>
-      <select id="lendDirection">
-        <option value="given">Money Given</option>
-        <option value="received">Money Received</option>
-      </select>
+    <form id="lendForm">
 
-      <label>Person</label>
-      <input id="lendPerson" type="text"
-        placeholder="Person name">
+      <label>Person Name</label>
+      <input
+        id="lendPerson"
+        type="text"
+        placeholder="Name"
+        required
+      >
 
       <label>Amount</label>
-      <input id="lendAmount" type="number"
-        inputmode="decimal"
-        placeholder="Enter amount">
+      <input
+        id="lendAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Amount"
+        required
+      >
 
-      <label>Date</label>
-      <input id="lendDate" type="date" value="${today()}">
+      <label>Type</label>
+      <select id="lendType">
+        <option value="given">Paisa Diya</option>
+        <option value="received">Paisa Liya</option>
+      </select>
 
-      <label>Note</label>
-      <textarea id="lendNote"
-        placeholder="Optional note"></textarea>
-
-      <button id="saveLendBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save Record
       </button>
-    </div>
+
+    </form>
   `);
 
-  $("saveLendBtn")?.addEventListener("click", saveLend);
-}
+  $("lendForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-function saveLend() {
-  const direction = $("lendDirection")?.value || "given";
-  const person = $("lendPerson")?.value.trim() || "Person";
-  const amount = Number($("lendAmount")?.value || 0);
-  const date = $("lendDate")?.value || today();
-  const note = $("lendNote")?.value.trim() || "";
+    const person = $("lendPerson").value.trim();
+    const amount = Number($("lendAmount").value);
+    const type = $("lendType").value;
 
-  if (amount <= 0) {
-    alert("Please enter a valid amount.");
-    return;
-  }
+    if (!person || amount <= 0) return;
 
-  getCurrentAccount().lend.push({
-    id: makeId(),
-    direction,
-    person,
-    title: person,
-    amount,
-    date,
-    time: currentTime(),
-    note
+    getCurrentAccount().lend.push({
+      id: makeId(),
+      title: person,
+      amount,
+      lendType: type,
+      date: today(),
+      time: currentTime(),
+      createdAt: Date.now()
+    });
+
+    saveData();
+    closeModal();
+    updateHome();
   });
-
-  saveData();
-  closeModal();
-  updateHome();
 }
 
-/* =========================================================
-   SAVINGS
-   ========================================================= */
+/* ---------- SAVINGS ---------- */
 
 function showSavings() {
-  const totalSavings = appData.savings.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
-
   openModal(`
-    <div class="modal-form">
-      <h2>🏦 Savings</h2>
+    <h2>Add Savings</h2>
 
-      <p>
-        Total saved:
-        <strong>${formatMoney(totalSavings)}</strong>
-      </p>
-
-      <label>Saving Amount</label>
-      <input id="savingAmount" type="number"
-        inputmode="decimal"
-        placeholder="Enter amount">
+    <form id="savingsForm">
 
       <label>Purpose</label>
-      <input id="savingPurpose" type="text"
-        placeholder="Car, emergency, education...">
+      <input
+        id="savingTitle"
+        type="text"
+        placeholder="Car / Bike / Emergency"
+        required
+      >
 
-      <button id="saveSavingBtn" class="primary-btn">
-        Add Savings
+      <label>Amount</label>
+      <input
+        id="savingAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Amount"
+        required
+      >
+
+      <button class="primary-btn" type="submit">
+        Save Savings
       </button>
-    </div>
+
+    </form>
   `);
 
-  $("saveSavingBtn")?.addEventListener("click", () => {
-    const amount = Number($("savingAmount")?.value || 0);
-    const purpose =
-      $("savingPurpose")?.value.trim() || "Savings";
+  $("savingsForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-    if (amount <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
+    const title = $("savingTitle").value.trim();
+    const amount = Number($("savingAmount").value);
+
+    if (!title || amount <= 0) return;
 
     appData.savings.push({
       id: makeId(),
+      title,
       amount,
-      purpose,
-      date: today()
+      date: today(),
+      createdAt: Date.now()
     });
 
     saveData();
@@ -601,55 +581,53 @@ function showSavings() {
   });
 }
 
-/* =========================================================
-   BUDGET
-   ========================================================= */
+/* ---------- BUDGET ---------- */
 
 function showBudget() {
-  const totalBudget = appData.budgets.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
-
   openModal(`
-    <div class="modal-form">
-      <h2>📊 Budget</h2>
+    <h2>Monthly Budget</h2>
 
-      <p>
-        Total planned budget:
-        <strong>${formatMoney(totalBudget)}</strong>
-      </p>
+    <form id="budgetForm">
 
-      <label>Budget Amount</label>
-      <input id="budgetAmount" type="number"
-        inputmode="decimal"
-        placeholder="Monthly budget">
+      <label>Budget Name</label>
+      <input
+        id="budgetTitle"
+        type="text"
+        placeholder="Monthly Budget"
+        required
+      >
 
-      <label>Category</label>
-      <input id="budgetCategory" type="text"
-        placeholder="Food, shopping, travel...">
+      <label>Amount</label>
+      <input
+        id="budgetAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Amount"
+        required
+      >
 
-      <button id="saveBudgetBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save Budget
       </button>
-    </div>
+
+    </form>
   `);
 
-  $("saveBudgetBtn")?.addEventListener("click", () => {
-    const amount = Number($("budgetAmount")?.value || 0);
-    const category =
-      $("budgetCategory")?.value.trim() || "Monthly Budget";
+  $("budgetForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-    if (amount <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
+    const title = $("budgetTitle").value.trim();
+    const amount = Number($("budgetAmount").value);
+
+    if (!title || amount <= 0) return;
 
     appData.budgets.push({
       id: makeId(),
+      title,
       amount,
-      category,
-      date: today()
+      date: today(),
+      createdAt: Date.now()
     });
 
     saveData();
@@ -657,49 +635,54 @@ function showBudget() {
   });
 }
 
-/* =========================================================
-   BILLS
-   ========================================================= */
+/* ---------- BILLS ---------- */
 
 function showBills() {
   openModal(`
-    <div class="modal-form">
-      <h2>🧾 Bills & Payments</h2>
+    <h2>Bills & Payments</h2>
+
+    <form id="billForm">
 
       <label>Bill Name</label>
-      <input id="billName" type="text"
-        placeholder="Electricity, mobile, rent...">
+      <input
+        id="billTitle"
+        type="text"
+        placeholder="Electricity / Mobile / Rent"
+        required
+      >
 
       <label>Amount</label>
-      <input id="billAmount" type="number"
-        inputmode="decimal"
-        placeholder="Bill amount">
+      <input
+        id="billAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Amount"
+        required
+      >
 
-      <label>Due Date</label>
-      <input id="billDate" type="date">
-
-      <button id="saveBillBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save Bill
       </button>
-    </div>
+
+    </form>
   `);
 
-  $("saveBillBtn")?.addEventListener("click", () => {
-    const name = $("billName")?.value.trim() || "Bill";
-    const amount = Number($("billAmount")?.value || 0);
-    const dueDate = $("billDate")?.value || today();
+  $("billForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-    if (amount <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
+    const title = $("billTitle").value.trim();
+    const amount = Number($("billAmount").value);
+
+    if (!title || amount <= 0) return;
 
     appData.bills.push({
       id: makeId(),
-      name,
+      title,
       amount,
-      dueDate,
-      paid: false
+      date: today(),
+      status: "pending",
+      createdAt: Date.now()
     });
 
     saveData();
@@ -707,55 +690,54 @@ function showBills() {
   });
 }
 
-/* =========================================================
-   EMI
-   ========================================================= */
+/* ---------- EMI ---------- */
 
 function showEMI() {
   openModal(`
-    <div class="modal-form">
-      <h2>🏠 Loans & EMI</h2>
+    <h2>Loans & EMI</h2>
 
-      <label>Loan / Bank Name</label>
-      <input id="emiName" type="text"
-        placeholder="Bank or finance company">
+    <form id="emiForm">
+
+      <label>Loan / EMI Name</label>
+      <input
+        id="emiTitle"
+        type="text"
+        placeholder="Home Loan / Bike EMI"
+        required
+      >
 
       <label>EMI Amount</label>
-      <input id="emiAmount" type="number"
-        inputmode="decimal"
-        placeholder="Monthly EMI">
+      <input
+        id="emiAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ EMI"
+        required
+      >
 
-      <label>Due Date</label>
-      <input id="emiDate" type="date">
-
-      <label>Total Tenure</label>
-      <input id="emiTenure" type="number"
-        placeholder="Months">
-
-      <button id="saveEMIBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save EMI
       </button>
-    </div>
+
+    </form>
   `);
 
-  $("saveEMIBtn")?.addEventListener("click", () => {
-    const name = $("emiName")?.value.trim() || "Loan";
-    const amount = Number($("emiAmount")?.value || 0);
-    const dueDate = $("emiDate")?.value || today();
-    const tenure = Number($("emiTenure")?.value || 0);
+  $("emiForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-    if (amount <= 0) {
-      alert("Please enter a valid EMI amount.");
-      return;
-    }
+    const title = $("emiTitle").value.trim();
+    const amount = Number($("emiAmount").value);
+
+    if (!title || amount <= 0) return;
 
     appData.emis.push({
       id: makeId(),
-      name,
+      title,
       amount,
-      dueDate,
-      tenure,
-      paid: false
+      date: today(),
+      status: "pending",
+      createdAt: Date.now()
     });
 
     saveData();
@@ -763,74 +745,54 @@ function showEMI() {
   });
 }
 
-/* =========================================================
-   GOALS
-   ========================================================= */
+/* ---------- GOALS ---------- */
 
 function showGoals() {
-  const goals = appData.goals || [];
-
   openModal(`
-    <div class="modal-form">
-      <h2>🎯 Goals</h2>
+    <h2>Money Goals</h2>
 
-      ${
-        goals.length
-          ? goals
-              .map(
-                goal => `
-                  <div class="goal-row">
-                    <strong>${escapeHTML(goal.name)}</strong>
-                    <small>
-                      ${formatMoney(goal.saved)}
-                      / ${formatMoney(goal.target)}
-                    </small>
-                  </div>
-                `
-              )
-              .join("")
-          : `
-            <p>No goals created yet.</p>
-          `
-      }
-
-      <hr>
+    <form id="goalForm">
 
       <label>Goal Name</label>
-      <input id="goalName" type="text"
-        placeholder="New car, bike, emergency fund...">
+      <input
+        id="goalTitle"
+        type="text"
+        placeholder="Car / Bike / Emergency Fund"
+        required
+      >
 
       <label>Target Amount</label>
-      <input id="goalTarget" type="number"
-        inputmode="decimal"
-        placeholder="Target amount">
+      <input
+        id="goalAmount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="₹ Target"
+        required
+      >
 
-      <button id="saveGoalBtn" class="primary-btn">
-        Create Goal
+      <button class="primary-btn" type="submit">
+        Save Goal
       </button>
-    </div>
+
+    </form>
   `);
 
-  $("saveGoalBtn")?.addEventListener("click", () => {
-    const name = $("goalName")?.value.trim();
-    const target = Number($("goalTarget")?.value || 0);
+  $("goalForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-    if (!name) {
-      alert("Please enter a goal name.");
-      return;
-    }
+    const title = $("goalTitle").value.trim();
+    const amount = Number($("goalAmount").value);
 
-    if (target <= 0) {
-      alert("Please enter a valid target amount.");
-      return;
-    }
+    if (!title || amount <= 0) return;
 
     appData.goals.push({
       id: makeId(),
-      name,
-      target,
+      title,
+      target: amount,
       saved: 0,
-      date: today()
+      date: today(),
+      createdAt: Date.now()
     });
 
     saveData();
@@ -838,64 +800,59 @@ function showGoals() {
   });
 }
 
-/* =========================================================
-   REPORTS
-   ========================================================= */
+/* ---------- REPORTS ---------- */
 
 function showReports() {
   const account = getCurrentAccount();
 
-  const income = (account.income || []).reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
+  const income =
+    (account.income || []).reduce(
+      (sum, item) =>
+        sum + Number(item.amount || 0),
+      0
+    );
 
-  const expense = (account.expense || []).reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
+  const expense =
+    (account.expense || []).reduce(
+      (sum, item) =>
+        sum + Number(item.amount || 0),
+      0
+    );
 
   const balance = income - expense;
 
   openModal(`
-    <div class="modal-form">
-      <h2>📈 Reports</h2>
+    <h2>Money Reports</h2>
 
-      <div class="report-box">
-        <span>Total Income</span>
-        <strong>${formatMoney(income)}</strong>
-      </div>
+    <div class="report-box">
+      <strong>Total Income</strong>
+      <span>${formatMoney(income)}</span>
+    </div>
 
-      <div class="report-box">
-        <span>Total Expense</span>
-        <strong>${formatMoney(expense)}</strong>
-      </div>
+    <div class="report-box">
+      <strong>Total Expense</strong>
+      <span>${formatMoney(expense)}</span>
+    </div>
 
-      <div class="report-box">
-        <span>Balance</span>
-        <strong>${formatMoney(balance)}</strong>
-      </div>
-
-      <div class="report-box">
-        <span>Transactions</span>
-        <strong>${getTransactions().length}</strong>
-      </div>
+    <div class="report-box">
+      <strong>Balance</strong>
+      <span>${formatMoney(balance)}</span>
     </div>
   `);
 }
 
-/* =========================================================
-   VIEW ALL
-   ========================================================= */
+/* ---------- VIEW ALL ---------- */
 
 function showAllTransactions() {
   const transactions = getTransactions();
 
   if (!transactions.length) {
     openModal(`
-      <div class="modal-form">
-        <h2>Recent Activity</h2>
-        <p>No transactions yet.</p>
+      <h2>All Transactions</h2>
+      <div class="empty-state">
+        <div>💰</div>
+        <strong>No transactions yet</strong>
+        <p>Your transaction history will appear here.</p>
       </div>
     `);
 
@@ -903,133 +860,123 @@ function showAllTransactions() {
   }
 
   openModal(`
-    <div class="modal-form">
-      <h2>All Transactions</h2>
+    <h2>All Transactions</h2>
 
-      ${transactions
-        .map(item => {
-          let type = "Income";
-          let sign = "+";
+    <div class="transaction-list">
 
-          if (item.type === "expense") {
-            type = "Expense";
-            sign = "-";
-          }
+      ${transactions.map(item => `
+        <div class="transaction-row">
 
-          if (item.type === "given") {
-            type = "Given";
-            sign = "-";
-          }
+          <strong>
+            ${escapeHTML(item.title || "Transaction")}
+          </strong>
 
-          if (item.type === "received") {
-            type = "Received";
-            sign = "+";
-          }
+          <span>
+            ${formatMoney(item.amount)}
+          </span>
 
-          return `
-            <div class="transaction-row">
-              <div>
-                <strong>
-                  ${escapeHTML(item.title || type)}
-                </strong>
+          <small>
+            ${escapeHTML(item.date || "")}
+            •
+            ${escapeHTML(item.time || "")}
+          </small>
 
-                <small>
-                  ${type} • ${escapeHTML(item.date || "")}
-                </small>
-              </div>
+        </div>
+      `).join("")}
 
-              <strong>
-                ${sign}${formatMoney(item.amount)}
-              </strong>
-            </div>
-          `;
-        })
-        .join("")}
     </div>
   `);
 }
 
-/* =========================================================
-   SETTINGS
-   ========================================================= */
+/* ---------- SETTINGS ---------- */
 
 function showSettings() {
   openModal(`
-    <div class="modal-form">
-      <h2>⚙️ Settings</h2>
+    <h2>Settings</h2>
+
+    <form id="settingsForm">
 
       <label>Currency</label>
 
       <select id="currencySelect">
-        <option value="₹">₹ Indian Rupee</option>
-        <option value="$">$ US Dollar</option>
-        <option value="€">€ Euro</option>
-        <option value="£">£ Pound</option>
+
+        <option value="₹"
+          ${appData.settings.currency === "₹" ? "selected" : ""}>
+          ₹ Indian Rupee
+        </option>
+
+        <option value="$"
+          ${appData.settings.currency === "$" ? "selected" : ""}>
+          $ US Dollar
+        </option>
+
+        <option value="€"
+          ${appData.settings.currency === "€" ? "selected" : ""}>
+          € Euro
+        </option>
+
+        <option value="£"
+          ${appData.settings.currency === "£" ? "selected" : ""}>
+          £ Pound
+        </option>
+
       </select>
 
-      <button id="saveSettingsBtn" class="primary-btn">
+      <button class="primary-btn" type="submit">
         Save Settings
       </button>
 
-      <hr>
+    </form>
 
-      <button id="clearDataBtn" class="secondary-btn">
-        Clear All Data
-      </button>
-    </div>
+    <button id="clearDataBtn" class="danger-btn">
+      Clear All Data
+    </button>
   `);
 
-  const currencySelect = $("currencySelect");
+  $("settingsForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-  if (currencySelect) {
-    currencySelect.value =
-      appData.settings.currency || "₹";
-  }
-
-  $("saveSettingsBtn")?.addEventListener("click", () => {
     appData.settings.currency =
-      $("currencySelect")?.value || "₹";
+      $("currencySelect").value;
 
     saveData();
     closeModal();
     updateHome();
   });
 
-  $("clearDataBtn")?.addEventListener("click", () => {
-    const confirmClear = confirm(
-      "Are you sure you want to delete all HISAB data?"
-    );
+  $("clearDataBtn").addEventListener("click", function() {
 
-    if (!confirmClear) {
-      return;
-    }
+    const confirmed =
+      window.confirm(
+        "Clear all HISAB data from this device?"
+      );
 
-    appData = structuredClone(defaultData);
+    if (!confirmed) return;
+
+    appData = cloneDefaultData();
+
     saveData();
-
     closeModal();
     updateHome();
-
-    alert("All data has been cleared.");
   });
 }
 
-/* =========================================================
-   ACTION ROUTER
-   ========================================================= */
+/* ---------- ACTION HANDLER ---------- */
 
 function handleAction(action) {
+
   switch (action) {
+
     case "income":
-      showIncomeForm();
+      showIncome();
       break;
 
     case "expense":
-      showExpenseForm();
+      showExpense();
       break;
 
     case "lend":
-      showLendForm();
+      showLend();
       break;
 
     case "savings":
@@ -1061,87 +1008,151 @@ function handleAction(action) {
   }
 }
 
-/* =========================================================
-   EVENT LISTENERS
-   ========================================================= */
+/* ---------- EVENTS ---------- */
 
 function setupEvents() {
 
   /* Continue */
-  $("continueBtn")?.addEventListener("click", () => {
-    showScreen("homeScreen");
-    updateHome();
-  });
+  const continueBtn = $("continueBtn");
+
+  if (continueBtn) {
+    continueBtn.addEventListener("click", function() {
+      showScreen("homeScreen");
+      updateHome();
+    });
+  }
 
   /* Personal */
-  $("personalBtn")?.addEventListener("click", () => {
-    appData.mode = "personal";
-    saveData();
-    updateHome();
-  });
+  const personalBtn = $("personalBtn");
+
+  if (personalBtn) {
+    personalBtn.addEventListener("click", function() {
+
+      appData.mode = "personal";
+
+      saveData();
+      updateHome();
+    });
+  }
 
   /* Business */
-  $("businessBtn")?.addEventListener("click", () => {
-    appData.mode = "business";
-    saveData();
-    updateHome();
-  });
+  const businessBtn = $("businessBtn");
+
+  if (businessBtn) {
+    businessBtn.addEventListener("click", function() {
+
+      appData.mode = "business";
+
+      saveData();
+      updateHome();
+    });
+  }
 
   /* Settings */
-  $("settingsBtn")?.addEventListener("click", showSettings);
+  const settingsBtn = $("settingsBtn");
+
+  if (settingsBtn) {
+    settingsBtn.addEventListener(
+      "click",
+      showSettings
+    );
+  }
 
   /* View All */
-  $("viewAllBtn")?.addEventListener(
-    "click",
-    showAllTransactions
-  );
+  const viewAllBtn = $("viewAllBtn");
 
-  /* All action cards */
+  if (viewAllBtn) {
+    viewAllBtn.addEventListener(
+      "click",
+      showAllTransactions
+    );
+  }
+
+  /* Action Cards */
   document
     .querySelectorAll("[data-action]")
-    .forEach(element => {
-      element.addEventListener("click", () => {
-        const action = element.dataset.action;
-        handleAction(action);
-      });
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        function() {
+
+          const action =
+            this.getAttribute("data-action");
+
+          handleAction(action);
+        }
+      );
+
     });
 
-  /* Close modal */
-  $("closeModal")?.addEventListener("click", closeModal);
+  /* Close Modal */
+  const closeBtn = $("closeModal");
 
-  $("modalOverlay")?.addEventListener(
-    "click",
-    closeModal
-  );
+  if (closeBtn) {
+    closeBtn.addEventListener(
+      "click",
+      closeModal
+    );
+  }
+
+  /* Modal Overlay */
+  const overlay = $("modalOverlay");
+
+  if (overlay) {
+    overlay.addEventListener(
+      "click",
+      closeModal
+    );
+  }
 
   /* Escape key */
-  document.addEventListener("keydown", event => {
-    if (event.key === "Escape") {
-      closeModal();
+  document.addEventListener(
+    "keydown",
+    function(event) {
+
+      if (event.key === "Escape") {
+        closeModal();
+      }
+
     }
-  });
+  );
 }
 
-/* =========================================================
-   APP START
-   ========================================================= */
+/* ---------- START APP ---------- */
 
 function startApp() {
-  console.log("HISAB V7 starting...");
 
-  setupEvents();
+  try {
 
-  updateHome();
+    setupEvents();
+    updateHome();
+    startSplash();
 
-  startSplash();
+  } catch (error) {
+
+    console.error(
+      "HISAB startup error:",
+      error
+    );
+
+    /* Keep app from completely crashing */
+    showScreen("welcomeScreen");
+
+  }
 }
 
-/* =========================================================
-   DOM READY
-   ========================================================= */
+/* ---------- START ---------- */
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", startApp);
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    startApp
+  );
+
 } else {
+
   startApp();
+
 }
