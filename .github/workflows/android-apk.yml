@@ -19,23 +19,16 @@ jobs:
           echo "=== Repository files ==="
           ls -la
 
-          echo "=== Required files ==="
-          test -f index.html
-          test -f app.js
-          test -f style.css
+          echo "=== www files ==="
+          ls -la www
+
+          test -f www/index.html
+          test -f www/app.js
+          test -f www/style.css
           test -f package.json
+          test -f Capacitor.config.ts
 
           echo "All required files found."
-
-      - name: Prepare www folder
-        run: |
-          mkdir -p www
-          cp index.html www/index.html
-          cp app.js www/app.js
-          cp style.css www/style.css
-
-          echo "=== www files ==="
-          ls -lh www/
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
