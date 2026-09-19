@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+
+  <meta name="theme-color" content="#0b1f33">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <title>HISAB — Money Manager</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div id="app">
+
+    <!-- Splash -->
+    <section id="splashScreen" class="screen active">
+      <div class="splash-logo">₹</div>
+      <h1>HISAB</h1>
+      <p>Money Manager</p>
+      <small>Track • Plan • Grow</small>
+    </section>
+
+    <!-- Welcome -->
+    <section id="welcomeScreen" class="screen">
+
+      <div class="brand">
+        <div class="brand-logo">₹</div>
+        <h1>HISAB</h1>
+        <p>Money Manager</p>
+      </div>
+
+      <div class="welcome-card">
+        <h2>Manage Your Money</h2>
+        <p>
+          Track income, expenses, savings, loans and daily money records
+          in one simple place.
+        </p>
+
+        <button id="continueBtn" class="primary-btn">
+          Continue Without Login
+        </button>
+      </div>
+
+      <p class="offline-note">
+        🔒 Your data stays on your device
+      </p>
+
+    </section>
+
+    <!-- Main Home -->
+    <section id="homeScreen" class="screen">
+
+      <header class="topbar">
+        <div>
+          <span class="hello">Welcome to</span>
+          <h1>HISAB</h1>
+        </div>
+
+        <button id="settingsBtn" class="icon-btn" aria-label="Settings">
+          ⚙️
+        </button>
+      </header>
+
+      <!-- Personal / Business -->
+      <div class="mode-switch">
+
+        <button
+          id="personalBtn"
+          class="mode-btn active"
+          data-mode="personal"
+        >
+          👤 Personal
+        </button>
+
+        <button
+          id="businessBtn"
+          class="mode-btn"
+          data-mode="business"
+        >
+          💼 Business
+        </button>
+
+      </div>
+
+      <!-- Money Overview -->
+      <div class="balance-card">
+
+        <div class="balance-title">
+          <span>Total Balance</span>
+          <span id="currencyLabel">₹</span>
+        </div>
+
+        <div id="totalBalance" class="total-balance">
+          ₹0
+        </div>
+
+        <div class="balance-row">
+
+          <div>
+            <span>Income</span>
+            <strong id="totalIncome">₹0</strong>
+          </div>
+
+          <div>
+            <span>Expense</span>
+            <strong id="totalExpense">₹0</strong>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section-header">
+        <h2>Quick Actions</h2>
+      </div>
+
+      <div class="quick-grid">
+
+        <button class="action-card" data-action="income">
+          <span>💰</span>
+          <strong>Income</strong>
+          <small>Add money received</small>
+        </button>
+
+        <button class="action-card" data-action="expense">
+          <span>💸</span>
+          <strong>Expense</strong>
+          <small>Record spending</small>
+        </button>
+
+        <button class="action-card" data-action="lend">
+          <span>🤝</span>
+          <strong>Paisa Len-Den</strong>
+          <small>Given & received</small>
+        </button>
+
+        <button class="action-card" data-action="savings">
+          <span>🏦</span>
+          <strong>Savings</strong>
+          <small>Build your savings</small>
+        </button>
+
+      </div>
+
+      <!-- Main Features -->
+      <div class="section-header">
+        <h2>Manage Money</h2>
+      </div>
+
+      <div class="feature-list">
+
+        <button class="feature-item" data-action="budget">
+          <span class="feature-icon">📊</span>
+          <span>
+            <strong>Budget</strong>
+            <small>Plan your monthly budget</small>
+          </span>
+          <b>›</b>
+        </button>
+
+        <button class="feature-item" data-action="bills">
+          <span class="feature-icon">🧾</span>
+          <span>
+            <strong>Bills & Payments</strong>
+            <small>Track upcoming bills</small>
+          </span>
+          <b>›</b>
+        </button>
+
+        <button class="feature-item" data-action="emi">
+          <span class="feature-icon">🏠</span>
+          <span>
+            <strong>Loans & EMI</strong>
+            <small>Track loans and installments</small>
+          </span>
+          <b>›</b>
+        </button>
+
+        <button class="feature-item" data-action="goals">
+          <span class="feature-icon">🎯</span>
+          <span>
+            <strong>Goals</strong>
+            <small>Save for your future goals</small>
+          </span>
+          <b>›</b>
+        </button>
+
+        <button class="feature-item" data-action="reports">
+          <span class="feature-icon">📈</span>
+          <span>
+            <strong>Reports</strong>
+            <small>Understand your money</small>
+          </span>
+          <b>›</b>
+        </button>
+
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section-header">
+        <h2>Recent Activity</h2>
+        <button id="viewAllBtn" class="text-btn">View All</button>
+      </div>
+
+      <div id="recentActivity" class="activity-card">
+        <div class="empty-state">
+          <div>💰</div>
+          <strong>No transactions yet</strong>
+          <p>Add your first income or expense.</p>
+        </div>
+      </div>
+
+      <footer class="app-footer">
+        <strong>HISAB</strong>
+        <span>Track • Plan • Grow</span>
+      </footer>
+
+    </section>
+
+    <!-- Generic Modal -->
+    <div id="modal" class="modal hidden">
+
+      <div class="modal-overlay" id="modalOverlay"></div>
+
+      <div class="modal-card">
+
+        <button id="closeModal" class="close-btn">
+          ×
+        </button>
+
+        <div id="modalContent"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
