@@ -108,13 +108,35 @@ jobs:
             exit 1
           fi
 
-          echo "APK successfully created:"
+          echo "=== APK FILE ==="
           ls -lh "$APK"
 
-          echo "Checking APK integrity..."
+          echo "=== APK ZIP INTEGRITY ==="
           unzip -t "$APK" > /dev/null
+          echo "APK ZIP integrity check passed."
 
-          echo "APK integrity check passed."
+          echo "=== APK SIGNATURE ==="
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found"
+            exit 1
+          fi
+
+          echo "Using: $APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+
+          echo "=== APK PACKAGE INFORMATION ==="
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+
+          if [ -z "$AAPT" ]; then
+            echo "ERROR: aapt not found"
+            exit 1
+          fi
+
+          "$AAPT" dump badging "$APK" | head -n 5
+
+          echo "=== APK VERIFICATION COMPLETE ==="
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
