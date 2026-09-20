@@ -1,9 +1,9 @@
-      (() => {
+(() => {
   "use strict";
 
   /* =========================================================
-     HISAB V7 - FINAL CONSOLIDATED APP.JS
-     Local-first / No-login / Mobile friendly
+     HISAB GLOBAL V7 — FINAL APP.JS
+     Local-first • No Login • Offline Ready
      ========================================================= */
 
   const STORAGE_KEY = "hisab_v7_data";
@@ -11,6 +11,7 @@
   const DEFAULT_DATA = {
     mode: "personal",
     currency: "₹",
+    language: "en",
 
     transactions: [],
     lendDen: [],
@@ -19,211 +20,189 @@
     bills: [],
     loans: [],
 
-    budgets: {
-      personal: 0,
-      business: 0
-    }
+    budget: 0
   };
 
-  let state = load();
+  /* =========================================================
+     DATA
+     ========================================================= */
+
+  function loadData() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+      const data = JSON.parse(saved);
+
+      return {
+        ...DEFAULT_DATA,
+        ...data,
+        transactions: Array.isArray(data.transactions) ? data.transactions : [],
+        lendDen: Array.isArray(data.lendDen) ? data.lendDen : [],
+        savings: Array.isArray(data.savings) ? data.savings : [],
+        goals: Array.isArray(data.goals) ? data.goals : [],
+        bills: Array.isArray(data.bills) ? data.bills : [],
+        loans: Array.isArray(data.loans) ? data.loans : []
+      };
+    } catch (e) {
+      console.error("HISAB data load error:", e);
+      return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
+  }
+
+  let data = loadData();
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    updateDashboard();
+  }
 
   /* =========================================================
-     BASIC HELPERS
+     HELPERS
      ========================================================= */
 
   function $(id) {
     return document.getElementById(id);
   }
 
-  function uid(prefix = "id") {
-    return (
-      prefix +
-      "_" +
-      Date.now().toString(36) +
-      "_" +
-      Math.random().toString(36).slice(2, 8)
-    );
-  }
+  function money(value) {
+    const n = Number(value) || 0;
 
-  function nowISO() {
-    return new Date().toISOString();
+    try {
+      return data.currency + n.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      });
+    } catch {
+      return data.currency + n;
+    }
   }
 
   function today() {
     return new Date().toISOString().slice(0, 10);
   }
 
-  function num(value) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
+  function nowTime() {
+    return new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
-  function money(value) {
-    const amount = num(value);
-
-    try {
-      return (
-        state.currency +
-        amount.toLocaleString("en-IN", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2
-        })
-      );
-    } catch {
-      return state.currency + amount.toFixed(2);
-    }
+  function uid(prefix = "id") {
+    return (
+      prefix +
+      "_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2, 8)
+    );
   }
 
-  function safe(value) {
+  function escapeHTML(value) {
     return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  function titleCase(value) {
-    return String(value || "")
-      .replace(/[-_]/g, " ")
-      .replace(/\b\w/g, c => c.toUpperCase());
-  }
+  function notify(message) {
+    const old = document.querySelector(".hisab-toast");
+    if (old) old.remove();
 
-  function currentMode() {
-    return state.mode === "business" ? "business" : "personal";
-  }
+    const toast = document.createElement("div");
+    toast.className = "hisab-toast";
+    toast.textContent = message;
 
-  function modeLabel() {
-    return currentMode() === "business" ? "Business" : "Personal";
-  }
-
-  /* =========================================================
-     STORAGE
-     ========================================================= */
-
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (!raw) {
-        return structuredClone(DEFAULT_DATA);
-      }
-
-      const saved = JSON.parse(raw);
-
-      const data = {
-        ...structuredClone(DEFAULT_DATA),
-        ...saved
-      };
-
-      data.transactions = Array.isArray(saved.transactions)
-        ? saved.transactions
-        : [];
-
-      data.lendDen = Array.isArray(saved.lendDen)
-        ? saved.lendDen
-        : [];
-
-      data.savings = Array.isArray(saved.savings)
-        ? saved.savings
-        : [];
-
-      data.goals = Array.isArray(saved.goals)
-        ? saved.goals
-        : [];
-
-      data.bills = Array.isArray(saved.bills)
-        ? saved.bills
-        : [];
-
-      data.loans = Array.isArray(saved.loans)
-        ? saved.loans
-        : [];
-
-      if (typeof saved.budgets === "object" && saved.budgets) {
-        data.budgets = {
-          ...DEFAULT_DATA.budgets,
-          ...saved.budgets
-        };
-      } else {
-        data.budgets = {
-          personal: num(saved.budget),
-          business: 0
-        };
-      }
-
-      if (!["personal", "business"].includes(data.mode)) {
-        data.mode = "personal";
-      }
-
-      return data;
-    } catch (error) {
-      console.error("HISAB load error:", error);
-      return structuredClone(DEFAULT_DATA);
-    }
-  }
-
-  function save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      return true;
-    } catch (error) {
-      console.error("HISAB save error:", error);
-      return false;
-    }
-  }
-
-  /* =========================================================
-     MODE HELPERS
-     ========================================================= */
-
-  function itemMode(item) {
-    return item && item.mode
-      ? item.mode
-      : "personal";
-  }
-
-  function modeItems(list) {
-    return list.filter(item => itemMode(item) === currentMode());
-  }
-
-  /* =========================================================
-     SCREEN / MODAL
-     ========================================================= */
-
-  function showScreen(id) {
-    document.querySelectorAll(".screen").forEach(screen => {
-      screen.classList.remove("active");
+    Object.assign(toast.style, {
+      position: "fixed",
+      left: "50%",
+      bottom: "85px",
+      transform: "translateX(-50%)",
+      zIndex: "99999",
+      padding: "12px 18px",
+      borderRadius: "14px",
+      background: "#0b1f33",
+      color: "#fff",
+      fontSize: "14px",
+      boxShadow: "0 8px 30px rgba(0,0,0,.25)"
     });
 
-    const target = $(id);
+    document.body.appendChild(toast);
 
-    if (target) {
-      target.classList.add("active");
-    }
+    setTimeout(() => toast.remove(), 2200);
   }
 
+  /* =========================================================
+     NAVIGATION
+     ========================================================= */
+
   function showHome() {
-    showScreen("homeScreen");
-    updateMode();
+    hideAllScreens();
+
+    const home =
+      $("homeScreen") ||
+      $("home") ||
+      $("mainScreen") ||
+      document.querySelector("[data-screen='home']");
+
+    if (home) {
+      home.style.display = "";
+      home.classList.add("active");
+    }
+
     updateDashboard();
   }
 
-  function openModal(html) {
-    const modal = $("modal");
-    const content = $("modalContent");
+  function hideAllScreens() {
+    const selectors = [
+      ".screen",
+      ".page",
+      ".app-screen",
+      "[data-screen]"
+    ];
 
-    if (!modal || !content) return;
-
-    content.innerHTML = html;
-    modal.classList.remove("hidden");
+    document.querySelectorAll(selectors.join(",")).forEach(el => {
+      if (
+        el.id !== "homeScreen" &&
+        el.id !== "home" &&
+        el.id !== "mainScreen" &&
+        el.dataset.screen !== "home"
+      ) {
+        el.style.display = "none";
+        el.classList.remove("active");
+      }
+    });
   }
 
-  function closeModal() {
-    const modal = $("modal");
+  function openFeature(name) {
+    const map = {
+      income: "showIncome",
+      expense: "showExpense",
+      lendden: "showLendDen",
+      khata: "showLendDen",
+      savings: "showSavings",
+      goals: "showGoals",
+      budget: "showBudget",
+      bills: "showBills",
+      loans: "showLoans",
+      emi: "showLoans",
+      reports: "showReports",
+      analytics: "showReports",
+      transactions: "showTransactions",
+      settings: "showSettings",
+      security: "showSecurity",
+      backup: "showBackup"
+    };
 
-    if (modal) {
-      modal.classList.add("hidden");
+    const fn = map[String(name).toLowerCase()];
+
+    if (fn && typeof window[fn] === "function") {
+      window[fn]();
+    } else {
+      notify("Feature opening...");
     }
   }
 
@@ -231,1527 +210,1070 @@
      DASHBOARD
      ========================================================= */
 
-  function currentTransactions() {
-    return modeItems(state.transactions);
+  function getIncome() {
+    return data.transactions
+      .filter(t => t.type === "income")
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
   }
 
-  function calculateTotals() {
-    const transactions = currentTransactions();
-
-    let income = 0;
-    let expense = 0;
-
-    transactions.forEach(t => {
-      if (t.type === "income") {
-        income += num(t.amount);
-      }
-
-      if (t.type === "expense") {
-        expense += num(t.amount);
-      }
-    });
-
-    return {
-      income,
-      expense,
-      balance: income - expense
-    };
+  function getExpense() {
+    return data.transactions
+      .filter(t => t.type === "expense")
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
   }
 
-  function updateMode() {
-    const personalBtn = $("personalBtn");
-    const businessBtn = $("businessBtn");
-
-    if (personalBtn) {
-      personalBtn.classList.toggle(
-        "active",
-        currentMode() === "personal"
-      );
-    }
-
-    if (businessBtn) {
-      businessBtn.classList.toggle(
-        "active",
-        currentMode() === "business"
-      );
-    }
-
-    const labels = document.querySelectorAll("[data-mode-label]");
-
-    labels.forEach(el => {
-      el.textContent = modeLabel();
-    });
+  function getBalance() {
+    return getIncome() - getExpense();
   }
 
   function updateDashboard() {
-    const totals = calculateTotals();
+    const income = getIncome();
+    const expense = getExpense();
+    const balance = income - expense;
 
-    if ($("totalBalance")) {
-      $("totalBalance").textContent = money(totals.balance);
-    }
-
-    if ($("totalIncome")) {
-      $("totalIncome").textContent = money(totals.income);
-    }
-
-    if ($("totalExpense")) {
-      $("totalExpense").textContent = money(totals.expense);
-    }
-
-    if ($("currencyLabel")) {
-      $("currencyLabel").textContent = state.currency;
-    }
-
-    updateRecent();
-    updateMode();
-  }
-
-  function updateRecent() {
-    const container = $("recentActivity");
-
-    if (!container) return;
-
-    const list = currentTransactions()
-      .slice()
-      .sort((a, b) => {
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      })
-      .slice(0, 5);
-
-    if (!list.length) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div>No transactions yet</div>
-          <small>Add your first income or expense.</small>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = list
-      .map(t => {
-        const positive = t.type === "income";
-
-        return `
-          <div class="activity-item">
-            <div>
-              <strong>${safe(t.title || titleCase(t.type))}</strong>
-              <small>${safe(t.date || "")}</small>
-            </div>
-
-            <strong>
-              ${positive ? "+" : "-"}${money(t.amount)}
-            </strong>
-
-            <button
-              type="button"
-              class="small-delete-btn"
-              data-delete-transaction="${safe(t.id)}"
-            >
-              ×
-            </button>
-          </div>
-        `;
-      })
-      .join("");
-
-    container
-      .querySelectorAll("[data-delete-transaction]")
-      .forEach(button => {
-        button.onclick = () => {
-          deleteTransaction(button.dataset.deleteTransaction);
-        };
-      });
-  }
-
-  /* =========================================================
-     TRANSACTIONS
-     ========================================================= */
-
-  function transactionForm(type) {
-    const isIncome = type === "income";
-
-    openModal(`
-      <div class="modal-inner">
-        <h2>${isIncome ? "Add Income" : "Add Expense"}</h2>
-
-        <form id="transactionForm">
-          <label>
-            Title
-            <input
-              id="transactionTitle"
-              type="text"
-              placeholder="${isIncome ? "Salary, Sales..." : "Food, Shopping..."}"
-              required
-            >
-          </label>
-
-          <label>
-            Amount
-            <input
-              id="transactionAmount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              inputmode="decimal"
-              placeholder="0"
-              required
-            >
-          </label>
-
-          <label>
-            Date
-            <input
-              id="transactionDate"
-              type="date"
-              value="${today()}"
-              required
-            >
-          </label>
-
-          <label>
-            Note
-            <textarea
-              id="transactionNote"
-              placeholder="Optional note"
-            ></textarea>
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Save ${isIncome ? "Income" : "Expense"}
-          </button>
-        </form>
-      </div>
-    `);
-
-    const form = $("transactionForm");
-
-    if (!form) return;
-
-    form.onsubmit = event => {
-      event.preventDefault();
-
-      const title = $("transactionTitle").value.trim();
-      const amount = num($("transactionAmount").value);
-      const date = $("transactionDate").value || today();
-      const note = $("transactionNote").value.trim();
-
-      if (!title || amount <= 0) {
-        alert("Please enter a valid title and amount.");
-        return;
-      }
-
-      state.transactions.push({
-        id: uid("txn"),
-        mode: currentMode(),
-        type,
-        title,
-        amount,
-        date,
-        note,
-        createdAt: nowISO()
-      });
-
-      save();
-      closeModal();
-      updateDashboard();
+    const values = {
+      income,
+      totalIncome: income,
+      expense,
+      totalExpense: expense,
+      balance,
+      totalBalance: balance,
+      savings: data.savings.reduce(
+        (s, x) => s + Number(x.amount || 0),
+        0
+      ),
+      budget: Number(data.budget || 0)
     };
-  }
 
-  function deleteTransaction(id) {
-    const index = state.transactions.findIndex(
-      item => item.id === id
+    Object.entries(values).forEach(([key, value]) => {
+      const ids = [
+        key,
+        `${key}Amount`,
+        `total${key.charAt(0).toUpperCase()}${key.slice(1)}`
+      ];
+
+      ids.forEach(id => {
+        const el = $(id);
+        if (el) el.textContent = money(value);
+      });
+    });
+
+    const modeEls = document.querySelectorAll(
+      "[data-current-mode], .current-mode"
     );
 
-    if (index === -1) return;
+    modeEls.forEach(el => {
+      el.textContent =
+        data.mode === "business" ? "Business" : "Personal";
+    });
 
-    if (!confirm("Delete this transaction?")) return;
-
-    state.transactions.splice(index, 1);
-    save();
-    updateDashboard();
+    renderRecentTransactions();
   }
 
   /* =========================================================
-     PAISA LEN-DEN
+     GENERIC MODAL
      ========================================================= */
 
-  function lendDen() {
-    const items = modeItems(state.lendDen);
+  function closeModal() {
+    document.querySelectorAll(
+      ".hisab-modal, .modal, [data-hisab-modal]"
+    ).forEach(m => {
+      if (m.dataset.hisabGenerated === "true") m.remove();
+      else m.style.display = "none";
+    });
+  }
 
-    const given = items
-      .filter(x => x.type === "given" && x.status !== "paid")
-      .reduce((sum, x) => sum + num(x.amount), 0);
+  function createModal(title, body, submitText = "Save", onSubmit) {
+    closeModal();
 
-    const received = items
-      .filter(x => x.type === "received" && x.status !== "paid")
-      .reduce((sum, x) => sum + num(x.amount), 0);
+    const modal = document.createElement("div");
 
-    openModal(`
-      <div class="modal-inner">
-        <h2>Paisa Len-Den</h2>
+    modal.className = "hisab-modal";
+    modal.dataset.hisabGenerated = "true";
 
-        <div class="summary-grid">
-          <div>
-            <small>Given</small>
-            <strong>${money(given)}</strong>
-          </div>
+    Object.assign(modal.style, {
+      position: "fixed",
+      inset: "0",
+      background: "rgba(0,0,0,.45)",
+      zIndex: "99998",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "16px"
+    });
 
-          <div>
-            <small>Received</small>
-            <strong>${money(received)}</strong>
-          </div>
+    modal.innerHTML = `
+      <div style="
+        width:100%;
+        max-width:430px;
+        max-height:90vh;
+        overflow:auto;
+        background:#fff;
+        border-radius:22px;
+        padding:20px;
+        box-sizing:border-box;
+      ">
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:10px;
+          margin-bottom:18px;
+        ">
+          <h2 style="margin:0">${escapeHTML(title)}</h2>
+          <button type="button"
+            data-close-modal
+            style="
+              border:0;
+              background:#eee;
+              width:36px;
+              height:36px;
+              border-radius:50%;
+              font-size:20px;
+            ">×</button>
         </div>
 
-        <form id="lendForm">
-          <label>
-            Person Name
-            <input id="lendName" type="text" required>
-          </label>
+        <form data-hisab-form>
+          ${body}
 
-          <label>
-            Type
-            <select id="lendType">
-              <option value="given">Paisa Diya</option>
-              <option value="received">Paisa Liya</option>
-            </select>
-          </label>
-
-          <label>
-            Amount
-            <input
-              id="lendAmount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              inputmode="decimal"
-              required
-            >
-          </label>
-
-          <label>
-            Date
-            <input id="lendDate" type="date" value="${today()}">
-          </label>
-
-          <label>
-            Note
-            <textarea id="lendNote"></textarea>
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Save Entry
+          <button type="submit"
+            style="
+              width:100%;
+              margin-top:16px;
+              padding:14px;
+              border:0;
+              border-radius:14px;
+              background:#0b1f33;
+              color:white;
+              font-size:16px;
+              font-weight:700;
+            ">
+            ${escapeHTML(submitText)}
           </button>
         </form>
-
-        <hr>
-
-        <div id="lendList">
-          ${items.length
-            ? items
-                .slice()
-                .reverse()
-                .map(item => `
-                  <div class="activity-item">
-                    <div>
-                      <strong>${safe(item.name)}</strong>
-                      <small>
-                        ${item.type === "given" ? "Given" : "Received"}
-                        • ${safe(item.date)}
-                      </small>
-                    </div>
-
-                    <strong>${money(item.amount)}</strong>
-
-                    <button
-                      type="button"
-                      data-delete-lend="${safe(item.id)}"
-                    >
-                      ×
-                    </button>
-                  </div>
-                `)
-                .join("")
-            : `<div class="empty-state">No entries yet.</div>`
-          }
-        </div>
       </div>
-    `);
+    `;
 
-    const form = $("lendForm");
+    document.body.appendChild(modal);
 
-    if (form) {
-      form.onsubmit = event => {
-        event.preventDefault();
+    modal.querySelector("[data-close-modal]")
+      .addEventListener("click", closeModal);
 
-        const name = $("lendName").value.trim();
-        const amount = num($("lendAmount").value);
+    modal.addEventListener("click", e => {
+      if (e.target === modal) closeModal();
+    });
 
-        if (!name || amount <= 0) {
-          alert("Please enter name and valid amount.");
+    modal.querySelector("form").addEventListener("submit", e => {
+      e.preventDefault();
+
+      try {
+        onSubmit(new FormData(e.target));
+      } catch (err) {
+        console.error(err);
+        notify("Please check the details");
+      }
+    });
+
+    return modal;
+  }
+
+  function input(label, name, type = "text", required = false) {
+    return `
+      <label style="display:block;margin-top:12px;font-weight:600">
+        ${escapeHTML(label)}
+        <input
+          name="${escapeHTML(name)}"
+          type="${escapeHTML(type)}"
+          ${required ? "required" : ""}
+          style="
+            width:100%;
+            box-sizing:border-box;
+            margin-top:6px;
+            padding:12px;
+            border:1px solid #ddd;
+            border-radius:12px;
+            font-size:16px;
+          "
+        >
+      </label>
+    `;
+  }
+
+  function select(label, name, options) {
+    return `
+      <label style="display:block;margin-top:12px;font-weight:600">
+        ${escapeHTML(label)}
+        <select
+          name="${escapeHTML(name)}"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            margin-top:6px;
+            padding:12px;
+            border:1px solid #ddd;
+            border-radius:12px;
+            font-size:16px;
+          ">
+          ${options.map(o =>
+            `<option value="${escapeHTML(o[0])}">
+              ${escapeHTML(o[1])}
+            </option>`
+          ).join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  /* =========================================================
+     INCOME
+     ========================================================= */
+
+  function showIncome() {
+    createModal(
+      "Add Income",
+      input("Amount", "amount", "number", true) +
+      input("Source", "source", "text", true) +
+      input("Date", "date", "date", true) +
+      input("Note", "note"),
+      "Add Income",
+      fd => {
+        const amount = Number(fd.get("amount"));
+
+        if (amount <= 0) {
+          notify("Enter a valid amount");
           return;
         }
 
-        state.lendDen.push({
-          id: uid("lend"),
-          mode: currentMode(),
-          name,
-          type: $("lendType").value,
+        data.transactions.push({
+          id: uid("income"),
+          type: "income",
           amount,
-          date: $("lendDate").value || today(),
-          note: $("lendNote").value.trim(),
-          status: "pending",
-          createdAt: nowISO()
+          category: "Income",
+          source: fd.get("source") || "Income",
+          note: fd.get("note") || "",
+          date: fd.get("date") || today(),
+          time: nowTime(),
+          createdAt: Date.now()
         });
 
-        save();
-        lendDen();
-      };
-    }
+        saveData();
+        closeModal();
+        notify("Income added successfully");
+      }
+    );
+  }
 
-    document
-      .querySelectorAll("[data-delete-lend]")
-      .forEach(button => {
-        button.onclick = () => {
-          const id = button.dataset.deleteLend;
+  /* =========================================================
+     EXPENSE
+     ========================================================= */
 
-          if (!confirm("Delete this entry?")) return;
+  function showExpense() {
+    createModal(
+      "Add Expense",
+      input("Amount", "amount", "number", true) +
+      input("Category", "category", "text", true) +
+      input("Date", "date", "date", true) +
+      input("Note", "note"),
+      "Add Expense",
+      fd => {
+        const amount = Number(fd.get("amount"));
 
-          state.lendDen = state.lendDen.filter(
-            item => item.id !== id
-          );
+        if (amount <= 0) {
+          notify("Enter a valid amount");
+          return;
+        }
 
-          save();
-          lendDen();
-        };
-      });
+        data.transactions.push({
+          id: uid("expense"),
+          type: "expense",
+          amount,
+          category: fd.get("category") || "Expense",
+          note: fd.get("note") || "",
+          date: fd.get("date") || today(),
+          time: nowTime(),
+          createdAt: Date.now()
+        });
+
+        saveData();
+        closeModal();
+        notify("Expense added successfully");
+      }
+    );
+  }
+
+  /* =========================================================
+     LEN-DEN
+     ========================================================= */
+
+  function showLendDen() {
+    const body =
+      input("Person Name", "person", "text", true) +
+      input("Amount", "amount", "number", true) +
+      select("Type", "type", [
+        ["given", "Paisa Diya"],
+        ["received", "Paisa Liya"]
+      ]) +
+      input("Date", "date", "date", true) +
+      input("Note", "note");
+
+    createModal(
+      "Paisa Len-Den",
+      body,
+      "Save Transaction",
+      fd => {
+        const amount = Number(fd.get("amount"));
+
+        if (amount <= 0) {
+          notify("Enter a valid amount");
+          return;
+        }
+
+        data.lendDen.push({
+          id: uid("lend"),
+          person: fd.get("person"),
+          amount,
+          type: fd.get("type"),
+          date: fd.get("date") || today(),
+          note: fd.get("note") || "",
+          createdAt: Date.now()
+        });
+
+        saveData();
+        closeModal();
+        notify("Len-Den saved");
+      }
+    );
   }
 
   /* =========================================================
      SAVINGS
      ========================================================= */
 
-  function savings() {
-    const items = modeItems(state.savings);
+  function showSavings() {
+    createModal(
+      "Add Savings",
+      input("Amount", "amount", "number", true) +
+      input("Purpose", "purpose", "text", true) +
+      input("Date", "date", "date", true) +
+      input("Note", "note"),
+      "Save",
+      fd => {
+        const amount = Number(fd.get("amount"));
 
-    const total = items.reduce(
-      (sum, item) => sum + num(item.amount),
-      0
-    );
-
-    openModal(`
-      <div class="modal-inner">
-        <h2>Savings</h2>
-
-        <div class="summary-card">
-          <small>Total Savings</small>
-          <h2>${money(total)}</h2>
-        </div>
-
-        <form id="savingForm">
-          <label>
-            Purpose
-            <input id="savingPurpose" type="text"
-              placeholder="Emergency, Car, Home..." required>
-          </label>
-
-          <label>
-            Amount
-            <input id="savingAmount" type="number"
-              min="0.01" step="0.01"
-              inputmode="decimal" required>
-          </label>
-
-          <label>
-            Date
-            <input id="savingDate" type="date" value="${today()}">
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Add Saving
-          </button>
-        </form>
-
-        <hr>
-
-        ${
-          items.length
-            ? items
-                .slice()
-                .reverse()
-                .map(item => `
-                  <div class="activity-item">
-                    <div>
-                      <strong>${safe(item.purpose)}</strong>
-                      <small>${safe(item.date)}</small>
-                    </div>
-
-                    <strong>${money(item.amount)}</strong>
-
-                    <button
-                      type="button"
-                      data-delete-saving="${safe(item.id)}"
-                    >
-                      ×
-                    </button>
-                  </div>
-                `)
-                .join("")
-            : `<div class="empty-state">No savings added yet.</div>`
-        }
-      </div>
-    `);
-
-    const form = $("savingForm");
-
-    if (form) {
-      form.onsubmit = event => {
-        event.preventDefault();
-
-        const purpose = $("savingPurpose").value.trim();
-        const amount = num($("savingAmount").value);
-
-        if (!purpose || amount <= 0) {
-          alert("Please enter valid saving details.");
+        if (amount <= 0) {
+          notify("Enter a valid amount");
           return;
         }
 
-        state.savings.push({
-          id: uid("save"),
-          mode: currentMode(),
-          purpose,
+        data.savings.push({
+          id: uid("saving"),
           amount,
-          date: $("savingDate").value || today(),
-          createdAt: nowISO()
+          purpose: fd.get("purpose"),
+          date: fd.get("date") || today(),
+          note: fd.get("note") || "",
+          createdAt: Date.now()
         });
 
-        save();
-        savings();
-      };
-    }
-
-    document
-      .querySelectorAll("[data-delete-saving]")
-      .forEach(button => {
-        button.onclick = () => {
-          if (!confirm("Delete this saving?")) return;
-
-          state.savings = state.savings.filter(
-            item => item.id !== button.dataset.deleteSaving
-          );
-
-          save();
-          savings();
-        };
-      });
-  }
-
-  /* =========================================================
-     BUDGET
-     ========================================================= */
-
-  function budget() {
-    const key = currentMode();
-    const currentBudget = num(state.budgets[key]);
-
-    const totals = calculateTotals();
-
-    const remaining =
-      currentBudget - totals.expense;
-
-    openModal(`
-      <div class="modal-inner">
-        <h2>${modeLabel()} Budget</h2>
-
-        <div class="summary-grid">
-          <div>
-            <small>Budget</small>
-            <strong>${money(currentBudget)}</strong>
-          </div>
-
-          <div>
-            <small>Spent</small>
-            <strong>${money(totals.expense)}</strong>
-          </div>
-
-          <div>
-            <small>Remaining</small>
-            <strong>${money(remaining)}</strong>
-          </div>
-        </div>
-
-        <form id="budgetForm">
-          <label>
-            Monthly Budget
-            <input
-              id="budgetAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              inputmode="decimal"
-              value="${currentBudget || ""}"
-              required
-            >
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Save Budget
-          </button>
-        </form>
-      </div>
-    `);
-
-    const form = $("budgetForm");
-
-    if (form) {
-      form.onsubmit = event => {
-        event.preventDefault();
-
-        state.budgets[key] = num(
-          $("budgetAmount").value
-        );
-
-        save();
+        saveData();
         closeModal();
-        updateDashboard();
-        alert("Budget saved.");
-      };
-    }
-  }
-
-  /* =========================================================
-     BILLS
-     ========================================================= */
-
-  function bills() {
-    const items = modeItems(state.bills);
-
-    openModal(`
-      <div class="modal-inner">
-        <h2>Bills</h2>
-
-        <form id="billForm">
-          <label>
-            Bill Name
-            <input id="billName" type="text"
-              placeholder="Electricity, Internet..." required>
-          </label>
-
-          <label>
-            Amount
-            <input id="billAmount" type="number"
-              min="0.01" step="0.01"
-              inputmode="decimal" required>
-          </label>
-
-          <label>
-            Due Date
-            <input id="billDueDate" type="date" required>
-          </label>
-
-          <label>
-            Status
-            <select id="billStatus">
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-            </select>
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Save Bill
-          </button>
-        </form>
-
-        <hr>
-
-        ${
-          items.length
-            ? items
-                .slice()
-                .reverse()
-                .map(item => `
-                  <div class="activity-item">
-                    <div>
-                      <strong>${safe(item.name)}</strong>
-                      <small>
-                        Due: ${safe(item.dueDate)}
-                        • ${item.status === "paid" ? "Paid" : "Pending"}
-                      </small>
-                    </div>
-
-                    <strong>${money(item.amount)}</strong>
-
-                    <button
-                      type="button"
-                      data-toggle-bill="${safe(item.id)}"
-                    >
-                      ${item.status === "paid" ? "↩" : "✓"}
-                    </button>
-
-                    <button
-                      type="button"
-                      data-delete-bill="${safe(item.id)}"
-                    >
-                      ×
-                    </button>
-                  </div>
-                `)
-                .join("")
-            : `<div class="empty-state">No bills added yet.</div>`
-        }
-      </div>
-    `);
-
-    const form = $("billForm");
-
-    if (form) {
-      form.onsubmit = event => {
-        event.preventDefault();
-
-        const name = $("billName").value.trim();
-        const amount = num($("billAmount").value);
-        const dueDate = $("billDueDate").value;
-
-        if (!name || amount <= 0 || !dueDate) {
-          alert("Please enter valid bill details.");
-          return;
-        }
-
-        state.bills.push({
-          id: uid("bill"),
-          mode: currentMode(),
-          name,
-          amount,
-          dueDate,
-          status: $("billStatus").value,
-          createdAt: nowISO()
-        });
-
-        save();
-        bills();
-      };
-    }
-
-    document
-      .querySelectorAll("[data-toggle-bill]")
-      .forEach(button => {
-        button.onclick = () => {
-          const item = state.bills.find(
-            x => x.id === button.dataset.toggleBill
-          );
-
-          if (!item) return;
-
-          item.status =
-            item.status === "paid"
-              ? "pending"
-              : "paid";
-
-          save();
-          bills();
-        };
-      });
-
-    document
-      .querySelectorAll("[data-delete-bill]")
-      .forEach(button => {
-        button.onclick = () => {
-          if (!confirm("Delete this bill?")) return;
-
-          state.bills = state.bills.filter(
-            x => x.id !== button.dataset.deleteBill
-          );
-
-          save();
-          bills();
-        };
-      });
-  }
-
-  /* =========================================================
-     LOANS / EMI
-     ========================================================= */
-
-  function loans() {
-    const items = modeItems(state.loans);
-
-    openModal(`
-      <div class="modal-inner">
-        <h2>Loans & EMI</h2>
-
-        <form id="loanForm">
-          <label>
-            Loan / EMI Name
-            <input id="loanName" type="text"
-              placeholder="Bike EMI, Personal Loan..." required>
-          </label>
-
-          <label>
-            Total Amount
-            <input id="loanAmount" type="number"
-              min="0.01" step="0.01"
-              inputmode="decimal" required>
-          </label>
-
-          <label>
-            EMI Amount
-            <input id="loanEmi" type="number"
-              min="0.01" step="0.01"
-              inputmode="decimal" required>
-          </label>
-
-          <label>
-            Due Date
-            <input id="loanDueDate" type="date" required>
-          </label>
-
-          <label>
-            Status
-            <select id="loanStatus">
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-            </select>
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Save EMI
-          </button>
-        </form>
-
-        <hr>
-
-        ${
-          items.length
-            ? items
-                .slice()
-                .reverse()
-                .map(item => `
-                  <div class="activity-item">
-                    <div>
-                      <strong>${safe(item.name)}</strong>
-                      <small>
-                        EMI ${money(item.emi)}
-                        • Due ${safe(item.dueDate)}
-                        • ${item.status}
-                      </small>
-                    </div>
-
-                    <strong>${money(item.amount)}</strong>
-
-                    <button
-                      type="button"
-                      data-toggle-loan="${safe(item.id)}"
-                    >
-                      ${item.status === "paid" ? "↩" : "✓"}
-                    </button>
-
-                    <button
-                      type="button"
-                      data-delete-loan="${safe(item.id)}"
-                    >
-                      ×
-                    </button>
-                  </div>
-                `)
-                .join("")
-            : `<div class="empty-state">No EMI added yet.</div>`
-        }
-      </div>
-    `);
-
-    const form = $("loanForm");
-
-    if (form) {
-      form.onsubmit = event => {
-        event.preventDefault();
-
-        const name = $("loanName").value.trim();
-        const amount = num($("loanAmount").value);
-        const emi = num($("loanEmi").value);
-        const dueDate = $("loanDueDate").value;
-
-        if (!name || amount <= 0 || emi <= 0 || !dueDate) {
-          alert("Please enter valid EMI details.");
-          return;
-        }
-
-        state.loans.push({
-          id: uid("loan"),
-          mode: currentMode(),
-          name,
-          amount,
-          emi,
-          dueDate,
-          status: $("loanStatus").value,
-          createdAt: nowISO()
-        });
-
-        save();
-        loans();
-      };
-    }
-
-    document
-      .querySelectorAll("[data-toggle-loan]")
-      .forEach(button => {
-        button.onclick = () => {
-          const item = state.loans.find(
-            x => x.id === button.dataset.toggleLoan
-          );
-
-          if (!item) return;
-
-          item.status =
-            item.status === "paid"
-              ? "pending"
-              : "paid";
-
-          save();
-          loans();
-        };
-      });
-
-    document
-      .querySelectorAll("[data-delete-loan]")
-      .forEach(button => {
-        button.onclick = () => {
-          if (!confirm("Delete this EMI?")) return;
-
-          state.loans = state.loans.filter(
-            x => x.id !== button.dataset.deleteLoan
-          );
-
-          save();
-          loans();
-        };
-      });
+        notify("Savings added");
+      }
+    );
   }
 
   /* =========================================================
      GOALS
      ========================================================= */
 
-  function goals() {
-    const items = modeItems(state.goals);
+  function showGoals() {
+    createModal(
+      "Create Goal",
+      input("Goal Name", "name", "text", true) +
+      input("Target Amount", "target", "number", true) +
+      input("Saved Amount", "saved", "number") +
+      input("Target Date", "date", "date"),
+      "Create Goal",
+      fd => {
+        const target = Number(fd.get("target"));
 
-    openModal(`
-      <div class="modal-inner">
-        <h2>Goals</h2>
-
-        <form id="goalForm">
-          <label>
-            Goal Name
-            <input id="goalName" type="text"
-              placeholder="New Bike, Emergency Fund..." required>
-          </label>
-
-          <label>
-            Target Amount
-            <input id="goalTarget" type="number"
-              min="0.01" step="0.01"
-              inputmode="decimal" required>
-          </label>
-
-          <label>
-            Saved Amount
-            <input id="goalSaved" type="number"
-              min="0" step="0.01"
-              inputmode="decimal"
-              value="0">
-          </label>
-
-          <label>
-            Target Date
-            <input id="goalDate" type="date">
-          </label>
-
-          <button class="primary-btn" type="submit">
-            Save Goal
-          </button>
-        </form>
-
-        <hr>
-
-        ${
-          items.length
-            ? items
-                .slice()
-                .reverse()
-                .map(item => {
-                  const target = num(item.target);
-                  const saved = num(item.saved);
-
-                  const percent =
-                    target > 0
-                      ? Math.min(
-                          100,
-                          Math.round((saved / target) * 100)
-                        )
-                      : 0;
-
-                  return `
-                    <div class="goal-item">
-                      <strong>${safe(item.name)}</strong>
-
-                      <small>
-                        ${money(saved)} / ${money(target)}
-                        • ${percent}%
-                      </small>
-
-                      <div class="goal-progress">
-                        <div
-                          style="width:${percent}%"
-                        ></div>
-                      </div>
-
-                      <button
-                        type="button"
-                        data-delete-goal="${safe(item.id)}"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  `;
-                })
-                .join("")
-            : `<div class="empty-state">No goals added yet.</div>`
-        }
-      </div>
-    `);
-
-    const form = $("goalForm");
-
-    if (form) {
-      form.onsubmit = event => {
-        event.preventDefault();
-
-        const name = $("goalName").value.trim();
-        const target = num($("goalTarget").value);
-        const saved = num($("goalSaved").value);
-
-        if (!name || target <= 0) {
-          alert("Please enter a valid goal.");
+        if (target <= 0) {
+          notify("Enter a valid target");
           return;
         }
 
-        state.goals.push({
+        data.goals.push({
           id: uid("goal"),
-          mode: currentMode(),
-          name,
+          name: fd.get("name"),
           target,
-          saved: Math.min(saved, target),
-          targetDate: $("goalDate").value || "",
-          createdAt: nowISO()
+          saved: Number(fd.get("saved")) || 0,
+          date: fd.get("date") || "",
+          createdAt: Date.now()
         });
 
-        save();
-        goals();
-      };
+        saveData();
+        closeModal();
+        notify("Goal created");
+      }
+    );
+  }
+
+  /* =========================================================
+     BUDGET
+     ========================================================= */
+
+  function showBudget() {
+    createModal(
+      "Monthly Budget",
+      input("Budget Amount", "amount", "number", true),
+      "Save Budget",
+      fd => {
+        const amount = Number(fd.get("amount"));
+
+        if (amount < 0) {
+          notify("Enter a valid budget");
+          return;
+        }
+
+        data.budget = amount;
+
+        saveData();
+        closeModal();
+        notify("Budget saved");
+      }
+    );
+  }
+
+  /* =========================================================
+     BILLS
+     ========================================================= */
+
+  function showBills() {
+    createModal(
+      "Add Bill / Reminder",
+      input("Bill Name", "name", "text", true) +
+      input("Amount", "amount", "number", true) +
+      input("Due Date", "dueDate", "date", true) +
+      select("Status", "status", [
+        ["pending", "Pending"],
+        ["paid", "Paid"]
+      ]) +
+      input("Note", "note"),
+      "Save Bill",
+      fd => {
+        data.bills.push({
+          id: uid("bill"),
+          name: fd.get("name"),
+          amount: Number(fd.get("amount")) || 0,
+          dueDate: fd.get("dueDate") || today(),
+          status: fd.get("status") || "pending",
+          note: fd.get("note") || "",
+          createdAt: Date.now()
+        });
+
+        saveData();
+        closeModal();
+        notify("Bill saved");
+      }
+    );
+  }
+
+  /* =========================================================
+     LOANS / EMI
+     ========================================================= */
+
+  function showLoans() {
+    createModal(
+      "Add Loan / EMI",
+      input("Loan / Company Name", "name", "text", true) +
+      input("Loan Amount", "amount", "number", true) +
+      input("EMI Amount", "emi", "number", true) +
+      input("Due Date", "dueDate", "date", true) +
+      input("Tenure (Months)", "tenure", "number") +
+      select("Status", "status", [
+        ["pending", "Pending"],
+        ["paid", "Paid"]
+      ]),
+      "Save Loan",
+      fd => {
+        data.loans.push({
+          id: uid("loan"),
+          name: fd.get("name"),
+          amount: Number(fd.get("amount")) || 0,
+          emi: Number(fd.get("emi")) || 0,
+          dueDate: fd.get("dueDate") || today(),
+          tenure: Number(fd.get("tenure")) || 0,
+          status: fd.get("status") || "pending",
+          createdAt: Date.now()
+        });
+
+        saveData();
+        closeModal();
+        notify("Loan / EMI saved");
+      }
+    );
+  }
+
+  /* =========================================================
+     TRANSACTIONS
+     ========================================================= */
+
+  function showTransactions() {
+    closeModal();
+
+    const rows = [...data.transactions]
+      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+      .map(t => `
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+          padding:13px 0;
+          border-bottom:1px solid #eee;
+        ">
+          <div>
+            <strong>${escapeHTML(
+              t.source || t.category || t.type
+            )}</strong>
+            <div style="font-size:12px;color:#777">
+              ${escapeHTML(t.date || "")}
+              ${escapeHTML(t.time || "")}
+            </div>
+            ${t.note ? `
+              <div style="font-size:12px;color:#777">
+                ${escapeHTML(t.note)}
+              </div>
+            ` : ""}
+          </div>
+
+          <div style="
+            font-weight:800;
+            color:${t.type === "income" ? "green" : "#c62828"};
+          ">
+            ${t.type === "income" ? "+" : "-"}${money(t.amount)}
+          </div>
+        </div>
+      `)
+      .join("");
+
+    createModal(
+      "Transactions",
+      `
+        <div>
+          ${
+            rows ||
+            `<p style="text-align:center;color:#777">
+              No transactions yet.
+            </p>`
+          }
+        </div>
+      `,
+      "Close",
+      () => closeModal()
+    );
+  }
+
+  function renderRecentTransactions() {
+    const container =
+      $("recentTransactions") ||
+      document.querySelector("[data-recent-transactions]");
+
+    if (!container) return;
+
+    const recent = [...data.transactions]
+      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+      .slice(0, 5);
+
+    if (!recent.length) {
+      container.innerHTML =
+        `<div style="padding:15px;color:#777">
+          No transactions yet
+        </div>`;
+      return;
     }
 
-    document
-      .querySelectorAll("[data-delete-goal]")
-      .forEach(button => {
-        button.onclick = () => {
-          if (!confirm("Delete this goal?")) return;
-
-          state.goals = state.goals.filter(
-            x => x.id !== button.dataset.deleteGoal
-          );
-
-          save();
-          goals();
-        };
-      });
+    container.innerHTML = recent.map(t => `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        padding:10px 0;
+        border-bottom:1px solid #eee;
+      ">
+        <span>
+          ${escapeHTML(t.source || t.category || t.type)}
+        </span>
+        <strong>
+          ${t.type === "income" ? "+" : "-"}${money(t.amount)}
+        </strong>
+      </div>
+    `).join("");
   }
 
   /* =========================================================
      REPORTS
      ========================================================= */
 
-  function reports() {
-    const totals = calculateTotals();
+  function showReports() {
+    const income = getIncome();
+    const expense = getExpense();
+    const balance = income - expense;
 
-    const lendItems = modeItems(state.lendDen);
-
-    const given = lendItems
+    const given = data.lendDen
       .filter(x => x.type === "given")
-      .reduce((sum, x) => sum + num(x.amount), 0);
+      .reduce((s, x) => s + Number(x.amount || 0), 0);
 
-    const received = lendItems
+    const received = data.lendDen
       .filter(x => x.type === "received")
-      .reduce((sum, x) => sum + num(x.amount), 0);
+      .reduce((s, x) => s + Number(x.amount || 0), 0);
 
-    const savingsTotal = modeItems(state.savings)
-      .reduce((sum, x) => sum + num(x.amount), 0);
+    const pendingBills = data.bills.filter(
+      x => x.status !== "paid"
+    ).length;
 
-    const pendingBills = modeItems(state.bills)
-      .filter(x => x.status !== "paid")
-      .reduce((sum, x) => sum + num(x.amount), 0);
+    const pendingLoans = data.loans.filter(
+      x => x.status !== "paid"
+    ).length;
 
-    const pendingEMI = modeItems(state.loans)
-      .filter(x => x.status !== "paid")
-      .reduce((sum, x) => sum + num(x.emi), 0);
+    createModal(
+      "Reports & Analytics",
+      `
+        <div style="display:grid;gap:10px">
 
-    openModal(`
-      <div class="modal-inner">
-        <h2>${modeLabel()} Reports</h2>
-
-        <div class="summary-grid">
-          <div>
-            <small>Income</small>
-            <strong>${money(totals.income)}</strong>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+            <small>Total Income</small>
+            <h3>${money(income)}</h3>
           </div>
 
-          <div>
-            <small>Expense</small>
-            <strong>${money(totals.expense)}</strong>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+            <small>Total Expense</small>
+            <h3>${money(expense)}</h3>
           </div>
 
-          <div>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
             <small>Balance</small>
-            <strong>${money(totals.balance)}</strong>
+            <h3>${money(balance)}</h3>
           </div>
 
-          <div>
-            <small>Savings</small>
-            <strong>${money(savingsTotal)}</strong>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+            <small>Paisa Diya</small>
+            <h3>${money(given)}</h3>
           </div>
 
-          <div>
-            <small>Paisa Given</small>
-            <strong>${money(given)}</strong>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+            <small>Paisa Liya</small>
+            <h3>${money(received)}</h3>
           </div>
 
-          <div>
-            <small>Paisa Received</small>
-            <strong>${money(received)}</strong>
-          </div>
-
-          <div>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
             <small>Pending Bills</small>
-            <strong>${money(pendingBills)}</strong>
+            <h3>${pendingBills}</h3>
           </div>
 
-          <div>
-            <small>Pending EMI</small>
-            <strong>${money(pendingEMI)}</strong>
+          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+            <small>Pending Loans / EMI</small>
+            <h3>${pendingLoans}</h3>
           </div>
+
         </div>
-
-        <button
-          type="button"
-          class="primary-btn"
-          id="closeReportBtn"
-        >
-          Done
-        </button>
-      </div>
-    `);
-
-    const close = $("closeReportBtn");
-
-    if (close) {
-      close.onclick = closeModal;
-    }
-  }
-
-  /* =========================================================
-     VIEW ALL
-     ========================================================= */
-
-  function viewAll() {
-    const items = currentTransactions()
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt || 0) -
-          new Date(a.createdAt || 0)
-      );
-
-    openModal(`
-      <div class="modal-inner">
-        <h2>All Transactions</h2>
-
-        ${
-          items.length
-            ? items
-                .map(item => `
-                  <div class="activity-item">
-                    <div>
-                      <strong>${safe(item.title)}</strong>
-                      <small>
-                        ${safe(item.date)}
-                        • ${titleCase(item.type)}
-                      </small>
-                    </div>
-
-                    <strong>
-                      ${item.type === "income" ? "+" : "-"}
-                      ${money(item.amount)}
-                    </strong>
-
-                    <button
-                      type="button"
-                      data-delete-all-transaction="${safe(item.id)}"
-                    >
-                      ×
-                    </button>
-                  </div>
-                `)
-                .join("")
-            : `<div class="empty-state">No transactions yet.</div>`
-        }
-      </div>
-    `);
-
-    document
-      .querySelectorAll("[data-delete-all-transaction]")
-      .forEach(button => {
-        button.onclick = () => {
-          deleteTransaction(
-            button.dataset.deleteAllTransaction
-          );
-          viewAll();
-        };
-      });
+      `,
+      "Close",
+      () => closeModal()
+    );
   }
 
   /* =========================================================
      SETTINGS
      ========================================================= */
 
-  function settings() {
-    openModal(`
-      <div class="modal-inner">
-        <h2>Settings</h2>
+  function showSettings() {
+    createModal(
+      "Settings",
+      `
+        ${select("Mode", "mode", [
+          ["personal", "Personal"],
+          ["business", "Business"]
+        ])}
 
-        <div class="settings-row">
-          <strong>Current Mode</strong>
-          <span>${modeLabel()}</span>
-        </div>
+        ${select("Currency", "currency", [
+          ["₹", "Indian Rupee (₹)"],
+          ["$", "US Dollar ($)"],
+          ["€", "Euro (€)"],
+          ["£", "British Pound (£)"],
+          ["¥", "Japanese Yen (¥)"],
+          ["AED ", "UAE Dirham"]
+        ])}
 
-        <div class="settings-row">
-          <strong>Currency</strong>
-          <button
-            type="button"
-            id="currencyBtn"
-          >
-            ${safe(state.currency)}
-          </button>
-        </div>
+        ${select("Language", "language", [
+          ["en", "English"],
+          ["hi", "Hindi"]
+        ])}
+      `,
+      "Save Settings",
+      fd => {
+        data.mode = fd.get("mode") || "personal";
+        data.currency = fd.get("currency") || "₹";
+        data.language = fd.get("language") || "en";
 
-        <button
-          type="button"
-          class="primary-btn"
-          id="exportBtn"
-        >
-          Export Data
-        </button>
-
-        <button
-          type="button"
-          id="clearDataBtn"
-        >
-          Clear All Data
-        </button>
-      </div>
-    `);
-
-    const currencyBtn = $("currencyBtn");
-
-    if (currencyBtn) {
-      currencyBtn.onclick = currency;
-    }
-
-    const exportBtn = $("exportBtn");
-
-    if (exportBtn) {
-      exportBtn.onclick = exportData;
-    }
-
-    const clearBtn = $("clearDataBtn");
-
-    if (clearBtn) {
-      clearBtn.onclick = clearData;
-    }
-  }
-
-  function currency() {
-    openModal(`
-      <div class="modal-inner">
-        <h2>Select Currency</h2>
-
-        <button type="button" data-currency="₹">₹ Indian Rupee</button>
-        <button type="button" data-currency="$">$ US Dollar</button>
-        <button type="button" data-currency="€">€ Euro</button>
-        <button type="button" data-currency="£">£ Pound</button>
-        <button type="button" data-currency="¥">¥ Yen</button>
-      </div>
-    `);
-
-    document
-      .querySelectorAll("[data-currency]")
-      .forEach(button => {
-        button.onclick = () => {
-          state.currency = button.dataset.currency;
-          save();
-          closeModal();
-          updateDashboard();
-        };
-      });
+        saveData();
+        closeModal();
+        notify("Settings saved");
+      }
+    );
   }
 
   /* =========================================================
-     EXPORT
+     SECURITY
      ========================================================= */
 
-  function exportData() {
-    try {
-      const json = JSON.stringify(state, null, 2);
-      const blob = new Blob([json], {
-        type: "application/json"
-      });
+  function showSecurity() {
+    createModal(
+      "Security",
+      `
+        <div style="line-height:1.6">
+          <p><strong>HISAB Security</strong></p>
+          <p>
+            Your financial data is stored locally on this device.
+          </p>
+          <p>
+            Biometric/app-lock integration can be added through
+            native Android security APIs.
+          </p>
+        </div>
+      `,
+      "Close",
+      () => closeModal()
+    );
+  }
 
-      const url = URL.createObjectURL(blob);
+  /* =========================================================
+     BACKUP / RESTORE
+     ========================================================= */
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `HISAB-${today()}.json`;
+  function showBackup() {
+    createModal(
+      "Backup & Restore",
+      `
+        <button type="button"
+          id="exportHisab"
+          style="
+            width:100%;
+            padding:14px;
+            border:0;
+            border-radius:14px;
+            background:#0b1f33;
+            color:white;
+            font-weight:700;
+          ">
+          Export Backup
+        </button>
 
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+        <label style="
+          display:block;
+          margin-top:14px;
+          padding:14px;
+          border:1px dashed #aaa;
+          border-radius:14px;
+          text-align:center;
+          cursor:pointer;
+        ">
+          Import Backup
+          <input
+            id="importHisab"
+            type="file"
+            accept=".json,application/json"
+            style="display:none"
+          >
+        </label>
+      `,
+      "Close",
+      () => closeModal()
+    );
 
-      URL.revokeObjectURL(url);
+    $("exportHisab").addEventListener("click", exportBackup);
 
-      alert("HISAB data exported.");
-    } catch (error) {
-      console.error(error);
-      alert("Export failed.");
-    }
+    $("importHisab").addEventListener(
+      "change",
+      importBackup
+    );
+  }
+
+  function exportBackup() {
+    const blob = new Blob(
+      [JSON.stringify(data, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      "HISAB_Backup_" +
+      new Date().toISOString().slice(0, 10) +
+      ".json";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+    notify("Backup exported");
+  }
+
+  function importBackup(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(reader.result);
+
+        if (!imported || typeof imported !== "object") {
+          throw new Error("Invalid backup");
+        }
+
+        data = {
+          ...DEFAULT_DATA,
+          ...imported
+        };
+
+        saveData();
+        closeModal();
+
+        notify("Backup restored successfully");
+      } catch (e) {
+        console.error(e);
+        notify("Invalid backup file");
+      }
+    };
+
+    reader.readAsText(file);
   }
 
   /* =========================================================
      CLEAR DATA
      ========================================================= */
 
-  function clearData() {
+  function clearAllData() {
     const ok = confirm(
-      "This will delete all HISAB data from this device. Continue?"
+      "Delete all HISAB data from this device?"
     );
 
     if (!ok) return;
 
-    state = structuredClone(DEFAULT_DATA);
-    save();
+    data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
-    closeModal();
-    updateDashboard();
+    saveData();
 
-    alert("All HISAB data has been cleared.");
+    notify("All data cleared");
   }
 
   /* =========================================================
-     ACTION ROUTER
+     QUICK BUTTON AUTO CONNECTION
      ========================================================= */
 
-  function action(name) {
-    switch (name) {
-      case "income":
-        transactionForm("income");
-        break;
+  function bindButtons() {
+    const selectors = [
+      "[data-action]",
+      "[data-feature]",
+      "[data-screen-button]"
+    ];
 
-      case "expense":
-        transactionForm("expense");
-        break;
+    document.querySelectorAll(selectors.join(",")).forEach(btn => {
+      if (btn.dataset.hisabBound === "true") return;
 
-      case "lend":
-      case "lendDen":
-      case "paisa":
-        lendDen();
-        break;
+      btn.dataset.hisabBound = "true";
 
-      case "savings":
-        savings();
-        break;
+      btn.addEventListener("click", e => {
+        const action =
+          btn.dataset.action ||
+          btn.dataset.feature ||
+          btn.dataset.screenButton;
 
-      case "budget":
-        budget();
-        break;
+        if (!action) return;
 
-      case "bills":
-        bills();
-        break;
+        if (action === "home") {
+          showHome();
+          return;
+        }
 
-      case "emi":
-      case "loans":
-        loans();
-        break;
+        if (action === "clear") {
+          clearAllData();
+          return;
+        }
 
-      case "goals":
-        goals();
-        break;
-
-      case "reports":
-        reports();
-        break;
-
-      default:
-        console.warn("Unknown HISAB action:", name);
-    }
-  }
-
-  /* =========================================================
-     EVENT BINDING
-     ========================================================= */
-
-  function bind(id, handler) {
-    const element = $(id);
-
-    if (!element) return;
-
-    element.onclick = event => {
-      event.preventDefault();
-      event.stopPropagation();
-      handler(event);
-    };
-  }
-
-  function init() {
-    /* Continue Without Login */
-    bind("continueBtn", () => {
-      showHome();
-    });
-
-    /* Personal */
-    bind("personalBtn", () => {
-      state.mode = "personal";
-      save();
-      updateDashboard();
-    });
-
-    /* Business */
-    bind("businessBtn", () => {
-      state.mode = "business";
-      save();
-      updateDashboard();
-    });
-
-    /* Settings */
-    bind("settingsBtn", settings);
-
-    /* Modal close */
-    bind("closeModal", closeModal);
-
-    bind("modalOverlay", closeModal);
-
-    /* Quick + feature actions */
-    document
-      .querySelectorAll("[data-action]")
-      .forEach(button => {
-        button.onclick = event => {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const actionName =
-            button.getAttribute("data-action");
-
-          action(actionName);
-        };
+        openFeature(action);
       });
-
-    /* View all */
-    bind("viewAllBtn", viewAll);
-
-    /* Prevent modal card click from closing modal */
-    const modalContent = $("modalContent");
-
-    if (modalContent) {
-      modalContent.onclick = event => {
-        event.stopPropagation();
-      };
-    }
-
-    /* Escape key */
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape") {
-        closeModal();
-      }
     });
 
-    /* Initial dashboard */
-    updateDashboard();
+    /* Common button text fallback */
+    document.querySelectorAll("button").forEach(btn => {
+      if (btn.dataset.hisabBound === "true") return;
 
-    /* Splash */
-    setTimeout(() => {
-      const splash = $("splashScreen");
-      const welcome = $("welcomeScreen");
+      const text = btn.textContent
+        .trim()
+        .toLowerCase();
 
-      if (splash && welcome) {
-        splash.classList.remove("active");
-        welcome.classList.add("active");
+      let action = null;
+
+      if (
+        text.includes("income") ||
+        text.includes("aamdani")
+      ) action = "income";
+
+      else if (
+        text.includes("expense") ||
+        text.includes("kharcha")
+      ) action = "expense";
+
+      else if (
+        text.includes("len-den") ||
+        text.includes("lend") ||
+        text.includes("udhaar") ||
+        text.includes("khata")
+      ) action = "lendden";
+
+      else if (
+        text.includes("saving")
+      ) action = "savings";
+
+      else if (
+        text.includes("goal")
+      ) action = "goals";
+
+      else if (
+        text.includes("budget")
+      ) action = "budget";
+
+      else if (
+        text.includes("bill")
+      ) action = "bills";
+
+      else if (
+        text.includes("loan") ||
+        text.includes("emi")
+      ) action = "loans";
+
+      else if (
+        text.includes("report") ||
+        text.includes("analytics")
+      ) action = "reports";
+
+      else if (
+        text.includes("transaction")
+      ) action = "transactions";
+
+      else if (
+        text.includes("setting")
+      ) action = "settings";
+
+      if (action) {
+        btn.dataset.hisabBound = "true";
+
+        btn.addEventListener("click", e => {
+          e.preventDefault();
+          openFeature(action);
+        });
       }
-    }, 1400);
+    });
   }
 
   /* =========================================================
-     START
-     ========================================================= */
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-
-  /* =========================================================
-     OPTIONAL GLOBAL ACCESS
-     Useful for debugging without breaking app.
-     ========================================================= */
-
-  /* =========================================================
-     OPTIONAL GLOBAL ACCESS
-     Useful for debugging without breaking app.
+     GLOBAL API
      ========================================================= */
 
   window.HISAB = {
-    getState: () => state,
-    save,
-    refresh: updateDashboard,
-    open: openModal,
-    close: closeModal
+    data,
+    saveData,
+    showHome,
+    showIncome,
+    showExpense,
+    showLendDen,
+    showSavings,
+    showGoals,
+    showBudget,
+    showBills,
+    showLoans,
+    showTransactions,
+    showReports,
+    showSettings,
+    showSecurity,
+    showBackup,
+    exportBackup,
+    importBackup,
+    clearAllData,
+    updateDashboard,
+    openFeature
   };
 
+  /* Direct global functions for existing HTML */
+  window.showHome = showHome;
+  window.showIncome = showIncome;
+  window.showExpense = showExpense;
+  window.showLendDen = showLendDen;
+  window.showSavings = showSavings;
+  window.showGoals = showGoals;
+  window.showBudget = showBudget;
+  window.showBills = showBills;
+  window.showLoans = showLoans;
+  window.showTransactions = showTransactions;
+  window.showReports = showReports;
+  window.showSettings = showSettings;
+  window.showSecurity = showSecurity;
+  window.showBackup = showBackup;
+  window.exportBackup = exportBackup;
+  window.clearAllData = clearAllData;
+  window.updateDashboard = updateDashboard;
+
   /* =========================================================
-     ANDROID BACK BUTTON SUPPORT
+     STARTUP
      ========================================================= */
 
-  document.addEventListener("backbutton", function (event) {
-    event.preventDefault();
+  function initHISAB() {
+    bindButtons();
+    updateDashboard();
 
-    const modal = $("modal");
+    /* Continue Without Login / Start buttons */
+    document.querySelectorAll("button, a").forEach(el => {
+      const text = el.textContent.trim().toLowerCase();
 
-    /* If modal is open, close it first */
-    if (modal && !modal.classList.contains("hidden")) {
-      closeModal();
-      return;
-    }
+      if (
+        text.includes("continue without login") ||
+        text === "continue" ||
+        text.includes("get started") ||
+        text.includes("start using hisab")
+      ) {
+        el.addEventListener("click", e => {
+          e.preventDefault();
 
-    /* If Home is open, go back to Welcome */
-    const home = $("homeScreen");
+          const welcome =
+            $("welcomeScreen") ||
+            $("loginScreen") ||
+            $("landingScreen") ||
+            document.querySelector(".welcome-screen");
 
-    if (home && home.classList.contains("active")) {
-      showScreen("welcomeScreen");
-      return;
-    }
+          if (welcome) {
+            welcome.style.display = "none";
+          }
 
-    /* If Welcome is open, stay here */
-    const welcome = $("welcomeScreen");
+          showHome();
+        });
+      }
+    });
 
-    if (welcome && welcome.classList.contains("active")) {
-      return;
-    }
-  });
+    console.log("HISAB V7 initialized successfully");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initHISAB
+    );
+  } else {
+    initHISAB();
+  }
 
 })();
