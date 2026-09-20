@@ -4,9 +4,38 @@
   /* =========================================================
      HISAB GLOBAL V7 — FINAL APP.JS
      Local-first • No Login • Offline Ready
+     Personal + Business • Goals • Reports • AdMob Ready
      ========================================================= */
 
   const STORAGE_KEY = "hisab_v7_data";
+
+  /* =========================================================
+     ADMOB CONFIG
+     ========================================================= */
+
+  const ADMOB_CONFIG = {
+    enabled: true,
+
+    bannerId:
+      "ca-app-pub-7508826045358834/9556512077",
+
+    interstitialId:
+      "ca-app-pub-7508826045358834/3969143474",
+
+    appOpenId:
+      "ca-app-pub-7508826045358834/3729470322"
+  };
+
+  let AdMob = null;
+  let admobReady = false;
+  let appOpenLoaded = false;
+  let interstitialReady = false;
+  let adSaveCounter = 0;
+  let appOpenShownThisSession = false;
+
+  /* =========================================================
+     DATA
+     ========================================================= */
 
   const DEFAULT_DATA = {
     mode: "personal",
@@ -23,26 +52,37 @@
     budget: 0
   };
 
-  /* =========================================================
-     DATA
-     ========================================================= */
-
   function loadData() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+      if (!saved) {
+        return JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
 
       const data = JSON.parse(saved);
 
       return {
         ...DEFAULT_DATA,
         ...data,
-        transactions: Array.isArray(data.transactions) ? data.transactions : [],
-        lendDen: Array.isArray(data.lendDen) ? data.lendDen : [],
-        savings: Array.isArray(data.savings) ? data.savings : [],
-        goals: Array.isArray(data.goals) ? data.goals : [],
-        bills: Array.isArray(data.bills) ? data.bills : [],
-        loans: Array.isArray(data.loans) ? data.loans : []
+        transactions: Array.isArray(data.transactions)
+          ? data.transactions
+          : [],
+        lendDen: Array.isArray(data.lendDen)
+          ? data.lendDen
+          : [],
+        savings: Array.isArray(data.savings)
+          ? data.savings
+          : [],
+        goals: Array.isArray(data.goals)
+          ? data.goals
+          : [],
+        bills: Array.isArray(data.bills)
+          ? data.bills
+          : [],
+        loans: Array.isArray(data.loans)
+          ? data.loans
+          : []
       };
     } catch (e) {
       console.error("HISAB data load error:", e);
@@ -53,8 +93,32 @@
   let data = loadData();
 
   function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(data)
+      );
+    } catch (e) {
+      console.error("HISAB save error:", e);
+      notify("Unable to save data");
+    }
+
     updateDashboard();
+
+    /*
+      Prepare/show interstitial only after a natural amount
+      of successful actions. This avoids showing ads after
+      every transaction.
+    */
+    adSaveCounter++;
+
+    if (
+      adSaveCounter >= 5 &&
+      admobReady
+    ) {
+      adSaveCounter = 0;
+      showInterstitialAd();
+    }
   }
 
   /* =========================================================
@@ -110,9 +174,11 @@
 
   function notify(message) {
     const old = document.querySelector(".hisab-toast");
+
     if (old) old.remove();
 
     const toast = document.createElement("div");
+
     toast.className = "hisab-toast";
     toast.textContent = message;
 
@@ -132,7 +198,384 @@
 
     document.body.appendChild(toast);
 
-    setTimeout(() => toast.remove(), 2200);
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 2200);
+  }
+
+  /* =========================================================
+     ADMOB
+     ========================================================= */
+
+  function getAdMobPlugin() {
+    try {
+      const Capacitor =
+        window.Capacitor || null;
+
+      if (!Capacitor) {
+        return null;
+      }
+
+      if (
+        Capacitor.Plugins &&
+        Capacitor.Plugins.AdMob
+      ) {
+        return Capacitor.Plugins.AdMob;
+      }
+
+      if (
+        typeof Capacitor.registerPlugin === "function"
+      ) {
+        return Capacitor.registerPlugin("AdMob");
+      }
+
+      return null;
+    } catch (e) {
+      console.warn(
+        "HISAB AdMob plugin unavailable:",
+        e
+      );
+
+      return null;
+    }
+  }
+
+  async function initAdMob() {
+    if (!ADMOB_CONFIG.enabled) {
+      return;
+    }
+
+    try {
+      AdMob = getAdMobPlugin();
+
+      if (!AdMob) {
+        console.log(
+          "HISAB: AdMob native plugin not available. Web mode continues."
+        );
+        return;
+      }
+
+      if (
+        typeof AdMob.initialize !== "function"
+      ) {
+        console.log(
+          "HISAB: AdMob API not available."
+        );
+        return;
+      }
+
+      await AdMob.initialize();
+
+      /*
+        Privacy consent is requested before ads are loaded.
+        If consent is not ready, HISAB continues normally
+        without displaying an ad.
+      */
+      let consentInfo = null;
+
+      if (
+        typeof AdMob.requestConsentInfo ===
+        "function"
+      ) {
+        try {
+          consentInfo =
+            await AdMob.requestConsentInfo();
+
+          if (
+            consentInfo &&
+            consentInfo.isConsentFormAvailable &&
+            consentInfo.status === "REQUIRED" &&
+            typeof AdMob.showConsentForm ===
+              "function"
+          ) {
+            consentInfo =
+              await AdMob.showConsentForm();
+          }
+        } catch (consentError) {
+          console.warn(
+            "HISAB AdMob consent:",
+            consentError
+          );
+        }
+      }
+
+      /*
+        If consent information says ads cannot be requested,
+        simply continue using HISAB without ads.
+      */
+      if (
+        consentInfo &&
+        consentInfo.canRequestAds === false
+      ) {
+        console.log(
+          "HISAB: Ads not available because consent is not ready."
+        );
+        return;
+      }
+
+      admobReady = true;
+
+      await showBannerAd();
+
+      /*
+        Prepare interstitial in background.
+      */
+      await prepareInterstitialAd();
+
+      /*
+        Prepare App Open ad.
+        App Open is not allowed to block startup.
+      */
+      await prepareAppOpenAd();
+
+      console.log(
+        "HISAB AdMob initialized successfully"
+      );
+    } catch (e) {
+      console.warn(
+        "HISAB AdMob initialization failed:",
+        e
+      );
+
+      admobReady = false;
+    }
+  }
+
+  /* =========================================================
+     BANNER
+     ========================================================= */
+
+  async function showBannerAd() {
+    if (!AdMob || !admobReady) {
+      return;
+    }
+
+    if (
+      typeof AdMob.showBanner !== "function"
+    ) {
+      return;
+    }
+
+    try {
+      await AdMob.showBanner({
+        adId: ADMOB_CONFIG.bannerId,
+        adSize: "ADAPTIVE_BANNER",
+        position: "BOTTOM_CENTER",
+        margin: 0
+      });
+
+      console.log(
+        "HISAB Banner Ad requested"
+      );
+    } catch (e) {
+      console.warn(
+        "HISAB Banner Ad failed:",
+        e
+      );
+    }
+  }
+
+  async function hideBannerAd() {
+    if (!AdMob) return;
+
+    try {
+      if (
+        typeof AdMob.hideBanner ===
+        "function"
+      ) {
+        await AdMob.hideBanner();
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  async function removeBannerAd() {
+    if (!AdMob) return;
+
+    try {
+      if (
+        typeof AdMob.removeBanner ===
+        "function"
+      ) {
+        await AdMob.removeBanner();
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  /* =========================================================
+     INTERSTITIAL
+     ========================================================= */
+
+  async function prepareInterstitialAd() {
+    if (!AdMob || !admobReady) {
+      return;
+    }
+
+    if (
+      typeof AdMob.prepareInterstitial !==
+      "function"
+    ) {
+      return;
+    }
+
+    try {
+      await AdMob.prepareInterstitial({
+        adId: ADMOB_CONFIG.interstitialId
+      });
+
+      interstitialReady = true;
+
+      console.log(
+        "HISAB Interstitial prepared"
+      );
+    } catch (e) {
+      interstitialReady = false;
+
+      console.warn(
+        "HISAB Interstitial prepare failed:",
+        e
+      );
+    }
+  }
+
+  async function showInterstitialAd() {
+    if (!AdMob || !admobReady) {
+      return;
+    }
+
+    if (
+      typeof AdMob.showInterstitial !==
+      "function"
+    ) {
+      return;
+    }
+
+    /*
+      Never interrupt an important form.
+      Only show after completed actions.
+    */
+    if (!interstitialReady) {
+      await prepareInterstitialAd();
+    }
+
+    if (!interstitialReady) {
+      return;
+    }
+
+    try {
+      await AdMob.showInterstitial();
+
+      interstitialReady = false;
+
+      /*
+        Prepare the next interstitial after the current
+        one is finished.
+      */
+      setTimeout(() => {
+        prepareInterstitialAd();
+      }, 1000);
+    } catch (e) {
+      interstitialReady = false;
+
+      console.warn(
+        "HISAB Interstitial show failed:",
+        e
+      );
+
+      setTimeout(() => {
+        prepareInterstitialAd();
+      }, 1000);
+    }
+  }
+
+  /* =========================================================
+     APP OPEN
+     ========================================================= */
+
+  async function prepareAppOpenAd() {
+    if (!AdMob || !admobReady) {
+      return;
+    }
+
+    if (
+      typeof AdMob.loadAppOpen !==
+      "function"
+    ) {
+      return;
+    }
+
+    try {
+      await AdMob.loadAppOpen({
+        adId: ADMOB_CONFIG.appOpenId
+      });
+
+      appOpenLoaded = true;
+
+      console.log(
+        "HISAB App Open Ad loaded"
+      );
+    } catch (e) {
+      appOpenLoaded = false;
+
+      console.warn(
+        "HISAB App Open load failed:",
+        e
+      );
+    }
+  }
+
+  async function showAppOpenAd() {
+    if (
+      !AdMob ||
+      !admobReady ||
+      appOpenShownThisSession ||
+      !appOpenLoaded
+    ) {
+      return;
+    }
+
+    if (
+      typeof AdMob.isAppOpenLoaded !==
+      "function" ||
+      typeof AdMob.showAppOpen !==
+      "function"
+    ) {
+      return;
+    }
+
+    try {
+      const loaded =
+        await AdMob.isAppOpenLoaded({
+          adId: ADMOB_CONFIG.appOpenId
+        });
+
+      if (!loaded || loaded.value !== true) {
+        return;
+      }
+
+      appOpenShownThisSession = true;
+      appOpenLoaded = false;
+
+      await AdMob.showAppOpen({
+        adId: ADMOB_CONFIG.appOpenId
+      });
+
+      setTimeout(() => {
+        prepareAppOpenAd();
+      }, 1000);
+    } catch (e) {
+      console.warn(
+        "HISAB App Open show failed:",
+        e
+      );
+
+      appOpenLoaded = false;
+    }
   }
 
   /* =========================================================
@@ -146,7 +589,9 @@
       $("homeScreen") ||
       $("home") ||
       $("mainScreen") ||
-      document.querySelector("[data-screen='home']");
+      document.querySelector(
+        "[data-screen='home']"
+      );
 
     if (home) {
       home.style.display = "";
@@ -164,17 +609,19 @@
       "[data-screen]"
     ];
 
-    document.querySelectorAll(selectors.join(",")).forEach(el => {
-      if (
-        el.id !== "homeScreen" &&
-        el.id !== "home" &&
-        el.id !== "mainScreen" &&
-        el.dataset.screen !== "home"
-      ) {
-        el.style.display = "none";
-        el.classList.remove("active");
-      }
-    });
+    document
+      .querySelectorAll(selectors.join(","))
+      .forEach(el => {
+        if (
+          el.id !== "homeScreen" &&
+          el.id !== "home" &&
+          el.id !== "mainScreen" &&
+          el.dataset.screen !== "home"
+        ) {
+          el.style.display = "none";
+          el.classList.remove("active");
+        }
+      });
   }
 
   function openFeature(name) {
@@ -197,9 +644,13 @@
       backup: "showBackup"
     };
 
-    const fn = map[String(name).toLowerCase()];
+    const fn =
+      map[String(name).toLowerCase()];
 
-    if (fn && typeof window[fn] === "function") {
+    if (
+      fn &&
+      typeof window[fn] === "function"
+    ) {
       window[fn]();
     } else {
       notify("Feature opening...");
@@ -213,13 +664,21 @@
   function getIncome() {
     return data.transactions
       .filter(t => t.type === "income")
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
+      .reduce(
+        (s, t) =>
+          s + Number(t.amount || 0),
+        0
+      );
   }
 
   function getExpense() {
     return data.transactions
       .filter(t => t.type === "expense")
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
+      .reduce(
+        (s, t) =>
+          s + Number(t.amount || 0),
+        0
+      );
   }
 
   function getBalance() {
@@ -239,32 +698,43 @@
       balance,
       totalBalance: balance,
       savings: data.savings.reduce(
-        (s, x) => s + Number(x.amount || 0),
+        (s, x) =>
+          s + Number(x.amount || 0),
         0
       ),
       budget: Number(data.budget || 0)
     };
 
-    Object.entries(values).forEach(([key, value]) => {
-      const ids = [
-        key,
-        `${key}Amount`,
-        `total${key.charAt(0).toUpperCase()}${key.slice(1)}`
-      ];
+    Object.entries(values).forEach(
+      ([key, value]) => {
+        const ids = [
+          key,
+          `${key}Amount`,
+          `total${key
+            .charAt(0)
+            .toUpperCase()}${key.slice(1)}`
+        ];
 
-      ids.forEach(id => {
-        const el = $(id);
-        if (el) el.textContent = money(value);
-      });
-    });
+        ids.forEach(id => {
+          const el = $(id);
 
-    const modeEls = document.querySelectorAll(
-      "[data-current-mode], .current-mode"
+          if (el) {
+            el.textContent = money(value);
+          }
+        });
+      }
     );
+
+    const modeEls =
+      document.querySelectorAll(
+        "[data-current-mode], .current-mode"
+      );
 
     modeEls.forEach(el => {
       el.textContent =
-        data.mode === "business" ? "Business" : "Personal";
+        data.mode === "business"
+          ? "Business"
+          : "Personal";
     });
 
     renderRecentTransactions();
@@ -275,18 +745,32 @@
      ========================================================= */
 
   function closeModal() {
-    document.querySelectorAll(
-      ".hisab-modal, .modal, [data-hisab-modal]"
-    ).forEach(m => {
-      if (m.dataset.hisabGenerated === "true") m.remove();
-      else m.style.display = "none";
-    });
+    document
+      .querySelectorAll(
+        ".hisab-modal, .modal, [data-hisab-modal]"
+      )
+      .forEach(m => {
+        if (
+          m.dataset.hisabGenerated ===
+          "true"
+        ) {
+          m.remove();
+        } else {
+          m.style.display = "none";
+        }
+      });
   }
 
-  function createModal(title, body, submitText = "Save", onSubmit) {
+  function createModal(
+    title,
+    body,
+    submitText = "Save",
+    onSubmit
+  ) {
     closeModal();
 
-    const modal = document.createElement("div");
+    const modal =
+      document.createElement("div");
 
     modal.className = "hisab-modal";
     modal.dataset.hisabGenerated = "true";
@@ -320,8 +804,12 @@
           gap:10px;
           margin-bottom:18px;
         ">
-          <h2 style="margin:0">${escapeHTML(title)}</h2>
-          <button type="button"
+          <h2 style="margin:0">
+            ${escapeHTML(title)}
+          </h2>
+
+          <button
+            type="button"
             data-close-modal
             style="
               border:0;
@@ -330,13 +818,15 @@
               height:36px;
               border-radius:50%;
               font-size:20px;
-            ">×</button>
+            "
+          >×</button>
         </div>
 
         <form data-hisab-form>
           ${body}
 
-          <button type="submit"
+          <button
+            type="submit"
             style="
               width:100%;
               margin-top:16px;
@@ -347,7 +837,8 @@
               color:white;
               font-size:16px;
               font-weight:700;
-            ">
+            "
+          >
             ${escapeHTML(submitText)}
           </button>
         </form>
@@ -356,31 +847,61 @@
 
     document.body.appendChild(modal);
 
-    modal.querySelector("[data-close-modal]")
-      .addEventListener("click", closeModal);
+    modal
+      .querySelector("[data-close-modal]")
+      .addEventListener(
+        "click",
+        closeModal
+      );
 
-    modal.addEventListener("click", e => {
-      if (e.target === modal) closeModal();
-    });
-
-    modal.querySelector("form").addEventListener("submit", e => {
-      e.preventDefault();
-
-      try {
-        onSubmit(new FormData(e.target));
-      } catch (err) {
-        console.error(err);
-        notify("Please check the details");
+    modal.addEventListener(
+      "click",
+      e => {
+        if (e.target === modal) {
+          closeModal();
+        }
       }
-    });
+    );
+
+    modal
+      .querySelector("form")
+      .addEventListener(
+        "submit",
+        e => {
+          e.preventDefault();
+
+          try {
+            onSubmit(
+              new FormData(e.target)
+            );
+          } catch (err) {
+            console.error(err);
+            notify(
+              "Please check the details"
+            );
+          }
+        }
+      );
 
     return modal;
   }
 
-  function input(label, name, type = "text", required = false) {
+  function input(
+    label,
+    name,
+    type = "text",
+    required = false
+  ) {
     return `
-      <label style="display:block;margin-top:12px;font-weight:600">
+      <label
+        style="
+          display:block;
+          margin-top:12px;
+          font-weight:600
+        "
+      >
         ${escapeHTML(label)}
+
         <input
           name="${escapeHTML(name)}"
           type="${escapeHTML(type)}"
@@ -399,10 +920,21 @@
     `;
   }
 
-  function select(label, name, options) {
+  function select(
+    label,
+    name,
+    options
+  ) {
     return `
-      <label style="display:block;margin-top:12px;font-weight:600">
+      <label
+        style="
+          display:block;
+          margin-top:12px;
+          font-weight:600
+        "
+      >
         ${escapeHTML(label)}
+
         <select
           name="${escapeHTML(name)}"
           style="
@@ -413,12 +945,18 @@
             border:1px solid #ddd;
             border-radius:12px;
             font-size:16px;
-          ">
-          ${options.map(o =>
-            `<option value="${escapeHTML(o[0])}">
-              ${escapeHTML(o[1])}
-            </option>`
-          ).join("")}
+          "
+        >
+          ${options
+            .map(
+              o =>
+                `<option value="${escapeHTML(
+                  o[0]
+                )}">
+                  ${escapeHTML(o[1])}
+                </option>`
+            )
+            .join("")}
         </select>
       </label>
     `;
@@ -431,16 +969,37 @@
   function showIncome() {
     createModal(
       "Add Income",
-      input("Amount", "amount", "number", true) +
-      input("Source", "source", "text", true) +
-      input("Date", "date", "date", true) +
+
+      input(
+        "Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      input(
+        "Source",
+        "source",
+        "text",
+        true
+      ) +
+      input(
+        "Date",
+        "date",
+        "date",
+        true
+      ) +
       input("Note", "note"),
+
       "Add Income",
+
       fd => {
-        const amount = Number(fd.get("amount"));
+        const amount =
+          Number(fd.get("amount"));
 
         if (amount <= 0) {
-          notify("Enter a valid amount");
+          notify(
+            "Enter a valid amount"
+          );
           return;
         }
 
@@ -449,16 +1008,24 @@
           type: "income",
           amount,
           category: "Income",
-          source: fd.get("source") || "Income",
-          note: fd.get("note") || "",
-          date: fd.get("date") || today(),
+          source:
+            fd.get("source") ||
+            "Income",
+          note:
+            fd.get("note") || "",
+          date:
+            fd.get("date") ||
+            today(),
           time: nowTime(),
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Income added successfully");
+
+        notify(
+          "Income added successfully"
+        );
       }
     );
   }
@@ -470,16 +1037,37 @@
   function showExpense() {
     createModal(
       "Add Expense",
-      input("Amount", "amount", "number", true) +
-      input("Category", "category", "text", true) +
-      input("Date", "date", "date", true) +
+
+      input(
+        "Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      input(
+        "Category",
+        "category",
+        "text",
+        true
+      ) +
+      input(
+        "Date",
+        "date",
+        "date",
+        true
+      ) +
       input("Note", "note"),
+
       "Add Expense",
+
       fd => {
-        const amount = Number(fd.get("amount"));
+        const amount =
+          Number(fd.get("amount"));
 
         if (amount <= 0) {
-          notify("Enter a valid amount");
+          notify(
+            "Enter a valid amount"
+          );
           return;
         }
 
@@ -487,16 +1075,24 @@
           id: uid("expense"),
           type: "expense",
           amount,
-          category: fd.get("category") || "Expense",
-          note: fd.get("note") || "",
-          date: fd.get("date") || today(),
+          category:
+            fd.get("category") ||
+            "Expense",
+          note:
+            fd.get("note") || "",
+          date:
+            fd.get("date") ||
+            today(),
           time: nowTime(),
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Expense added successfully");
+
+        notify(
+          "Expense added successfully"
+        );
       }
     );
   }
@@ -507,40 +1103,71 @@
 
   function showLendDen() {
     const body =
-      input("Person Name", "person", "text", true) +
-      input("Amount", "amount", "number", true) +
-      select("Type", "type", [
-        ["given", "Paisa Diya"],
-        ["received", "Paisa Liya"]
-      ]) +
-      input("Date", "date", "date", true) +
+      input(
+        "Person Name",
+        "person",
+        "text",
+        true
+      ) +
+      input(
+        "Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      select(
+        "Type",
+        "type",
+        [
+          ["given", "Paisa Diya"],
+          ["received", "Paisa Liya"]
+        ]
+      ) +
+      input(
+        "Date",
+        "date",
+        "date",
+        true
+      ) +
       input("Note", "note");
 
     createModal(
       "Paisa Len-Den",
       body,
       "Save Transaction",
+
       fd => {
-        const amount = Number(fd.get("amount"));
+        const amount =
+          Number(fd.get("amount"));
 
         if (amount <= 0) {
-          notify("Enter a valid amount");
+          notify(
+            "Enter a valid amount"
+          );
           return;
         }
 
         data.lendDen.push({
           id: uid("lend"),
-          person: fd.get("person"),
+          person:
+            fd.get("person"),
           amount,
-          type: fd.get("type"),
-          date: fd.get("date") || today(),
-          note: fd.get("note") || "",
+          type:
+            fd.get("type"),
+          date:
+            fd.get("date") ||
+            today(),
+          note:
+            fd.get("note") || "",
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Len-Den saved");
+
+        notify(
+          "Len-Den saved"
+        );
       }
     );
   }
@@ -552,31 +1179,59 @@
   function showSavings() {
     createModal(
       "Add Savings",
-      input("Amount", "amount", "number", true) +
-      input("Purpose", "purpose", "text", true) +
-      input("Date", "date", "date", true) +
+
+      input(
+        "Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      input(
+        "Purpose",
+        "purpose",
+        "text",
+        true
+      ) +
+      input(
+        "Date",
+        "date",
+        "date",
+        true
+      ) +
       input("Note", "note"),
+
       "Save",
+
       fd => {
-        const amount = Number(fd.get("amount"));
+        const amount =
+          Number(fd.get("amount"));
 
         if (amount <= 0) {
-          notify("Enter a valid amount");
+          notify(
+            "Enter a valid amount"
+          );
           return;
         }
 
         data.savings.push({
           id: uid("saving"),
           amount,
-          purpose: fd.get("purpose"),
-          date: fd.get("date") || today(),
-          note: fd.get("note") || "",
+          purpose:
+            fd.get("purpose"),
+          date:
+            fd.get("date") ||
+            today(),
+          note:
+            fd.get("note") || "",
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Savings added");
+
+        notify(
+          "Savings added"
+        );
       }
     );
   }
@@ -588,31 +1243,63 @@
   function showGoals() {
     createModal(
       "Create Goal",
-      input("Goal Name", "name", "text", true) +
-      input("Target Amount", "target", "number", true) +
-      input("Saved Amount", "saved", "number") +
-      input("Target Date", "date", "date"),
+
+      input(
+        "Goal Name",
+        "name",
+        "text",
+        true
+      ) +
+      input(
+        "Target Amount",
+        "target",
+        "number",
+        true
+      ) +
+      input(
+        "Saved Amount",
+        "saved",
+        "number"
+      ) +
+      input(
+        "Target Date",
+        "date",
+        "date"
+      ),
+
       "Create Goal",
+
       fd => {
-        const target = Number(fd.get("target"));
+        const target =
+          Number(fd.get("target"));
 
         if (target <= 0) {
-          notify("Enter a valid target");
+          notify(
+            "Enter a valid target"
+          );
           return;
         }
 
         data.goals.push({
           id: uid("goal"),
-          name: fd.get("name"),
+          name:
+            fd.get("name"),
           target,
-          saved: Number(fd.get("saved")) || 0,
-          date: fd.get("date") || "",
+          saved:
+            Number(
+              fd.get("saved")
+            ) || 0,
+          date:
+            fd.get("date") || "",
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Goal created");
+
+        notify(
+          "Goal created"
+        );
       }
     );
   }
@@ -624,13 +1311,24 @@
   function showBudget() {
     createModal(
       "Monthly Budget",
-      input("Budget Amount", "amount", "number", true),
+
+      input(
+        "Budget Amount",
+        "amount",
+        "number",
+        true
+      ),
+
       "Save Budget",
+
       fd => {
-        const amount = Number(fd.get("amount"));
+        const amount =
+          Number(fd.get("amount"));
 
         if (amount < 0) {
-          notify("Enter a valid budget");
+          notify(
+            "Enter a valid budget"
+          );
           return;
         }
 
@@ -638,7 +1336,10 @@
 
         saveData();
         closeModal();
-        notify("Budget saved");
+
+        notify(
+          "Budget saved"
+        );
       }
     );
   }
@@ -650,29 +1351,63 @@
   function showBills() {
     createModal(
       "Add Bill / Reminder",
-      input("Bill Name", "name", "text", true) +
-      input("Amount", "amount", "number", true) +
-      input("Due Date", "dueDate", "date", true) +
-      select("Status", "status", [
-        ["pending", "Pending"],
-        ["paid", "Paid"]
-      ]) +
+
+      input(
+        "Bill Name",
+        "name",
+        "text",
+        true
+      ) +
+      input(
+        "Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      input(
+        "Due Date",
+        "dueDate",
+        "date",
+        true
+      ) +
+      select(
+        "Status",
+        "status",
+        [
+          ["pending", "Pending"],
+          ["paid", "Paid"]
+        ]
+      ) +
       input("Note", "note"),
+
       "Save Bill",
+
       fd => {
         data.bills.push({
           id: uid("bill"),
-          name: fd.get("name"),
-          amount: Number(fd.get("amount")) || 0,
-          dueDate: fd.get("dueDate") || today(),
-          status: fd.get("status") || "pending",
-          note: fd.get("note") || "",
+          name:
+            fd.get("name"),
+          amount:
+            Number(
+              fd.get("amount")
+            ) || 0,
+          dueDate:
+            fd.get("dueDate") ||
+            today(),
+          status:
+            fd.get("status") ||
+            "pending",
+          note:
+            fd.get("note") || "",
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Bill saved");
+
+        notify(
+          "Bill saved"
+        );
       }
     );
   }
@@ -684,31 +1419,79 @@
   function showLoans() {
     createModal(
       "Add Loan / EMI",
-      input("Loan / Company Name", "name", "text", true) +
-      input("Loan Amount", "amount", "number", true) +
-      input("EMI Amount", "emi", "number", true) +
-      input("Due Date", "dueDate", "date", true) +
-      input("Tenure (Months)", "tenure", "number") +
-      select("Status", "status", [
-        ["pending", "Pending"],
-        ["paid", "Paid"]
-      ]),
+
+      input(
+        "Loan / Company Name",
+        "name",
+        "text",
+        true
+      ) +
+      input(
+        "Loan Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      input(
+        "EMI Amount",
+        "emi",
+        "number",
+        true
+      ) +
+      input(
+        "Due Date",
+        "dueDate",
+        "date",
+        true
+      ) +
+      input(
+        "Tenure (Months)",
+        "tenure",
+        "number"
+      ) +
+      select(
+        "Status",
+        "status",
+        [
+          ["pending", "Pending"],
+          ["paid", "Paid"]
+        ]
+      ),
+
       "Save Loan",
+
       fd => {
         data.loans.push({
           id: uid("loan"),
-          name: fd.get("name"),
-          amount: Number(fd.get("amount")) || 0,
-          emi: Number(fd.get("emi")) || 0,
-          dueDate: fd.get("dueDate") || today(),
-          tenure: Number(fd.get("tenure")) || 0,
-          status: fd.get("status") || "pending",
+          name:
+            fd.get("name"),
+          amount:
+            Number(
+              fd.get("amount")
+            ) || 0,
+          emi:
+            Number(
+              fd.get("emi")
+            ) || 0,
+          dueDate:
+            fd.get("dueDate") ||
+            today(),
+          tenure:
+            Number(
+              fd.get("tenure")
+            ) || 0,
+          status:
+            fd.get("status") ||
+            "pending",
           createdAt: Date.now()
         });
 
         saveData();
         closeModal();
-        notify("Loan / EMI saved");
+
+        notify(
+          "Loan / EMI saved"
+        );
       }
     );
   }
@@ -720,54 +1503,103 @@
   function showTransactions() {
     closeModal();
 
-    const rows = [...data.transactions]
-      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-      .map(t => `
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          gap:10px;
-          padding:13px 0;
-          border-bottom:1px solid #eee;
-        ">
-          <div>
-            <strong>${escapeHTML(
-              t.source || t.category || t.type
-            )}</strong>
-            <div style="font-size:12px;color:#777">
-              ${escapeHTML(t.date || "")}
-              ${escapeHTML(t.time || "")}
-            </div>
-            ${t.note ? `
-              <div style="font-size:12px;color:#777">
-                ${escapeHTML(t.note)}
-              </div>
-            ` : ""}
-          </div>
-
+    const rows =
+      [...data.transactions]
+        .sort(
+          (a, b) =>
+            Number(
+              b.createdAt || 0
+            ) -
+            Number(
+              a.createdAt || 0
+            )
+        )
+        .map(
+          t => `
           <div style="
-            font-weight:800;
-            color:${t.type === "income" ? "green" : "#c62828"};
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+            padding:13px 0;
+            border-bottom:1px solid #eee;
           ">
-            ${t.type === "income" ? "+" : "-"}${money(t.amount)}
+            <div>
+              <strong>
+                ${escapeHTML(
+                  t.source ||
+                  t.category ||
+                  t.type
+                )}
+              </strong>
+
+              <div style="
+                font-size:12px;
+                color:#777
+              ">
+                ${escapeHTML(
+                  t.date || ""
+                )}
+                ${escapeHTML(
+                  t.time || ""
+                )}
+              </div>
+
+              ${
+                t.note
+                  ? `
+                <div style="
+                  font-size:12px;
+                  color:#777
+                ">
+                  ${escapeHTML(
+                    t.note
+                  )}
+                </div>
+              `
+                  : ""
+              }
+            </div>
+
+            <div style="
+              font-weight:800;
+              color:${
+                t.type === "income"
+                  ? "green"
+                  : "#c62828"
+              };
+            ">
+              ${
+                t.type === "income"
+                  ? "+"
+                  : "-"
+              }${money(t.amount)}
+            </div>
           </div>
-        </div>
-      `)
-      .join("");
+        `
+        )
+        .join("");
 
     createModal(
       "Transactions",
+
       `
         <div>
           ${
             rows ||
-            `<p style="text-align:center;color:#777">
-              No transactions yet.
-            </p>`
+            `
+              <p style="
+                text-align:center;
+                color:#777
+              ">
+                No transactions yet.
+              </p>
+            `
           }
         </div>
       `,
+
       "Close",
+
       () => closeModal()
     );
   }
@@ -775,37 +1607,68 @@
   function renderRecentTransactions() {
     const container =
       $("recentTransactions") ||
-      document.querySelector("[data-recent-transactions]");
+      document.querySelector(
+        "[data-recent-transactions]"
+      );
 
     if (!container) return;
 
-    const recent = [...data.transactions]
-      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-      .slice(0, 5);
+    const recent =
+      [...data.transactions]
+        .sort(
+          (a, b) =>
+            Number(
+              b.createdAt || 0
+            ) -
+            Number(
+              a.createdAt || 0
+            )
+        )
+        .slice(0, 5);
 
     if (!recent.length) {
       container.innerHTML =
-        `<div style="padding:15px;color:#777">
+        `
+        <div style="
+          padding:15px;
+          color:#777
+        ">
           No transactions yet
-        </div>`;
+        </div>
+        `;
+
       return;
     }
 
-    container.innerHTML = recent.map(t => `
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        padding:10px 0;
-        border-bottom:1px solid #eee;
-      ">
-        <span>
-          ${escapeHTML(t.source || t.category || t.type)}
-        </span>
-        <strong>
-          ${t.type === "income" ? "+" : "-"}${money(t.amount)}
-        </strong>
-      </div>
-    `).join("");
+    container.innerHTML =
+      recent
+        .map(
+          t => `
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          padding:10px 0;
+          border-bottom:1px solid #eee;
+        ">
+          <span>
+            ${escapeHTML(
+              t.source ||
+              t.category ||
+              t.type
+            )}
+          </span>
+
+          <strong>
+            ${
+              t.type === "income"
+                ? "+"
+                : "-"
+            }${money(t.amount)}
+          </strong>
+        </div>
+      `
+        )
+        .join("");
   }
 
   /* =========================================================
@@ -815,67 +1678,136 @@
   function showReports() {
     const income = getIncome();
     const expense = getExpense();
-    const balance = income - expense;
+    const balance =
+      income - expense;
 
-    const given = data.lendDen
-      .filter(x => x.type === "given")
-      .reduce((s, x) => s + Number(x.amount || 0), 0);
+    const given =
+      data.lendDen
+        .filter(
+          x => x.type === "given"
+        )
+        .reduce(
+          (s, x) =>
+            s + Number(
+              x.amount || 0
+            ),
+          0
+        );
 
-    const received = data.lendDen
-      .filter(x => x.type === "received")
-      .reduce((s, x) => s + Number(x.amount || 0), 0);
+    const received =
+      data.lendDen
+        .filter(
+          x => x.type === "received"
+        )
+        .reduce(
+          (s, x) =>
+            s + Number(
+              x.amount || 0
+            ),
+          0
+        );
 
-    const pendingBills = data.bills.filter(
-      x => x.status !== "paid"
-    ).length;
+    const pendingBills =
+      data.bills.filter(
+        x => x.status !== "paid"
+      ).length;
 
-    const pendingLoans = data.loans.filter(
-      x => x.status !== "paid"
-    ).length;
+    const pendingLoans =
+      data.loans.filter(
+        x => x.status !== "paid"
+      ).length;
 
     createModal(
       "Reports & Analytics",
+
       `
-        <div style="display:grid;gap:10px">
+        <div style="
+          display:grid;
+          gap:10px
+        ">
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Total Income</small>
-            <h3>${money(income)}</h3>
+            <h3>
+              ${money(income)}
+            </h3>
           </div>
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Total Expense</small>
-            <h3>${money(expense)}</h3>
+            <h3>
+              ${money(expense)}
+            </h3>
           </div>
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Balance</small>
-            <h3>${money(balance)}</h3>
+            <h3>
+              ${money(balance)}
+            </h3>
           </div>
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Paisa Diya</small>
-            <h3>${money(given)}</h3>
+            <h3>
+              ${money(given)}
+            </h3>
           </div>
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Paisa Liya</small>
-            <h3>${money(received)}</h3>
+            <h3>
+              ${money(received)}
+            </h3>
           </div>
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Pending Bills</small>
-            <h3>${pendingBills}</h3>
+            <h3>
+              ${pendingBills}
+            </h3>
           </div>
 
-          <div style="padding:15px;border-radius:15px;background:#f5f7fa">
+          <div style="
+            padding:15px;
+            border-radius:15px;
+            background:#f5f7fa
+          ">
             <small>Pending Loans / EMI</small>
-            <h3>${pendingLoans}</h3>
+            <h3>
+              ${pendingLoans}
+            </h3>
           </div>
 
         </div>
       `,
+
       "Close",
+
       () => closeModal()
     );
   }
@@ -887,35 +1819,91 @@
   function showSettings() {
     createModal(
       "Settings",
+
       `
-        ${select("Mode", "mode", [
-          ["personal", "Personal"],
-          ["business", "Business"]
-        ])}
+        ${select(
+          "Mode",
+          "mode",
+          [
+            [
+              "personal",
+              "Personal"
+            ],
+            [
+              "business",
+              "Business"
+            ]
+          ]
+        )}
 
-        ${select("Currency", "currency", [
-          ["₹", "Indian Rupee (₹)"],
-          ["$", "US Dollar ($)"],
-          ["€", "Euro (€)"],
-          ["£", "British Pound (£)"],
-          ["¥", "Japanese Yen (¥)"],
-          ["AED ", "UAE Dirham"]
-        ])}
+        ${select(
+          "Currency",
+          "currency",
+          [
+            [
+              "₹",
+              "Indian Rupee (₹)"
+            ],
+            [
+              "$",
+              "US Dollar ($)"
+            ],
+            [
+              "€",
+              "Euro (€)"
+            ],
+            [
+              "£",
+              "British Pound (£)"
+            ],
+            [
+              "¥",
+              "Japanese Yen (¥)"
+            ],
+            [
+              "AED ",
+              "UAE Dirham"
+            ]
+          ]
+        )}
 
-        ${select("Language", "language", [
-          ["en", "English"],
-          ["hi", "Hindi"]
-        ])}
+        ${select(
+          "Language",
+          "language",
+          [
+            [
+              "en",
+              "English"
+            ],
+            [
+              "hi",
+              "Hindi"
+            ]
+          ]
+        )}
       `,
+
       "Save Settings",
+
       fd => {
-        data.mode = fd.get("mode") || "personal";
-        data.currency = fd.get("currency") || "₹";
-        data.language = fd.get("language") || "en";
+        data.mode =
+          fd.get("mode") ||
+          "personal";
+
+        data.currency =
+          fd.get("currency") ||
+          "₹";
+
+        data.language =
+          fd.get("language") ||
+          "en";
 
         saveData();
         closeModal();
-        notify("Settings saved");
+
+        notify(
+          "Settings saved"
+        );
       }
     );
   }
@@ -927,19 +1915,32 @@
   function showSecurity() {
     createModal(
       "Security",
+
       `
-        <div style="line-height:1.6">
-          <p><strong>HISAB Security</strong></p>
+        <div style="
+          line-height:1.6
+        ">
           <p>
-            Your financial data is stored locally on this device.
+            <strong>
+              HISAB Security
+            </strong>
           </p>
+
           <p>
-            Biometric/app-lock integration can be added through
-            native Android security APIs.
+            Your financial data is stored
+            locally on this device.
+          </p>
+
+          <p>
+            Biometric/app-lock integration
+            can be added through native
+            Android security APIs.
           </p>
         </div>
       `,
+
       "Close",
+
       () => closeModal()
     );
   }
@@ -951,8 +1952,10 @@
   function showBackup() {
     createModal(
       "Backup & Restore",
+
       `
-        <button type="button"
+        <button
+          type="button"
           id="exportHisab"
           style="
             width:100%;
@@ -962,7 +1965,8 @@
             background:#0b1f33;
             color:white;
             font-weight:700;
-          ">
+          "
+        >
           Export Backup
         </button>
 
@@ -976,6 +1980,7 @@
           cursor:pointer;
         ">
           Import Backup
+
           <input
             id="importHisab"
             type="file"
@@ -984,69 +1989,189 @@
           >
         </label>
       `,
+
       "Close",
+
       () => closeModal()
     );
 
-    $("exportHisab").addEventListener("click", exportBackup);
+    const exportButton =
+      $("exportHisab");
 
-    $("importHisab").addEventListener(
-      "change",
-      importBackup
-    );
+    const importInput =
+      $("importHisab");
+
+    if (exportButton) {
+      exportButton.addEventListener(
+        "click",
+        exportBackup
+      );
+    }
+
+    if (importInput) {
+      importInput.addEventListener(
+        "change",
+        importBackup
+      );
+    }
   }
 
   function exportBackup() {
-    const blob = new Blob(
-      [JSON.stringify(data, null, 2)],
-      { type: "application/json" }
-    );
+    try {
+      const blob =
+        new Blob(
+          [
+            JSON.stringify(
+              data,
+              null,
+              2
+            )
+          ],
+          {
+            type:
+              "application/json"
+          }
+        );
 
-    const url = URL.createObjectURL(blob);
+      const url =
+        URL.createObjectURL(
+          blob
+        );
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download =
-      "HISAB_Backup_" +
-      new Date().toISOString().slice(0, 10) +
-      ".json";
+      const a =
+        document.createElement(
+          "a"
+        );
 
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+      a.href = url;
 
-    URL.revokeObjectURL(url);
+      a.download =
+        "HISAB_Backup_" +
+        new Date()
+          .toISOString()
+          .slice(0, 10) +
+        ".json";
 
-    notify("Backup exported");
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      URL.revokeObjectURL(url);
+
+      notify(
+        "Backup exported"
+      );
+    } catch (e) {
+      console.error(e);
+
+      notify(
+        "Backup export failed"
+      );
+    }
   }
 
   function importBackup(event) {
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     if (!file) return;
 
-    const reader = new FileReader();
+    const reader =
+      new FileReader();
 
     reader.onload = () => {
       try {
-        const imported = JSON.parse(reader.result);
+        const imported =
+          JSON.parse(
+            reader.result
+          );
 
-        if (!imported || typeof imported !== "object") {
-          throw new Error("Invalid backup");
+        if (
+          !imported ||
+          typeof imported !==
+            "object"
+        ) {
+          throw new Error(
+            "Invalid backup"
+          );
         }
 
         data = {
           ...DEFAULT_DATA,
-          ...imported
+          ...imported,
+
+          transactions:
+            Array.isArray(
+              imported.transactions
+            )
+              ? imported.transactions
+              : [],
+
+          lendDen:
+            Array.isArray(
+              imported.lendDen
+            )
+              ? imported.lendDen
+              : [],
+
+          savings:
+            Array.isArray(
+              imported.savings
+            )
+              ? imported.savings
+              : [],
+
+          goals:
+            Array.isArray(
+              imported.goals
+            )
+              ? imported.goals
+              : [],
+
+          bills:
+            Array.isArray(
+              imported.bills
+            )
+              ? imported.bills
+              : [],
+
+          loans:
+            Array.isArray(
+              imported.loans
+            )
+              ? imported.loans
+              : []
         };
 
-        saveData();
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(data)
+        );
+
+        /*
+          Keep public HISAB API synchronized
+          after restoring backup.
+        */
+        if (window.HISAB) {
+          window.HISAB.data =
+            data;
+        }
+
+        updateDashboard();
+
         closeModal();
 
-        notify("Backup restored successfully");
+        notify(
+          "Backup restored successfully"
+        );
       } catch (e) {
         console.error(e);
-        notify("Invalid backup file");
+
+        notify(
+          "Invalid backup file"
+        );
       }
     };
 
@@ -1058,17 +2183,35 @@
      ========================================================= */
 
   function clearAllData() {
-    const ok = confirm(
-      "Delete all HISAB data from this device?"
-    );
+    const ok =
+      confirm(
+        "Delete all HISAB data from this device?"
+      );
 
     if (!ok) return;
 
-    data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    data =
+      JSON.parse(
+        JSON.stringify(
+          DEFAULT_DATA
+        )
+      );
 
-    saveData();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(data)
+    );
 
-    notify("All data cleared");
+    if (window.HISAB) {
+      window.HISAB.data =
+        data;
+    }
+
+    updateDashboard();
+
+    notify(
+      "All data cleared"
+    );
   }
 
   /* =========================================================
@@ -1082,103 +2225,193 @@
       "[data-screen-button]"
     ];
 
-    document.querySelectorAll(selectors.join(",")).forEach(btn => {
-      if (btn.dataset.hisabBound === "true") return;
-
-      btn.dataset.hisabBound = "true";
-
-      btn.addEventListener("click", e => {
-        const action =
-          btn.dataset.action ||
-          btn.dataset.feature ||
-          btn.dataset.screenButton;
-
-        if (!action) return;
-
-        if (action === "home") {
-          showHome();
+    document
+      .querySelectorAll(
+        selectors.join(",")
+      )
+      .forEach(btn => {
+        if (
+          btn.dataset.hisabBound ===
+          "true"
+        ) {
           return;
         }
 
-        if (action === "clear") {
-          clearAllData();
-          return;
-        }
+        btn.dataset.hisabBound =
+          "true";
 
-        openFeature(action);
+        btn.addEventListener(
+          "click",
+          e => {
+            const action =
+              btn.dataset.action ||
+              btn.dataset.feature ||
+              btn.dataset.screenButton;
+
+            if (!action) return;
+
+            if (
+              action === "home"
+            ) {
+              showHome();
+              return;
+            }
+
+            if (
+              action === "clear"
+            ) {
+              clearAllData();
+              return;
+            }
+
+            openFeature(action);
+          }
+        );
       });
-    });
 
-    /* Common button text fallback */
-    document.querySelectorAll("button").forEach(btn => {
-      if (btn.dataset.hisabBound === "true") return;
+    /*
+      Common button text fallback
+    */
+    document
+      .querySelectorAll("button")
+      .forEach(btn => {
+        if (
+          btn.dataset.hisabBound ===
+          "true"
+        ) {
+          return;
+        }
 
-      const text = btn.textContent
-        .trim()
-        .toLowerCase();
+        const text =
+          btn.textContent
+            .trim()
+            .toLowerCase();
 
-      let action = null;
+        let action = null;
 
-      if (
-        text.includes("income") ||
-        text.includes("aamdani")
-      ) action = "income";
+        if (
+          text.includes("income") ||
+          text.includes("aamdani")
+        ) {
+          action = "income";
+        }
 
-      else if (
-        text.includes("expense") ||
-        text.includes("kharcha")
-      ) action = "expense";
+        else if (
+          text.includes("expense") ||
+          text.includes("kharcha")
+        ) {
+          action = "expense";
+        }
 
-      else if (
-        text.includes("len-den") ||
-        text.includes("lend") ||
-        text.includes("udhaar") ||
-        text.includes("khata")
-      ) action = "lendden";
+        else if (
+          text.includes("len-den") ||
+          text.includes("lend") ||
+          text.includes("udhaar") ||
+          text.includes("khata")
+        ) {
+          action = "lendden";
+        }
 
-      else if (
-        text.includes("saving")
-      ) action = "savings";
+        else if (
+          text.includes("saving")
+        ) {
+          action = "savings";
+        }
 
-      else if (
-        text.includes("goal")
-      ) action = "goals";
+        else if (
+          text.includes("goal")
+        ) {
+          action = "goals";
+        }
 
-      else if (
-        text.includes("budget")
-      ) action = "budget";
+        else if (
+          text.includes("budget")
+        ) {
+          action = "budget";
+        }
 
-      else if (
-        text.includes("bill")
-      ) action = "bills";
+        else if (
+          text.includes("bill")
+        ) {
+          action = "bills";
+        }
 
-      else if (
-        text.includes("loan") ||
-        text.includes("emi")
-      ) action = "loans";
+        else if (
+          text.includes("loan") ||
+          text.includes("emi")
+        ) {
+          action = "loans";
+        }
 
-      else if (
-        text.includes("report") ||
-        text.includes("analytics")
-      ) action = "reports";
+        else if (
+          text.includes("report") ||
+          text.includes("analytics")
+        ) {
+          action = "reports";
+        }
 
-      else if (
-        text.includes("transaction")
-      ) action = "transactions";
+        else if (
+          text.includes(
+            "transaction"
+          )
+        ) {
+          action =
+            "transactions";
+        }
 
-      else if (
-        text.includes("setting")
-      ) action = "settings";
+        else if (
+          text.includes("setting")
+        ) {
+          action =
+            "settings";
+        }
 
-      if (action) {
-        btn.dataset.hisabBound = "true";
+        if (action) {
+          btn.dataset.hisabBound =
+            "true";
 
-        btn.addEventListener("click", e => {
-          e.preventDefault();
-          openFeature(action);
-        });
+          btn.addEventListener(
+            "click",
+            e => {
+              e.preventDefault();
+
+              openFeature(
+                action
+              );
+            }
+          );
+        }
+      });
+  }
+
+  /* =========================================================
+     APP RESUME
+     ========================================================= */
+
+  function setupAppResume() {
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (
+          document.visibilityState ===
+          "visible"
+        ) {
+          /*
+            App Open is only attempted when
+            an ad was already loaded.
+          */
+          if (
+            admobReady &&
+            appOpenLoaded &&
+            !appOpenShownThisSession
+          ) {
+            setTimeout(() => {
+              showAppOpenAd();
+            }, 700);
+          }
+        }
       }
-    });
+    );
   }
 
   /* =========================================================
@@ -1187,7 +2420,9 @@
 
   window.HISAB = {
     data,
+
     saveData,
+
     showHome,
     showIncome,
     showExpense,
@@ -1202,31 +2437,81 @@
     showSettings,
     showSecurity,
     showBackup,
+
     exportBackup,
     importBackup,
     clearAllData,
+
     updateDashboard,
-    openFeature
+    openFeature,
+
+    /*
+      AdMob controls
+    */
+    initAdMob,
+    showBannerAd,
+    hideBannerAd,
+    removeBannerAd,
+    prepareInterstitialAd,
+    showInterstitialAd,
+    prepareAppOpenAd,
+    showAppOpenAd
   };
 
-  /* Direct global functions for existing HTML */
-  window.showHome = showHome;
-  window.showIncome = showIncome;
-  window.showExpense = showExpense;
-  window.showLendDen = showLendDen;
-  window.showSavings = showSavings;
-  window.showGoals = showGoals;
-  window.showBudget = showBudget;
-  window.showBills = showBills;
-  window.showLoans = showLoans;
-  window.showTransactions = showTransactions;
-  window.showReports = showReports;
-  window.showSettings = showSettings;
-  window.showSecurity = showSecurity;
-  window.showBackup = showBackup;
-  window.exportBackup = exportBackup;
-  window.clearAllData = clearAllData;
-  window.updateDashboard = updateDashboard;
+  /* =========================================================
+     DIRECT GLOBAL FUNCTIONS
+     ========================================================= */
+
+  window.showHome =
+    showHome;
+
+  window.showIncome =
+    showIncome;
+
+  window.showExpense =
+    showExpense;
+
+  window.showLendDen =
+    showLendDen;
+
+  window.showSavings =
+    showSavings;
+
+  window.showGoals =
+    showGoals;
+
+  window.showBudget =
+    showBudget;
+
+  window.showBills =
+    showBills;
+
+  window.showLoans =
+    showLoans;
+
+  window.showTransactions =
+    showTransactions;
+
+  window.showReports =
+    showReports;
+
+  window.showSettings =
+    showSettings;
+
+  window.showSecurity =
+    showSecurity;
+
+  window.showBackup =
+    showBackup;
+
+  window.exportBackup =
+    exportBackup;
+
+  window.clearAllData =
+    clearAllData;
+
+  window.updateDashboard =
+    updateDashboard;
 
   /* =========================================================
      STARTUP
@@ -1234,40 +2519,96 @@
 
   function initHISAB() {
     bindButtons();
+
     updateDashboard();
 
-    /* Continue Without Login / Start buttons */
-    document.querySelectorAll("button, a").forEach(el => {
-      const text = el.textContent.trim().toLowerCase();
+    setupAppResume();
 
-      if (
-        text.includes("continue without login") ||
-        text === "continue" ||
-        text.includes("get started") ||
-        text.includes("start using hisab")
-      ) {
-        el.addEventListener("click", e => {
-          e.preventDefault();
+    /*
+      Continue Without Login / Start buttons
+    */
+    document
+      .querySelectorAll(
+        "button, a"
+      )
+      .forEach(el => {
+        const text =
+          el.textContent
+            .trim()
+            .toLowerCase();
 
-          const welcome =
-            $("welcomeScreen") ||
-            $("loginScreen") ||
-            $("landingScreen") ||
-            document.querySelector(".welcome-screen");
+        if (
+          text.includes(
+            "continue without login"
+          ) ||
+          text === "continue" ||
+          text.includes(
+            "get started"
+          ) ||
+          text.includes(
+            "start using hisab"
+          )
+        ) {
+          el.addEventListener(
+            "click",
+            e => {
+              e.preventDefault();
 
-          if (welcome) {
-            welcome.style.display = "none";
-          }
+              const welcome =
+                $("welcomeScreen") ||
+                $("loginScreen") ||
+                $("landingScreen") ||
+                document.querySelector(
+                  ".welcome-screen"
+                );
 
-          showHome();
-        });
-      }
-    });
+              if (welcome) {
+                welcome.style.display =
+                  "none";
+              }
 
-    console.log("HISAB V7 initialized successfully");
+              showHome();
+
+              /*
+                Start AdMob only after UI
+                is ready. This prevents ads
+                from blocking app startup.
+              */
+              setTimeout(() => {
+                initAdMob();
+              }, 500);
+            }
+          );
+        }
+      });
+
+    /*
+      If the app has no welcome/login screen,
+      initialize AdMob after UI is ready.
+    */
+    const welcomeExists =
+      $("welcomeScreen") ||
+      $("loginScreen") ||
+      $("landingScreen") ||
+      document.querySelector(
+        ".welcome-screen"
+      );
+
+    if (!welcomeExists) {
+      setTimeout(() => {
+        initAdMob();
+      }, 700);
+    }
+
+    console.log(
+      "HISAB V7 initialized successfully"
+    );
   }
 
-  if (document.readyState === "loading") {
+  if (
+    document.readyState ===
+    "loading"
+  ) {
     document.addEventListener(
       "DOMContentLoaded",
       initHISAB
