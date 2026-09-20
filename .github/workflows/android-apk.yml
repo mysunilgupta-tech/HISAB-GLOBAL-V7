@@ -11,9 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # =====================================================
+      # 1. Checkout
+      # =====================================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # =====================================================
+      # 2. Check source files
+      # =====================================================
       - name: Check project files
         run: |
           echo "=== Repository files ==="
@@ -28,13 +34,20 @@ jobs:
           test -f capacitor.config.js || \
           test -f capacitor.config.json
 
-          echo "Source files found."
+          echo "Source files found successfully."
 
+      # =====================================================
+      # 3. Setup Node.js
+      # =====================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
+      # =====================================================
+      # 4. Setup Java 21
+      # =====================================================
       - name: Setup Java 21
         uses: actions/setup-java@v5
         with:
@@ -42,16 +55,25 @@ jobs:
           java-version: '21'
           check-latest: true
 
+      # =====================================================
+      # 5. Verify Java
+      # =====================================================
       - name: Verify Java
         run: |
           echo "JAVA_HOME=$JAVA_HOME"
           java -version
           javac -version
 
+      # =====================================================
+      # 6. Install dependencies
+      # =====================================================
       - name: Install dependencies
         run: |
           npm install
 
+      # =====================================================
+      # 7. Build Web Assets
+      # =====================================================
       - name: Build Web Assets
         run: |
           npm run build
@@ -65,18 +87,80 @@ jobs:
 
           echo "Web assets built successfully."
 
+      # =====================================================
+      # 8. Verify Capacitor
+      # =====================================================
       - name: Verify Capacitor
         run: |
           npx cap --version
 
+      # =====================================================
+      # 9. Create Android project
+      # =====================================================
       - name: Add Android platform
         run: |
           npx cap add android
 
+      # =====================================================
+      # 10. Configure AdMob App ID
+      # =====================================================
+      - name: Configure AdMob
+        env:
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+        run: |
+          if [ -z "$ADMOB_APP_ID" ]; then
+            echo "ERROR: ADMOB_APP_ID secret is missing."
+            exit 1
+          fi
+
+          mkdir -p android/app/src/main/res/values
+
+          cat > android/app/src/main/res/values/strings.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">HISAB</string>
+              <string name="title_activity_main">HISAB</string>
+              <string name="package_name">com.hisab.moneymanager</string>
+              <string name="custom_url_scheme">com.hisab.moneymanager</string>
+              <string name="admob_app_id">${ADMOB_APP_ID}</string>
+          </resources>
+          EOF
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+
+          if not manifest.exists():
+              raise SystemExit("AndroidManifest.xml not found")
+
+          text = manifest.read_text()
+
+          meta = """        <meta-data
+              android:name="com.google.android.gms.ads.APPLICATION_ID"
+              android:value="@string/admob_app_id" />"""
+
+          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
+              text = text.replace(
+                  "</application>",
+                  meta + "\n    </application>"
+              )
+
+          manifest.write_text(text)
+
+          print("AdMob App ID configured successfully.")
+          PY
+
+      # =====================================================
+      # 11. Sync Capacitor
+      # =====================================================
       - name: Sync Capacitor
         run: |
           npx cap sync android
 
+      # =====================================================
+      # 12. Verify Android project
+      # =====================================================
       - name: Verify Android project
         run: |
           test -d android
@@ -85,8 +169,13 @@ jobs:
           test -f android/app/build.gradle || \
           test -f android/app/build.gradle.kts
 
+          test -f android/app/src/main/AndroidManifest.xml
+
           echo "Android project verified."
 
+      # =====================================================
+      # 13. Verify Web Assets inside project
+      # =====================================================
       - name: Verify Web Assets
         run: |
           test -f www/index.html
@@ -96,62 +185,167 @@ jobs:
           echo "=== Web assets ==="
           ls -lh www/
 
+      # =====================================================
+      # 14. Verify AdMob configuration
+      # =====================================================
+      - name: Verify AdMob configuration
+        run: |
+          echo "=== Checking AdMob configuration ==="
+
+          grep -q "com.google.android.gms.ads.APPLICATION_ID" \
+            android/app/src/main/AndroidManifest.xml
+
+          grep -q "admob_app_id" \
+            android/app/src/main/res/values/strings.xml
+
+          echo "AdMob configuration verified."
+
+      # =====================================================
+      # 15. Verify Gradle
+      # =====================================================
       - name: Verify Gradle Java
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew --version
 
+      # =====================================================
+      # 16. Build Debug APK
+      # =====================================================
       - name: Build Debug APK
         working-directory: android
         run: |
           chmod +x gradlew
+
           ./gradlew clean
+
           ./gradlew assembleDebug --stacktrace
 
-      - name: Verify APK
+      # =====================================================
+      # 17. Verify Debug APK
+      # =====================================================
+      - name: Verify Debug APK
         working-directory: android
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
 
           if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not created"
+            echo "ERROR: Debug APK was not created."
             exit 1
           fi
 
-          echo "=== APK FILE ==="
+          echo "=== DEBUG APK ==="
           ls -lh "$APK"
 
           echo "=== APK ZIP INTEGRITY ==="
           unzip -t "$APK" > /dev/null
+
           echo "APK ZIP integrity check passed."
 
           echo "=== APK SIGNATURE ==="
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" \
+            -name apksigner \
+            -type f | sort -V | tail -n 1)
 
           if [ -z "$APKSIGNER" ]; then
-            echo "ERROR: apksigner not found"
+            echo "ERROR: apksigner not found."
             exit 1
           fi
 
           echo "Using: $APKSIGNER"
+
           "$APKSIGNER" verify --verbose "$APK"
 
           echo "=== APK PACKAGE INFORMATION ==="
-          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+
+          AAPT=$(find "$ANDROID_HOME/build-tools" \
+            -name aapt \
+            -type f | sort -V | tail -n 1)
 
           if [ -z "$AAPT" ]; then
-            echo "ERROR: aapt not found"
+            echo "ERROR: aapt not found."
             exit 1
           fi
 
-          "$AAPT" dump badging "$APK" | head -n 5
+          "$AAPT" dump badging "$APK" | head -n 10
 
-          echo "=== APK VERIFICATION COMPLETE ==="
+          echo "=== DEBUG APK VERIFICATION COMPLETE ==="
 
-      - name: Upload APK
+      # =====================================================
+      # 18. Build Release AAB
+      # =====================================================
+      - name: Build Release AAB
+        working-directory: android
+        run: |
+          chmod +x gradlew
+
+          ./gradlew bundleRelease --stacktrace
+
+      # =====================================================
+      # 19. Verify Release AAB
+      # =====================================================
+      - name: Verify Release AAB
+        working-directory: android
+        run: |
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+
+          if [ ! -f "$AAB" ]; then
+            echo "ERROR: Release AAB was not created."
+            exit 1
+          fi
+
+          echo "=== RELEASE AAB ==="
+          ls -lh "$AAB"
+
+          echo "=== AAB ZIP INTEGRITY ==="
+          unzip -t "$AAB" > /dev/null
+
+          echo "Release AAB ZIP integrity check passed."
+
+      # =====================================================
+      # 20. Upload Debug APK
+      # =====================================================
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: HISAB-GLOBAL-V7-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      # =====================================================
+      # 21. Upload Release AAB
+      # =====================================================
+      - name: Upload Release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: HISAB-GLOBAL-V7-release-AAB
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      # =====================================================
+      # 22. Final Build Summary
+      # =====================================================
+      - name: Final Build Summary
+        run: |
+          echo "=========================================="
+          echo "        HISAB GLOBAL V7 BUILD COMPLETE"
+          echo "=========================================="
+          echo ""
+          echo "App ID:"
+          echo "com.hisab.moneymanager"
+          echo ""
+          echo "AdMob App ID configured:"
+          echo "YES"
+          echo ""
+          echo "Debug APK:"
+          echo "CREATED"
+          echo ""
+          echo "Release AAB:"
+          echo "CREATED"
+          echo ""
+          echo "Artifacts:"
+          echo "- HISAB-GLOBAL-V7-debug"
+          echo "- HISAB-GLOBAL-V7-release-AAB"
+          echo ""
+          echo "=========================================="
