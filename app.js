@@ -1710,6 +1710,11 @@
      Useful for debugging without breaking app.
      ========================================================= */
 
+  /* =========================================================
+     OPTIONAL GLOBAL ACCESS
+     Useful for debugging without breaking app.
+     ========================================================= */
+
   window.HISAB = {
     getState: () => state,
     save,
@@ -1717,5 +1722,36 @@
     open: openModal,
     close: closeModal
   };
+
+  /* =========================================================
+     ANDROID BACK BUTTON SUPPORT
+     ========================================================= */
+
+  document.addEventListener("backbutton", function (event) {
+    event.preventDefault();
+
+    const modal = $("modal");
+
+    /* If modal is open, close it first */
+    if (modal && !modal.classList.contains("hidden")) {
+      closeModal();
+      return;
+    }
+
+    /* If Home is open, go back to Welcome */
+    const home = $("homeScreen");
+
+    if (home && home.classList.contains("active")) {
+      showScreen("welcomeScreen");
+      return;
+    }
+
+    /* If Welcome is open, stay here */
+    const welcome = $("welcomeScreen");
+
+    if (welcome && welcome.classList.contains("active")) {
+      return;
+    }
+  });
 
 })();
