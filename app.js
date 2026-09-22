@@ -2219,170 +2219,125 @@
      ========================================================= */
 
   function bindButtons() {
-    const selectors = [
-      "[data-action]",
-      "[data-feature]",
-      "[data-screen-button]"
-    ];
-
-    document
-      .querySelectorAll(
-        selectors.join(",")
-      )
-      .forEach(btn => {
-        if (
-          btn.dataset.hisabBound ===
-          "true"
-        ) {
-          return;
-        }
-
-        btn.dataset.hisabBound =
-          "true";
-
-        btn.addEventListener(
-          "click",
-          e => {
-            const action =
-              btn.dataset.action ||
-              btn.dataset.feature ||
-              btn.dataset.screenButton;
-
-            if (!action) return;
-
-            if (
-              action === "home"
-            ) {
-              showHome();
-              return;
-            }
-
-            if (
-              action === "clear"
-            ) {
-              clearAllData();
-              return;
-            }
-
-            openFeature(action);
-          }
-        );
-      });
-
-    /*
-      Common button text fallback
-    */
-    document
-      .querySelectorAll("button")
-      .forEach(btn => {
-        if (
-          btn.dataset.hisabBound ===
-          "true"
-        ) {
-          return;
-        }
-
-        const text =
-          btn.textContent
-            .trim()
-            .toLowerCase();
-
-        let action = null;
-
-        if (
-          text.includes("income") ||
-          text.includes("aamdani")
-        ) {
-          action = "income";
-        }
-
-        else if (
-          text.includes("expense") ||
-          text.includes("kharcha")
-        ) {
-          action = "expense";
-        }
-
-        else if (
-          text.includes("len-den") ||
-          text.includes("lend") ||
-          text.includes("udhaar") ||
-          text.includes("khata")
-        ) {
-          action = "lendden";
-        }
-
-        else if (
-          text.includes("saving")
-        ) {
-          action = "savings";
-        }
-
-        else if (
-          text.includes("goal")
-        ) {
-          action = "goals";
-        }
-
-        else if (
-          text.includes("budget")
-        ) {
-          action = "budget";
-        }
-
-        else if (
-          text.includes("bill")
-        ) {
-          action = "bills";
-        }
-
-        else if (
-          text.includes("loan") ||
-          text.includes("emi")
-        ) {
-          action = "loans";
-        }
-
-        else if (
-          text.includes("report") ||
-          text.includes("analytics")
-        ) {
-          action = "reports";
-        }
-
-        else if (
-          text.includes(
-            "transaction"
-          )
-        ) {
-          action =
-            "transactions";
-        }
-
-        else if (
-          text.includes("setting")
-        ) {
-          action =
-            "settings";
-        }
-
-        if (action) {
-          btn.dataset.hisabBound =
-            "true";
-
-          btn.addEventListener(
-            "click",
-            e => {
-              e.preventDefault();
-
-              openFeature(
-                action
-              );
-            }
-          );
-        }
-      });
+  if (
+    document.documentElement.dataset.hisabDelegated ===
+    "true"
+  ) {
+    return;
   }
+
+  document.documentElement.dataset.hisabDelegated =
+    "true";
+
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(
+      "button, [role='button'], [data-action], [data-feature], [data-screen-button]"
+    );
+
+    if (!btn) return;
+
+    const action =
+      btn.dataset.action ||
+      btn.dataset.feature ||
+      btn.dataset.screenButton;
+
+    if (action) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const normalized = String(action)
+        .trim()
+        .toLowerCase();
+
+      if (normalized === "home") {
+        showHome();
+        return;
+      }
+
+      if (normalized === "clear") {
+        clearAllData();
+        return;
+      }
+
+      openFeature(normalized);
+      return;
+    }
+
+    const text = (btn.textContent || "")
+      .trim()
+      .toLowerCase();
+
+    let fallback = null;
+
+    if (
+      text.includes("income") ||
+      text.includes("aamdani")
+    ) {
+      fallback = "income";
+    } else if (
+      text.includes("expense") ||
+      text.includes("kharcha")
+    ) {
+      fallback = "expense";
+    } else if (
+      text.includes("len-den") ||
+      text.includes("lend") ||
+      text.includes("udhaar") ||
+      text.includes("khata")
+    ) {
+      fallback = "lendden";
+    } else if (
+      text.includes("saving")
+    ) {
+      fallback = "savings";
+    } else if (
+      text.includes("goal")
+    ) {
+      fallback = "goals";
+    } else if (
+      text.includes("budget")
+    ) {
+      fallback = "budget";
+    } else if (
+      text.includes("bill")
+    ) {
+      fallback = "bills";
+    } else if (
+      text.includes("loan") ||
+      text.includes("emi")
+    ) {
+      fallback = "loans";
+    } else if (
+      text.includes("report") ||
+      text.includes("analytics")
+    ) {
+      fallback = "reports";
+    } else if (
+      text.includes("transaction")
+    ) {
+      fallback = "transactions";
+    } else if (
+      text.includes("setting")
+    ) {
+      fallback = "settings";
+    } else if (
+      text.includes("security")
+    ) {
+      fallback = "security";
+    } else if (
+      text.includes("backup") ||
+      text.includes("restore")
+    ) {
+      fallback = "backup";
+    }
+
+    if (fallback) {
+      e.preventDefault();
+      e.stopPropagation();
+      openFeature(fallback);
+    }
+  });
+}
 
   /* =========================================================
      APP RESUME
