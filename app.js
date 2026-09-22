@@ -2236,7 +2236,12 @@
 
     if (!btn) return;
 
-    const action =
+/* Never let the global click handler hijack modal buttons. */
+if (btn.closest(".hisab-modal")) {
+  return;
+}
+
+const action =
       btn.dataset.action ||
       btn.dataset.feature ||
       btn.dataset.screenButton;
