@@ -1096,1268 +1096,481 @@
       }
     );
   }
-/* =========================================================
-     UDHAR — GIVE / RECEIVE
-     ========================================================= */
 
-  function renderUdharList(filter = "all", searchText = "") {
-    const allEntries = [...data.lendDen].sort(
-      (a, b) =>
-        Number(b.createdAt || 0) -
-        Number(a.createdAt || 0)
+  /* =========================================================
+   UDHAR — PERSON WISE GIVE / RECEIVE
+   ========================================================= */
+
+function getUdharPersons() {
+  const map = {};
+
+  (data.lendDen || []).forEach(item => {
+    const name = String(item.person || "").trim();
+    if (!name) return;
+
+    const key = name.toLowerCase();
+
+    if (!map[key]) {
+      map[key] = {
+        person: name,
+        given: 0,
+        received: 0,
+        entries: []
+      };
+    }
+
+    const amount = Number(item.amount || 0);
+
+    if (item.type === "given") {
+      map[key].given += amount;
+    } else if (item.type === "received") {
+      map[key].received += amount;
+    }
+
+    map[key].entries.push(item);
+  });
+
+  return Object.values(map).map(p => {
+    p.balance = p.given - p.received;
+    return p;
+  });
+}
+
+
+function getUdharPerson(person) {
+  const key = String(person || "")
+    .trim()
+    .toLowerCase();
+
+  return getUdharPersons().find(
+    p => p.person.toLowerCase() === key
+  );
+}
+
+
+function renderUdharList(filter = "all", searchText = "") {
+
+  const persons = getUdharPersons()
+    .sort((a, b) =>
+      a.person.localeCompare(b.person)
     );
 
-    const search = String(searchText || "")
-      .trim()
-      .toLowerCase();
+  const search = String(searchText || "")
+    .trim()
+    .toLowerCase();
 
-    const totalGive = allEntries
-      .filter(x => x.type === "given")
-      .reduce(
-        (sum, x) => sum + Number(x.amount || 0),
-        0
-      );
+  /* ---------------------------------------------------------
+     OVERALL TRANSACTION TOTALS
+     --------------------------------------------------------- */
 
-    const totalReceive = allEntries
-      .filter(x => x.type === "received")
-      .reduce(
-        (sum, x) => sum + Number(x.amount || 0),
-        0
-      );
+  const totalGive = (data.lendDen || [])
+    .filter(x => x.type === "given")
+    .reduce(
+      (sum, x) =>
+        sum + Number(x.amount || 0),
+      0
+    );
 
-    const net = totalGive - totalReceive;
+  const totalReceive = (data.lendDen || [])
+    .filter(x => x.type === "received")
+    .reduce(
+      (sum, x) =>
+        sum + Number(x.amount || 0),
+      0
+    );
 
-    const entries = allEntries.filter(item => {
-      const typeMatch =
-        filter === "all" ||
-        item.type === filter;
+  /* ---------------------------------------------------------
+     PERSON FILTER
+     --------------------------------------------------------- */
 
-      const text =
-        `${item.person || ""} ${item.note || ""}`
-          .toLowerCase();
+  const filteredPersons = persons.filter(person => {
 
-      const searchMatch =
-        !search || text.includes(search);
+    const text =
+      String(person.person || "")
+        .toLowerCase();
 
-      return typeMatch && searchMatch;
-    });
+    const searchMatch =
+      !search ||
+      text.includes(search);
 
-    const rows = entries.length
-      ? entries.map(item => {
-          const isGive =
-            item.type === "given";
+    let filterMatch = true;
 
-          const color = isGive
-            ? "#d32f2f"
-            : "#168a45";
+    if (filter === "given") {
+      filterMatch =
+        person.given > 0;
+    }
 
-          const bg = isGive
-            ? "#fff5f5"
-            : "#f1fff6";
+    if (filter === "received") {
+      filterMatch =
+        person.received > 0;
+    }
 
-          const label = isGive
-            ? "GIVE"
-            : "RECEIVE";
+    if (filter === "due") {
+      filterMatch =
+        person.balance !== 0;
+    }
 
-          return `
+    return searchMatch && filterMatch;
+  });
+
+
+  /* ---------------------------------------------------------
+     PERSON CARDS
+     --------------------------------------------------------- */
+
+  const rows = filteredPersons.length
+
+    ? filteredPersons.map(person => {
+
+        const balance =
+          Number(person.balance || 0);
+
+        let statusText = "CLEAR";
+        let statusColor = "#168a45";
+        let statusBg = "#edfff4";
+
+        if (balance > 0) {
+          statusText = "GIVE";
+          statusColor = "#d32f2f";
+          statusBg = "#fff0f0";
+        }
+
+        if (balance < 0) {
+          statusText = "RECEIVE";
+          statusColor = "#168a45";
+          statusBg = "#edfff4";
+        }
+
+        return `
+          <div
+            data-udhar-person="${escapeHTML(
+              person.person
+            )}"
+            style="
+              background:#fff;
+              border:1px solid #e3e8ed;
+              border-radius:18px;
+              padding:15px;
+              margin-bottom:11px;
+              box-shadow:0 3px 10px rgba(0,0,0,.04);
+              cursor:pointer;
+            "
+          >
+
+            <!-- PERSON HEADER -->
+
             <div
-              data-udhar-person="${escapeHTML(
-                item.person || ""
-              )}"
               style="
-                background:${bg};
-                border:1px solid ${
-                  isGive
-                    ? "#ffd5d5"
-                    : "#ccefd9"
-                };
-                border-radius:18px;
-                padding:14px;
-                margin-bottom:10px;
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:10px;
               "
             >
 
               <div
                 style="
-                  display:flex;
-                  align-items:flex-start;
-                  justify-content:space-between;
-                  gap:12px;
+                  flex:1;
+                  min-width:0;
                 "
               >
 
-                <div style="flex:1;min-width:0;">
-
-                  <div
-                    style="
-                      font-size:17px;
-                      font-weight:900;
-                      color:#172b3a;
-                      word-break:break-word;
-                    "
-                  >
-                    ${escapeHTML(
-                      item.person || "Unknown"
-                    )}
-                  </div>
-
-                  <div
-                    style="
-                      margin-top:5px;
-                      font-size:12px;
-                      color:#777;
-                    "
-                  >
-                    ${escapeHTML(
-                      item.date || ""
-                    )}
-                    ${
-                      item.time
-                        ? " • " +
-                          escapeHTML(item.time)
-                        : ""
-                    }
-                  </div>
-
-                  ${
-                    item.note
-                      ? `
-                        <div
-                          style="
-                            margin-top:7px;
-                            font-size:13px;
-                            color:#666;
-                            line-height:1.4;
-                          "
-                        >
-                          ${escapeHTML(
-                            item.note
-                          )}
-                        </div>
-                      `
-                      : ""
-                  }
-
+                <div
+                  style="
+                    font-size:17px;
+                    font-weight:900;
+                    color:#172b3a;
+                    word-break:break-word;
+                  "
+                >
+                  ${escapeHTML(person.person)}
                 </div>
 
                 <div
                   style="
-                    text-align:right;
-                    min-width:92px;
+                    margin-top:4px;
+                    font-size:11px;
+                    color:#777;
                   "
                 >
-
-                  <div
-                    style="
-                      font-size:11px;
-                      font-weight:900;
-                      color:${color};
-                      letter-spacing:.6px;
-                    "
-                  >
-                    ${label}
-                  </div>
-
-                  <div
-                    style="
-                      margin-top:3px;
-                      font-size:18px;
-                      font-weight:900;
-                      color:${color};
-                    "
-                  >
-                    ${money(item.amount)}
-                  </div>
-
+                  Tap to view full history
                 </div>
 
               </div>
 
               <div
                 style="
-                  display:flex;
-                  justify-content:flex-end;
-                  gap:8px;
-                  margin-top:12px;
-                  padding-top:10px;
-                  border-top:1px solid rgba(0,0,0,.06);
+                  padding:6px 9px;
+                  border-radius:9px;
+                  background:${statusBg};
+                  color:${statusColor};
+                  font-size:10px;
+                  font-weight:900;
+                  letter-spacing:.5px;
                 "
               >
-
-                <button
-                  type="button"
-                  data-edit-udhar="${item.id}"
-                  style="
-                    border:0;
-                    border-radius:10px;
-                    padding:7px 12px;
-                    background:#eef3f7;
-                    color:#172b3a;
-                    font-weight:800;
-                  "
-                >
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  data-delete-udhar="${item.id}"
-                  style="
-                    border:0;
-                    border-radius:10px;
-                    padding:7px 12px;
-                    background:#fff0f0;
-                    color:#d32f2f;
-                    font-weight:800;
-                  "
-                >
-                  Delete
-                </button>
-
+                ${statusText}
               </div>
 
             </div>
-          `;
-        }).join("")
-      : `
+
+
+            <!-- PERSON TOTALS -->
+
+            <div
+              style="
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:8px;
+                margin-top:13px;
+              "
+            >
+
+              <div
+                style="
+                  padding:11px;
+                  border-radius:12px;
+                  background:#fff5f5;
+                "
+              >
+                <div
+                  style="
+                    font-size:10px;
+                    color:#d32f2f;
+                    font-weight:900;
+                  "
+                >
+                  DIYA
+                </div>
+
+                <div
+                  style="
+                    margin-top:3px;
+                    font-size:16px;
+                    color:#d32f2f;
+                    font-weight:900;
+                  "
+                >
+                  ${money(person.given)}
+                </div>
+              </div>
+
+
+              <div
+                style="
+                  padding:11px;
+                  border-radius:12px;
+                  background:#f0fff5;
+                "
+              >
+                <div
+                  style="
+                    font-size:10px;
+                    color:#168a45;
+                    font-weight:900;
+                  "
+                >
+                  LIYA
+                </div>
+
+                <div
+                  style="
+                    margin-top:3px;
+                    font-size:16px;
+                    color:#168a45;
+                    font-weight:900;
+                  "
+                >
+                  ${money(person.received)}
+                </div>
+              </div>
+
+            </div>
+
+
+            <!-- BALANCE -->
+
+            <div
+              style="
+                margin-top:9px;
+                padding:11px 12px;
+                border-radius:12px;
+                background:#f5f7fa;
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:10px;
+              "
+            >
+
+              <span
+                style="
+                  font-size:12px;
+                  font-weight:800;
+                  color:#555;
+                "
+              >
+                ${
+                  balance > 0
+                    ? "Is person ko dena hai"
+                    : balance < 0
+                    ? "Is person se lena hai"
+                    : "Hisab clear"
+                }
+              </span>
+
+              <strong
+                style="
+                  color:${statusColor};
+                  font-size:16px;
+                "
+              >
+                ${money(Math.abs(balance))}
+              </strong>
+
+            </div>
+
+
+            <!-- QUICK ACTION -->
+
+            <div
+              style="
+                display:flex;
+                justify-content:flex-end;
+                gap:7px;
+                margin-top:10px;
+              "
+            >
+
+              <button
+                type="button"
+                data-quick-udhar="${escapeHTML(
+                  person.person
+                )}"
+                style="
+                  border:0;
+                  border-radius:10px;
+                  padding:8px 11px;
+                  background:#eef3f7;
+                  color:#172b3a;
+                  font-weight:800;
+                  font-size:12px;
+                "
+              >
+                + Entry
+              </button>
+
+            </div>
+
+          </div>
+        `;
+      }).join("")
+
+    : `
+      <div
+        style="
+          text-align:center;
+          padding:35px 15px;
+          color:#777;
+        "
+      >
+
         <div
           style="
-            text-align:center;
-            padding:35px 15px;
-            color:#777;
+            width:60px;
+            height:60px;
+            margin:0 auto 12px;
+            border-radius:50%;
+            background:#f2f5f8;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:25px;
+            font-weight:900;
+            color:#0b1f33;
           "
         >
+          ₹
+        </div>
+
+        <strong>
+          No Udhar found
+        </strong>
+
+        <div
+          style="
+            margin-top:5px;
+            font-size:13px;
+          "
+        >
+          Add a Give or Receive entry.
+        </div>
+
+      </div>
+    `;
+
+
+  /* ---------------------------------------------------------
+     NET TOTAL — ONLY FOR OVERALL VIEW
+     IMPORTANT:
+     EACH PERSON IS CALCULATED SEPARATELY ABOVE.
+     --------------------------------------------------------- */
+
+  const overallNet =
+    totalGive - totalReceive;
+
+
+  return `
+    <div>
+
+      <!-- SUMMARY -->
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:10px;
+          margin-bottom:10px;
+        "
+      >
+
+        <div
+          style="
+            padding:15px;
+            border-radius:18px;
+            background:#fff0f0;
+            border:1px solid #ffd4d4;
+          "
+        >
+
           <div
             style="
-              width:60px;
-              height:60px;
-              margin:0 auto 12px;
-              border-radius:50%;
-              background:#f2f5f8;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              font-size:25px;
+              font-size:11px;
               font-weight:900;
-              color:#0b1f33;
+              color:#d32f2f;
+              letter-spacing:.7px;
             "
           >
-            ₹
+            TOTAL DIYA
           </div>
-
-          <strong>
-            No Udhar entries
-          </strong>
 
           <div
             style="
               margin-top:5px;
-              font-size:13px;
-            "
-          >
-            Add your first Give or Receive entry.
-          </div>
-        </div>
-      `;
-
-    return `
-      <div>
-
-        <!-- SUMMARY -->
-
-        <div
-          style="
-            display:grid;
-            grid-template-columns:1fr 1fr;
-            gap:10px;
-            margin-bottom:10px;
-          "
-        >
-
-          <div
-            style="
-              padding:15px;
-              border-radius:18px;
-              background:#fff0f0;
-              border:1px solid #ffd4d4;
-            "
-          >
-            <div
-              style="
-                font-size:11px;
-                font-weight:900;
-                color:#d32f2f;
-                letter-spacing:.7px;
-              "
-            >
-              GIVE
-            </div>
-
-            <div
-              style="
-                margin-top:5px;
-                font-size:20px;
-                font-weight:900;
-                color:#d32f2f;
-              "
-            >
-              ${money(totalGive)}
-            </div>
-
-            <div
-              style="
-                margin-top:3px;
-                font-size:11px;
-                color:#777;
-              "
-            >
-              Paisa diya
-            </div>
-          </div>
-
-          <div
-            style="
-              padding:15px;
-              border-radius:18px;
-              background:#edfff4;
-              border:1px solid #c9f1d8;
-            "
-          >
-            <div
-              style="
-                font-size:11px;
-                font-weight:900;
-                color:#168a45;
-                letter-spacing:.7px;
-              "
-            >
-              RECEIVE
-            </div>
-
-            <div
-              style="
-                margin-top:5px;
-                font-size:20px;
-                font-weight:900;
-                color:#168a45;
-              "
-            >
-              ${money(totalReceive)}
-            </div>
-
-            <div
-              style="
-                margin-top:3px;
-                font-size:11px;
-                color:#777;
-              "
-            >
-              Paisa mila
-            </div>
-          </div>
-
-        </div>
-
-        <!-- NET -->
-
-        <div
-          style="
-            padding:13px 15px;
-            border-radius:16px;
-            background:#f5f7fa;
-            margin-bottom:13px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-          "
-        >
-
-          <span
-            style="
-              font-size:13px;
-              font-weight:800;
-              color:#555;
-            "
-          >
-            Net Udhar
-          </span>
-
-          <strong
-            style="
-              font-size:17px;
-              color:${
-                net >= 0
-                  ? "#d32f2f"
-                  : "#168a45"
-              };
-            "
-          >
-            ${money(Math.abs(net))}
-          </strong>
-
-        </div>
-
-        <!-- ADD -->
-
-        <button
-          type="button"
-          id="addUdharButton"
-          style="
-            width:100%;
-            padding:14px;
-            border:0;
-            border-radius:15px;
-            background:#0b1f33;
-            color:#fff;
-            font-size:15px;
-            font-weight:900;
-            margin-bottom:13px;
-          "
-        >
-          + Add Udhar
-        </button>
-
-        <!-- SEARCH -->
-
-        <input
-          id="udharSearch"
-          type="search"
-          placeholder="Search name or note..."
-          value="${escapeHTML(searchText || "")}"
-          style="
-            width:100%;
-            box-sizing:border-box;
-            padding:13px 14px;
-            border:1px solid #dfe5ea;
-            border-radius:14px;
-            font-size:14px;
-            outline:none;
-            margin-bottom:10px;
-            background:#fff;
-          "
-        />
-
-        <!-- FILTERS -->
-
-        <div
-          style="
-            display:grid;
-            grid-template-columns:1fr 1fr 1fr;
-            gap:7px;
-            margin-bottom:17px;
-          "
-        >
-
-          <button
-            type="button"
-            data-udhar-filter="all"
-            style="
-              padding:10px 5px;
-              border-radius:11px;
-              border:1px solid #dfe5ea;
-              background:${
-                filter === "all"
-                  ? "#0b1f33"
-                  : "#fff"
-              };
-              color:${
-                filter === "all"
-                  ? "#fff"
-                  : "#172b3a"
-              };
-              font-weight:800;
-            "
-          >
-            All
-          </button>
-
-          <button
-            type="button"
-            data-udhar-filter="given"
-            style="
-              padding:10px 5px;
-              border-radius:11px;
-              border:1px solid #ffd5d5;
-              background:${
-                filter === "given"
-                  ? "#d32f2f"
-                  : "#fff5f5"
-              };
-              color:${
-                filter === "given"
-                  ? "#fff"
-                  : "#d32f2f"
-              };
-              font-weight:800;
-            "
-          >
-            Give
-          </button>
-
-          <button
-            type="button"
-            data-udhar-filter="received"
-            style="
-              padding:10px 5px;
-              border-radius:11px;
-              border:1px solid #ccefd9;
-              background:${
-                filter === "received"
-                  ? "#168a45"
-                  : "#f1fff6"
-              };
-              color:${
-                filter === "received"
-                  ? "#fff"
-                  : "#168a45"
-              };
-              font-weight:800;
-            "
-          >
-            Receive
-          </button>
-
-        </div>
-
-        <!-- HISTORY -->
-
-        <div
-          style="
-            font-size:15px;
-            font-weight:900;
-            color:#172b3a;
-            margin-bottom:10px;
-          "
-        >
-          Udhar History
-        </div>
-
-        ${rows}
-
-      </div>
-    `;
-  }
-
-
-  function showLendDen(
-    filter = "all",
-    searchText = ""
-  ) {
-    closeModal();
-
-    const modal = createModal(
-      "Udhar",
-      renderUdharList(
-        filter,
-        searchText
-      ),
-      "Close",
-      () => closeModal()
-    );
-
-    const addButton =
-      modal.querySelector(
-        "#addUdharButton"
-      );
-
-    if (addButton) {
-      addButton.addEventListener(
-        "click",
-        () => {
-          showAddUdharForm();
-        }
-      );
-    }
-
-    const search =
-      modal.querySelector(
-        "#udharSearch"
-      );
-
-    if (search) {
-      search.addEventListener(
-        "input",
-        () => {
-          const value =
-            search.value;
-
-          const currentFilter =
-            modal
-              .querySelector(
-                "[data-udhar-filter][style*='background:#0b1f33'], [data-udhar-filter][style*='background:#d32f2f'], [data-udhar-filter][style*='background:#168a45']"
-              );
-
-          let selected =
-            filter;
-
-          if (currentFilter) {
-            selected =
-              currentFilter.getAttribute(
-                "data-udhar-filter"
-              ) || filter;
-          }
-
-          const content =
-            modal.querySelector(
-              ".modal-body"
-            );
-
-          if (content) {
-            content.innerHTML =
-              renderUdharList(
-                selected,
-                value
-              );
-
-            bindUdharEvents(
-              modal,
-              selected,
-              value
-            );
-          }
-        }
-      );
-    }
-
-    bindUdharEvents(
-      modal,
-      filter,
-      searchText
-    );
-  }
-
-
-  function bindUdharEvents(
-    modal,
-    currentFilter,
-    currentSearch
-  ) {
-    modal
-      .querySelectorAll(
-        "[data-udhar-filter]"
-      )
-      .forEach(button => {
-        button.addEventListener(
-          "click",
-          () => {
-            const newFilter =
-              button.getAttribute(
-                "data-udhar-filter"
-              ) || "all";
-
-            const search =
-              modal.querySelector(
-                "#udharSearch"
-              );
-
-            showLendDen(
-              newFilter,
-              search
-                ? search.value
-                : currentSearch
-            );
-          }
-        );
-      });
-
-    modal
-      .querySelectorAll(
-        "[data-delete-udhar]"
-      )
-      .forEach(button => {
-        button.addEventListener(
-          "click",
-          () => {
-            const id =
-              button.getAttribute(
-                "data-delete-udhar"
-              );
-
-            const ok =
-              confirm(
-                "Delete this Udhar entry?"
-              );
-
-            if (!ok) return;
-
-            data.lendDen =
-              data.lendDen.filter(
-                x => x.id !== id
-              );
-
-            saveData();
-
-            showLendDen(
-              currentFilter,
-              currentSearch
-            );
-
-            notify(
-              "Udhar deleted"
-            );
-          }
-        );
-      });
-
-    modal
-      .querySelectorAll(
-        "[data-edit-udhar]"
-      )
-      .forEach(button => {
-        button.addEventListener(
-          "click",
-          () => {
-            const id =
-              button.getAttribute(
-                "data-edit-udhar"
-              );
-
-            showEditUdharForm(id);
-          }
-        );
-      });
-
-    modal
-      .querySelectorAll(
-        "[data-udhar-person]"
-      )
-      .forEach(card => {
-        card.addEventListener(
-          "click",
-          event => {
-            if (
-              event.target.closest(
-                "button"
-              )
-            ) {
-              return;
-            }
-
-            const person =
-              card.getAttribute(
-                "data-udhar-person"
-              );
-
-            if (person) {
-              showPersonUdharHistory(
-                person
-              );
-            }
-          }
-        );
-      });
-  }
-
-
-  function showAddUdharForm() {
-    const body =
-      input(
-        "Name",
-        "person",
-        "text",
-        true
-      ) +
-
-      input(
-        "Amount",
-        "amount",
-        "number",
-        true
-      ) +
-
-      select(
-        "Type",
-        "type",
-        [
-          [
-            "given",
-            "Give — Paisa Diya"
-          ],
-          [
-            "received",
-            "Receive — Paisa Mila"
-          ]
-        ]
-      ) +
-
-      input(
-        "Date",
-        "date",
-        "date",
-        true
-      ) +
-
-      input(
-        "Note",
-        "note"
-      );
-
-    createModal(
-      "Add Udhar",
-      body,
-      "Save Udhar",
-
-      fd => {
-        const person =
-          String(
-            fd.get("person") || ""
-          ).trim();
-
-        const amount =
-          Number(
-            fd.get("amount")
-          );
-
-        const type =
-          fd.get("type") ||
-          "given";
-
-        if (!person) {
-          notify(
-            "Please enter name"
-          );
-          return;
-        }
-
-        if (
-          !Number.isFinite(amount) ||
-          amount <= 0
-        ) {
-          notify(
-            "Enter a valid amount"
-          );
-          return;
-        }
-
-        data.lendDen.push({
-          id: uid("udhar"),
-          person,
-          amount,
-          type,
-          date:
-            fd.get("date") ||
-            today(),
-          time: nowTime(),
-          note:
-            String(
-              fd.get("note") || ""
-            ).trim(),
-          createdAt: Date.now()
-        });
-
-        saveData();
-
-        showLendDen();
-
-        notify(
-          type === "given"
-            ? "Give saved"
-            : "Receive saved"
-        );
-      }
-    );
-  }
-
-
-  function showEditUdharForm(id) {
-    const item =
-      data.lendDen.find(
-        x => x.id === id
-      );
-
-    if (!item) {
-      notify(
-        "Udhar entry not found"
-      );
-      return;
-    }
-
-    const body =
-      input(
-        "Name",
-        "person",
-        "text",
-        true
-      ) +
-
-      input(
-        "Amount",
-        "amount",
-        "number",
-        true
-      ) +
-
-      select(
-        "Type",
-        "type",
-        [
-          [
-            "given",
-            "Give — Paisa Diya"
-          ],
-          [
-            "received",
-            "Receive — Paisa Mila"
-          ]
-        ]
-      ) +
-
-      input(
-        "Date",
-        "date",
-        "date",
-        true
-      ) +
-
-      input(
-        "Note",
-        "note"
-      );
-
-    createModal(
-      "Edit Udhar",
-      body,
-      "Update Udhar",
-
-      fd => {
-        const person =
-          String(
-            fd.get("person") || ""
-          ).trim();
-
-        const amount =
-          Number(
-            fd.get("amount")
-          );
-
-        if (!person) {
-          notify(
-            "Please enter name"
-          );
-          return;
-        }
-
-        if (
-          !Number.isFinite(amount) ||
-          amount <= 0
-        ) {
-          notify(
-            "Enter a valid amount"
-          );
-          return;
-        }
-
-        item.person = person;
-        item.amount = amount;
-        item.type =
-          fd.get("type") ||
-          "given";
-        item.date =
-          fd.get("date") ||
-          today();
-        item.note =
-          String(
-            fd.get("note") || ""
-          ).trim();
-
-        saveData();
-
-        showLendDen();
-
-        notify(
-          "Udhar updated"
-        );
-      }
-    );
-
-    const modal =
-      document.querySelector(
-        ".modal"
-      );
-
-    if (!modal) return;
-
-    const personInput =
-      modal.querySelector(
-        '[name="person"]'
-      );
-
-    const amountInput =
-      modal.querySelector(
-        '[name="amount"]'
-      );
-
-    const typeInput =
-      modal.querySelector(
-        '[name="type"]'
-      );
-
-    const dateInput =
-      modal.querySelector(
-        '[name="date"]'
-      );
-
-    const noteInput =
-      modal.querySelector(
-        '[name="note"]'
-      );
-
-    if (personInput)
-      personInput.value =
-        item.person || "";
-
-    if (amountInput)
-      amountInput.value =
-        item.amount || "";
-
-    if (typeInput)
-      typeInput.value =
-        item.type || "given";
-
-    if (dateInput)
-      dateInput.value =
-        item.date || today();
-
-    if (noteInput)
-      noteInput.value =
-        item.note || "";
-  }
-
-
-  function showPersonUdharHistory(person) {
-    const history =
-      data.lendDen
-        .filter(
-          x =>
-            String(x.person || "")
-              .toLowerCase() ===
-            String(person || "")
-              .toLowerCase()
-        )
-        .sort(
-          (a, b) =>
-            Number(b.createdAt || 0) -
-            Number(a.createdAt || 0)
-        );
-
-    const give =
-      history
-        .filter(
-          x => x.type === "given"
-        )
-        .reduce(
-          (sum, x) =>
-            sum +
-            Number(x.amount || 0),
-          0
-        );
-
-    const receive =
-      history
-        .filter(
-          x => x.type === "received"
-        )
-        .reduce(
-          (sum, x) =>
-            sum +
-            Number(x.amount || 0),
-          0
-        );
-
-    const rows =
-      history
-        .map(item => {
-          const isGive =
-            item.type === "given";
-
-          const color =
-            isGive
-              ? "#d32f2f"
-              : "#168a45";
-
-          return `
-            <div
-              style="
-                padding:12px 0;
-                border-bottom:1px solid #edf0f2;
-              "
-            >
-
-              <div
-                style="
-                  display:flex;
-                  justify-content:space-between;
-                  gap:10px;
-                "
-              >
-
-                <div>
-                  <div
-                    style="
-                      font-size:12px;
-                      color:#777;
-                    "
-                  >
-                    ${escapeHTML(
-                      item.date || ""
-                    )}
-                    ${
-                      item.time
-                        ? " • " +
-                          escapeHTML(
-                            item.time
-                          )
-                        : ""
-                    }
-                  </div>
-
-                  ${
-                    item.note
-                      ? `
-                        <div
-                          style="
-                            margin-top:4px;
-                            font-size:13px;
-                            color:#555;
-                          "
-                        >
-                          ${escapeHTML(
-                            item.note
-                          )}
-                        </div>
-                      `
-                      : ""
-                  }
-                </div>
-
-                <div
-                  style="
-                    text-align:right;
-                    color:${color};
-                    font-weight:900;
-                  "
-                >
-                  ${isGive
-                    ? "GIVE"
-                    : "RECEIVE"}
-                  <br>
-                  ${money(item.amount)}
-                </div>
-
-              </div>
-
-            </div>
-          `;
-        })
-        .join("");
-
-    createModal(
-      escapeHTML(person),
-      `
-        <div>
-
-          <div
-            style="
-              display:grid;
-              grid-template-columns:1fr 1fr;
-              gap:10px;
-              margin-bottom:14px;
-            "
-          >
-
-            <div
-              style="
-                padding:13px;
-                border-radius:14px;
-                background:#fff0f0;
-              "
-            >
-              <div
-                style="
-                  font-size:11px;
-                  font-weight:900;
-                  color:#d32f2f;
-                "
-              >
-                GIVE
-              </div>
-
-              <strong
-                style="
-                  display:block;
-                  margin-top:4px;
-                  color:#d32f2f;
-                  font-size:18px;
-                "
-              >
-                ${money(give)}
-              </strong>
-            </div>
-
-            <div
-              style="
-                padding:13px;
-                border-radius:14px;
-                background:#edfff4;
-              "
-            >
-              <div
-                style="
-                  font-size:11px;
-                  font-weight:900;
-                  color:#168a45;
-                "
-              >
-                RECEIVE
-              </div>
-
-              <strong
-                style="
-                  display:block;
-                  margin-top:4px;
-                  color:#168a45;
-                  font-size:18px;
-                "
-              >
-                ${money(receive)}
-              </strong>
-            </div>
-
-          </div>
-
-          <div
-            style="
-              font-size:15px;
+              font-size:20px;
               font-weight:900;
-              color:#172b3a;
-              margin-bottom:5px;
+              color:#d32f2f;
             "
           >
-            Transaction History
+            ${money(totalGive)}
           </div>
 
-          ${
-            rows ||
-            `
-              <div
-                style="
-                  padding:20px;
-                  text-align:center;
-                  color:#777;
-                "
-              >
-                No history
-              </div>
-            `
-          }
-
         </div>
-      `,
-      "Close",
-      () => closeModal()
-    );
-  }
-  
+
+
+        <div
+          style="
+           
   /* =========================================================
      SAVINGS
      ========================================================= */
