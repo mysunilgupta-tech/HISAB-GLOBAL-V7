@@ -1096,481 +1096,905 @@
       }
     );
   }
+  /* =========================================================
+     UDHAR — PERSON WISE GIVE / RECEIVE
+     ========================================================= */
+
+  function getUdharPersons() {
+
+    const map = {};
+
+    if (!Array.isArray(data.lendDen)) {
+      data.lendDen = [];
+    }
+
+    data.lendDen.forEach(item => {
+
+      const name =
+        String(
+          item.person ||
+          ""
+        ).trim();
+
+      if (!name) return;
+
+      const key =
+        name.toLowerCase();
+
+      if (!map[key]) {
+        map[key] = {
+          person: name,
+          given: 0,
+          received: 0,
+          entries: []
+        };
+      }
+
+      const amount =
+        Number(item.amount || 0);
+
+      if (item.type === "given") {
+        map[key].given += amount;
+      }
+
+      if (item.type === "received") {
+        map[key].received += amount;
+      }
+
+      map[key].entries.push(item);
+    });
+
+    return Object.values(map).map(person => {
+
+      /*
+        Diya - Liya
+
+        Positive:
+        Person se paisa lena hai
+
+        Negative:
+        Person ko paisa dena hai
+
+        Zero:
+        Hisab clear
+      */
+
+      person.balance =
+        person.given -
+        person.received;
+
+      return person;
+    });
+  }
+
 
   /* =========================================================
-   UDHAR — PERSON WISE GIVE / RECEIVE
-   ========================================================= */
+     ADD UDHAR ENTRY
+     ========================================================= */
 
-function getUdharPersons() {
-  const map = {};
+  function showLendDen(personName = "") {
 
-  (data.lendDen || []).forEach(item => {
-    const name = String(item.person || "").trim();
-    if (!name) return;
+    createModal(
+      "Paisa Len-Den / Udhaar",
 
-    const key = name.toLowerCase();
+      input(
+        "Person Name",
+        "person",
+        "text",
+        true
+      ) +
+      input(
+        "Amount",
+        "amount",
+        "number",
+        true
+      ) +
+      select(
+        "Type",
+        "type",
+        [
+          [
+            "given",
+            "Paisa Diya"
+          ],
+          [
+            "received",
+            "Paisa Liya"
+          ]
+        ]
+      ) +
+      input(
+        "Date",
+        "date",
+        "date",
+        true
+      ) +
+      input(
+        "Note",
+        "note"
+      ),
 
-    if (!map[key]) {
-      map[key] = {
-        person: name,
-        given: 0,
-        received: 0,
-        entries: []
-      };
+      "Save Entry",
+
+      fd => {
+
+        const person =
+          String(
+            fd.get("person") || ""
+          ).trim();
+
+        const amount =
+          Number(
+            fd.get("amount")
+          );
+
+        const type =
+          String(
+            fd.get("type") || ""
+          );
+
+        if (!person) {
+          notify(
+            "Person name required"
+          );
+          return;
+        }
+
+        if (
+          !amount ||
+          amount <= 0
+        ) {
+          notify(
+            "Enter a valid amount"
+          );
+          return;
+        }
+
+        if (
+          type !== "given" &&
+          type !== "received"
+        ) {
+          notify(
+            "Select valid type"
+          );
+          return;
+        }
+
+        if (
+          !Array.isArray(
+            data.lendDen
+          )
+        ) {
+          data.lendDen = [];
+        }
+
+        data.lendDen.push({
+
+          id:
+            uid("udhar"),
+
+          person:
+            person,
+
+          type:
+            type,
+
+          amount:
+            amount,
+
+          note:
+            String(
+              fd.get("note") || ""
+            ).trim(),
+
+          date:
+            fd.get("date") ||
+            today(),
+
+          time:
+            nowTime(),
+
+          createdAt:
+            Date.now()
+
+        });
+
+        saveData();
+
+        closeModal();
+
+        notify(
+          type === "given"
+            ? "Paisa diya record ho gaya"
+            : "Paisa liya record ho gaya"
+        );
+
+        /*
+          Open Udhaar again so the
+          updated person-wise balance
+          is immediately visible.
+        */
+
+        setTimeout(() => {
+          showLendDen();
+        }, 150);
+      }
+    );
+
+    /*
+      Pre-fill person name when
+      entry is opened from a person card.
+    */
+
+    if (personName) {
+
+      setTimeout(() => {
+
+        const personInput =
+          document.querySelector(
+            ".hisab-modal input[name='person']"
+          );
+
+        if (personInput) {
+          personInput.value =
+            personName;
+        }
+
+      }, 50);
+    }
+  }
+
+
+  /* =========================================================
+     UDHAR SUMMARY
+     ========================================================= */
+
+  function getUdharSummary() {
+
+    let given = 0;
+    let received = 0;
+
+    if (!Array.isArray(data.lendDen)) {
+      data.lendDen = [];
     }
 
-    const amount = Number(item.amount || 0);
+    data.lendDen.forEach(item => {
 
-    if (item.type === "given") {
-      map[key].given += amount;
-    } else if (item.type === "received") {
-      map[key].received += amount;
-    }
+      const amount =
+        Number(
+          item.amount || 0
+        );
 
-    map[key].entries.push(item);
-  });
+      if (item.type === "given") {
+        given += amount;
+      }
 
-  return Object.values(map).map(p => {
-    p.balance = p.given - p.received;
-    return p;
-  });
-}
+      if (item.type === "received") {
+        received += amount;
+      }
+    });
 
-
-function getUdharPerson(person) {
-  const key = String(person || "")
-    .trim()
-    .toLowerCase();
-
-  return getUdharPersons().find(
-    p => p.person.toLowerCase() === key
-  );
-}
+    return {
+      given,
+      received,
+      net:
+        given - received
+    };
+  }
 
 
-function renderUdharList(filter = "all", searchText = "") {
+  /* =========================================================
+     UDHAR MAIN SCREEN
+     ========================================================= */
 
-  const persons = getUdharPersons()
-    .sort((a, b) =>
-      a.person.localeCompare(b.person)
-    );
+  function openUdharScreen(
+    filter = "all",
+    searchText = ""
+  ) {
 
-  const search = String(searchText || "")
-    .trim()
-    .toLowerCase();
+    const persons =
+      getUdharPersons();
 
-  /* ---------------------------------------------------------
-     OVERALL TRANSACTION TOTALS
-     --------------------------------------------------------- */
+    const summary =
+      getUdharSummary();
 
-  const totalGive = (data.lendDen || [])
-    .filter(x => x.type === "given")
-    .reduce(
-      (sum, x) =>
-        sum + Number(x.amount || 0),
-      0
-    );
-
-  const totalReceive = (data.lendDen || [])
-    .filter(x => x.type === "received")
-    .reduce(
-      (sum, x) =>
-        sum + Number(x.amount || 0),
-      0
-    );
-
-  /* ---------------------------------------------------------
-     PERSON FILTER
-     --------------------------------------------------------- */
-
-  const filteredPersons = persons.filter(person => {
-
-    const text =
-      String(person.person || "")
+    const search =
+      String(
+        searchText || ""
+      )
+        .trim()
         .toLowerCase();
 
-    const searchMatch =
-      !search ||
-      text.includes(search);
+    let filtered =
+      persons.filter(person => {
 
-    let filterMatch = true;
+        const matchesSearch =
+          !search ||
+          person.person
+            .toLowerCase()
+            .includes(search);
 
-    if (filter === "given") {
-      filterMatch =
-        person.given > 0;
-    }
-
-    if (filter === "received") {
-      filterMatch =
-        person.received > 0;
-    }
-
-    if (filter === "due") {
-      filterMatch =
-        person.balance !== 0;
-    }
-
-    return searchMatch && filterMatch;
-  });
-
-
-  /* ---------------------------------------------------------
-     PERSON CARDS
-     --------------------------------------------------------- */
-
-  const rows = filteredPersons.length
-
-    ? filteredPersons.map(person => {
-
-        const balance =
-          Number(person.balance || 0);
-
-        let statusText = "CLEAR";
-        let statusColor = "#168a45";
-        let statusBg = "#edfff4";
-
-        if (balance > 0) {
-          statusText = "GIVE";
-          statusColor = "#d32f2f";
-          statusBg = "#fff0f0";
+        if (!matchesSearch) {
+          return false;
         }
 
-        if (balance < 0) {
-          statusText = "RECEIVE";
-          statusColor = "#168a45";
-          statusBg = "#edfff4";
+        if (filter === "given") {
+          return person.given > 0;
         }
 
-        return `
+        if (filter === "received") {
+          return person.received > 0;
+        }
+
+        if (filter === "due") {
+          return person.balance !== 0;
+        }
+
+        return true;
+      });
+
+
+    filtered.sort((a, b) =>
+      a.person.localeCompare(
+        b.person
+      )
+    );
+
+
+    const personHTML =
+      filtered.length
+
+        ? filtered.map(person => {
+
+            const balance =
+              Number(
+                person.balance || 0
+              );
+
+            let status =
+              "HISAB CLEAR";
+
+            let statusBg =
+              "#edf9f1";
+
+            let statusColor =
+              "#168a45";
+
+            if (balance > 0) {
+
+              status =
+                "LENA HAI";
+
+              statusBg =
+                "#fff0f0";
+
+              statusColor =
+                "#d32f2f";
+
+            } else if (balance < 0) {
+
+              status =
+                "DENA HAI";
+
+              statusBg =
+                "#fff7e8";
+
+              statusColor =
+                "#c77700";
+            }
+
+
+            return `
+
+              <div
+                style="
+                  padding:15px;
+                  margin-bottom:10px;
+                  border:1px solid #e1e7ec;
+                  border-radius:18px;
+                  background:#fff;
+                "
+              >
+
+                <div
+                  style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    gap:10px;
+                  "
+                >
+
+                  <strong
+                    style="
+                      font-size:17px;
+                      color:#172b3a;
+                    "
+                  >
+                    ${escapeHTML(
+                      person.person
+                    )}
+                  </strong>
+
+                  <span
+                    style="
+                      padding:5px 8px;
+                      border-radius:8px;
+                      background:${statusBg};
+                      color:${statusColor};
+                      font-size:10px;
+                      font-weight:900;
+                    "
+                  >
+                    ${status}
+                  </span>
+
+                </div>
+
+
+                <div
+                  style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:8px;
+                    margin-top:12px;
+                  "
+                >
+
+                  <div
+                    style="
+                      padding:10px;
+                      border-radius:12px;
+                      background:#fff1f1;
+                    "
+                  >
+
+                    <small
+                      style="
+                        color:#d32f2f;
+                        font-weight:800;
+                      "
+                    >
+                      DIYA
+                    </small>
+
+                    <div
+                      style="
+                        margin-top:3px;
+                        color:#d32f2f;
+                        font-weight:900;
+                      "
+                    >
+                      ${money(
+                        person.given
+                      )}
+                    </div>
+
+                  </div>
+
+
+                  <div
+                    style="
+                      padding:10px;
+                      border-radius:12px;
+                      background:#effbf3;
+                    "
+                  >
+
+                    <small
+                      style="
+                        color:#168a45;
+                        font-weight:800;
+                      "
+                    >
+                      LIYA
+                    </small>
+
+                    <div
+                      style="
+                        margin-top:3px;
+                        color:#168a45;
+                        font-weight:900;
+                      "
+                    >
+                      ${money(
+                        person.received
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                <div
+                  style="
+                    margin-top:9px;
+                    padding:11px;
+                    border-radius:12px;
+                    background:#f5f7fa;
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                  "
+                >
+
+                  <span
+                    style="
+                      font-size:12px;
+                      font-weight:800;
+                      color:#555;
+                    "
+                  >
+                    ${
+                      balance > 0
+                        ? "Is person se lena hai"
+                        : balance < 0
+                        ? "Is person ko dena hai"
+                        : "Hisab clear"
+                    }
+                  </span>
+
+                  <strong
+                    style="
+                      color:${statusColor};
+                    "
+                  >
+                    ${money(
+                      Math.abs(balance)
+                    )}
+                  </strong>
+
+                </div>
+
+
+                <div
+                  style="
+                    display:flex;
+                    gap:7px;
+                    margin-top:10px;
+                  "
+                >
+
+                  <button
+                    type="button"
+                    data-udhar-entry="${escapeHTML(
+                      person.person
+                    )}"
+                    style="
+                      flex:1;
+                      padding:10px;
+                      border:0;
+                      border-radius:10px;
+                      background:#0b1f33;
+                      color:#fff;
+                      font-weight:800;
+                    "
+                  >
+                    + Entry
+                  </button>
+
+                  <button
+                    type="button"
+                    data-udhar-history="${escapeHTML(
+                      person.person
+                    )}"
+                    style="
+                      flex:1;
+                      padding:10px;
+                      border:1px solid #d9e0e6;
+                      border-radius:10px;
+                      background:#fff;
+                      color:#172b3a;
+                      font-weight:800;
+                    "
+                  >
+                    History
+                  </button>
+
+                </div>
+
+              </div>
+
+            `;
+
+          }).join("")
+
+        : `
+
           <div
-            data-udhar-person="${escapeHTML(
-              person.person
+            style="
+              text-align:center;
+              padding:35px 15px;
+              color:#777;
+            "
+          >
+
+            <div
+              style="
+                font-size:35px;
+                margin-bottom:8px;
+              "
+            >
+              🤝
+            </div>
+
+            <strong>
+              No Udhaar found
+            </strong>
+
+            <p
+              style="
+                margin:6px 0 0;
+                font-size:13px;
+              "
+            >
+              Add your first Paisa Diya
+              or Paisa Liya entry.
+            </p>
+
+          </div>
+
+        `;
+
+
+    const modal =
+      createModal(
+        "Udhaar Hisaab",
+
+        `
+          <!-- SUMMARY -->
+
+          <div
+            style="
+              display:grid;
+              grid-template-columns:1fr 1fr;
+              gap:8px;
+            "
+          >
+
+            <div
+              style="
+                padding:12px;
+                border-radius:14px;
+                background:#fff0f0;
+              "
+            >
+
+              <small
+                style="
+                  color:#d32f2f;
+                  font-weight:900;
+                "
+              >
+                TOTAL DIYA
+              </small>
+
+              <div
+                style="
+                  margin-top:4px;
+                  color:#d32f2f;
+                  font-size:18px;
+                  font-weight:900;
+                "
+              >
+                ${money(
+                  summary.given
+                )}
+              </div>
+
+            </div>
+
+
+            <div
+              style="
+                padding:12px;
+                border-radius:14px;
+                background:#effbf3;
+              "
+            >
+
+              <small
+                style="
+                  color:#168a45;
+                  font-weight:900;
+                "
+              >
+                TOTAL LIYA
+              </small>
+
+              <div
+                style="
+                  margin-top:4px;
+                  color:#168a45;
+                  font-size:18px;
+                  font-weight:900;
+                "
+              >
+                ${money(
+                  summary.received
+                )}
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div
+            style="
+              margin-top:9px;
+              padding:12px;
+              border-radius:14px;
+              background:#f5f7fa;
+              text-align:center;
+            "
+          >
+
+            <small
+              style="
+                color:#666;
+                font-weight:800;
+              "
+            >
+              OVERALL NET
+            </small>
+
+            <div
+              style="
+                margin-top:4px;
+                font-size:19px;
+                font-weight:900;
+              "
+            >
+              ${
+                summary.net > 0
+                  ? "Lena Hai " +
+                    money(summary.net)
+                  : summary.net < 0
+                  ? "Dena Hai " +
+                    money(
+                      Math.abs(
+                        summary.net
+                      )
+                    )
+                  : "Hisab Clear ₹0"
+              }
+            </div>
+
+          </div>
+
+
+          <!-- SEARCH -->
+
+          <input
+            id="udharSearch"
+            type="search"
+            placeholder="Search person..."
+            value="${escapeHTML(
+              searchText
             )}"
             style="
-              background:#fff;
-              border:1px solid #e3e8ed;
-              border-radius:18px;
-              padding:15px;
-              margin-bottom:11px;
-              box-shadow:0 3px 10px rgba(0,0,0,.04);
-              cursor:pointer;
+              width:100%;
+              box-sizing:border-box;
+              margin-top:12px;
+              padding:12px;
+              border:1px solid #ddd;
+              border-radius:12px;
+              font-size:15px;
             "
           >
 
-            <!-- PERSON HEADER -->
 
-            <div
-              style="
-                display:flex;
-                align-items:center;
-                justify-content:space-between;
-                gap:10px;
-              "
-            >
-
-              <div
-                style="
-                  flex:1;
-                  min-width:0;
-                "
-              >
-
-                <div
-                  style="
-                    font-size:17px;
-                    font-weight:900;
-                    color:#172b3a;
-                    word-break:break-word;
-                  "
-                >
-                  ${escapeHTML(person.person)}
-                </div>
-
-                <div
-                  style="
-                    margin-top:4px;
-                    font-size:11px;
-                    color:#777;
-                  "
-                >
-                  Tap to view full history
-                </div>
-
-              </div>
-
-              <div
-                style="
-                  padding:6px 9px;
-                  border-radius:9px;
-                  background:${statusBg};
-                  color:${statusColor};
-                  font-size:10px;
-                  font-weight:900;
-                  letter-spacing:.5px;
-                "
-              >
-                ${statusText}
-              </div>
-
-            </div>
-
-
-            <!-- PERSON TOTALS -->
-
-            <div
-              style="
-                display:grid;
-                grid-template-columns:1fr 1fr;
-                gap:8px;
-                margin-top:13px;
-              "
-            >
-
-              <div
-                style="
-                  padding:11px;
-                  border-radius:12px;
-                  background:#fff5f5;
-                "
-              >
-                <div
-                  style="
-                    font-size:10px;
-                    color:#d32f2f;
-                    font-weight:900;
-                  "
-                >
-                  DIYA
-                </div>
-
-                <div
-                  style="
-                    margin-top:3px;
-                    font-size:16px;
-                    color:#d32f2f;
-                    font-weight:900;
-                  "
-                >
-                  ${money(person.given)}
-                </div>
-              </div>
-
-
-              <div
-                style="
-                  padding:11px;
-                  border-radius:12px;
-                  background:#f0fff5;
-                "
-              >
-                <div
-                  style="
-                    font-size:10px;
-                    color:#168a45;
-                    font-weight:900;
-                  "
-                >
-                  LIYA
-                </div>
-
-                <div
-                  style="
-                    margin-top:3px;
-                    font-size:16px;
-                    color:#168a45;
-                    font-weight:900;
-                  "
-                >
-                  ${money(person.received)}
-                </div>
-              </div>
-
-            </div>
-
-
-            <!-- BALANCE -->
-
-            <div
-              style="
-                margin-top:9px;
-                padding:11px 12px;
-                border-radius:12px;
-                background:#f5f7fa;
-                display:flex;
-                align-items:center;
-                justify-content:space-between;
-                gap:10px;
-              "
-            >
-
-              <span
-                style="
-                  font-size:12px;
-                  font-weight:800;
-                  color:#555;
-                "
-              >
-                ${
-                  balance > 0
-                    ? "Is person ko dena hai"
-                    : balance < 0
-                    ? "Is person se lena hai"
-                    : "Hisab clear"
-                }
-              </span>
-
-              <strong
-                style="
-                  color:${statusColor};
-                  font-size:16px;
-                "
-              >
-                ${money(Math.abs(balance))}
-              </strong>
-
-            </div>
-
-
-            <!-- QUICK ACTION -->
-
-            <div
-              style="
-                display:flex;
-                justify-content:flex-end;
-                gap:7px;
-                margin-top:10px;
-              "
-            >
-
-              <button
-                type="button"
-                data-quick-udhar="${escapeHTML(
-                  person.person
-                )}"
-                style="
-                  border:0;
-                  border-radius:10px;
-                  padding:8px 11px;
-                  background:#eef3f7;
-                  color:#172b3a;
-                  font-weight:800;
-                  font-size:12px;
-                "
-              >
-                + Entry
-              </button>
-
-            </div>
-
-          </div>
-        `;
-      }).join("")
-
-    : `
-      <div
-        style="
-          text-align:center;
-          padding:35px 15px;
-          color:#777;
-        "
-      >
-
-        <div
-          style="
-            width:60px;
-            height:60px;
-            margin:0 auto 12px;
-            border-radius:50%;
-            background:#f2f5f8;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:25px;
-            font-weight:900;
-            color:#0b1f33;
-          "
-        >
-          ₹
-        </div>
-
-        <strong>
-          No Udhar found
-        </strong>
-
-        <div
-          style="
-            margin-top:5px;
-            font-size:13px;
-          "
-        >
-          Add a Give or Receive entry.
-        </div>
-
-      </div>
-    `;
-
-
-  /* ---------------------------------------------------------
-     NET TOTAL — ONLY FOR OVERALL VIEW
-     IMPORTANT:
-     EACH PERSON IS CALCULATED SEPARATELY ABOVE.
-     --------------------------------------------------------- */
-
-  const overallNet =
-    totalGive - totalReceive;
-
-
-  return `
-    <div>
-
-      <!-- SUMMARY -->
-
-      <div
-        style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-          margin-bottom:10px;
-        "
-      >
-
-        <div
-          style="
-            padding:15px;
-            border-radius:18px;
-            background:#fff0f0;
-            border:1px solid #ffd4d4;
-          "
-        >
+          <!-- FILTERS -->
 
           <div
             style="
-              font-size:11px;
-              font-weight:900;
-              color:#d32f2f;
-              letter-spacing:.7px;
+              display:grid;
+              grid-template-columns:repeat(4,1fr);
+              gap:5px;
+              margin-top:10px;
             "
           >
-            TOTAL DIYA
+
+            <button
+              type="button"
+              data-udhar-filter="all"
+              style="
+                padding:9px 4px;
+                border:0;
+                border-radius:9px;
+                background:#eef3f7;
+                font-weight:800;
+                font-size:11px;
+              "
+            >
+              All
+            </button>
+
+            <button
+              type="button"
+              data-udhar-filter="given"
+              style="
+                padding:9px 4px;
+                border:0;
+                border-radius:9px;
+                background:#eef3f7;
+                font-weight:800;
+                font-size:11px;
+              "
+            >
+              Diya
+            </button>
+
+            <button
+              type="button"
+              data-udhar-filter="received"
+              style="
+                padding:9px 4px;
+                border:0;
+                border-radius:9px;
+                background:#eef3f7;
+                font-weight:800;
+                font-size:11px;
+              "
+            >
+              Liya
+            </button>
+
+            <button
+              type="button"
+              data-udhar-filter="due"
+              style="
+                padding:9px 4px;
+                border:0;
+                border-radius:9px;
+                background:#eef3f7;
+                font-weight:800;
+                font-size:11px;
+              "
+            >
+              Due
+            </button>
+
           </div>
+
+
+          <!-- ADD -->
+
+          <button
+            type="button"
+            id="addUdharEntry"
+            style="
+              width:100%;
+              margin-top:11px;
+              padding:13px;
+              border:0;
+              border-radius:13px;
+              background:#0b1f33;
+              color:#fff;
+              font-weight:900;
+            "
+          >
+            + Add Udhaar Entry
+          </button>
+
+
+          <!-- PEOPLE -->
 
           <div
             style="
-              margin-top:5px;
-              font-size:20px;
-              font-weight:900;
-              color:#d32f2f;
+              margin-top:15px;
             "
           >
-            ${money(totalGive)}
-          </div>
 
-        </div>
-
-
-        <div
-          style="
+            <h3
+              style="
+                margin:0 0 10px;
+                color:#172b3a;
+              "
            
+
   /* =========================================================
      SAVINGS
      ========================================================= */
