@@ -466,36 +466,58 @@ function showExpense() {
 /* ---------- PAISA LEN-DEN ---------- */
 
 function showLend() {
+
   openModal(`
     <h2>Paisa Len-Den</h2>
 
     <form id="lendForm">
 
       <label>Person Name</label>
+
       <input
         id="lendPerson"
         type="text"
-        placeholder="Name"
+        placeholder="Kumar"
         required
       >
 
       <label>Amount</label>
+
       <input
         id="lendAmount"
         type="number"
-        min="0"
+        min="0.01"
         step="0.01"
         placeholder="₹ Amount"
         required
       >
 
       <label>Type</label>
+
       <select id="lendType">
-        <option value="given">Paisa Diya</option>
-        <option value="received">Paisa Liya</option>
+
+        <option value="given">
+          Paisa Diya
+        </option>
+
+        <option value="received">
+          Paisa Liya
+        </option>
+
       </select>
 
-      <button class="primary-btn" type="submit">
+      <label>Note</label>
+
+      <input
+        id="lendNote"
+        type="text"
+        placeholder="Optional note"
+      >
+
+      <button
+        class="primary-btn"
+        type="submit"
+      >
         Save Record
       </button>
 
@@ -503,28 +525,59 @@ function showLend() {
   `);
 
   $("lendForm").addEventListener("submit", function(e) {
+
     e.preventDefault();
 
-    const person = $("lendPerson").value.trim();
-    const amount = Number($("lendAmount").value);
-    const type = $("lendType").value;
+    const person =
+      $("lendPerson").value.trim();
 
-    if (!person || amount <= 0) return;
+    const amount =
+      Number($("lendAmount").value);
+
+    const type =
+      $("lendType").value;
+
+    const note =
+      $("lendNote").value.trim();
+
+    if (!person || amount <= 0) {
+      return;
+    }
+
+    if (!Array.isArray(getCurrentAccount().lend)) {
+      getCurrentAccount().lend = [];
+    }
 
     getCurrentAccount().lend.push({
+
       id: makeId(),
+
+      person: person,
+
       title: person,
-      amount,
+
+      amount: amount,
+
       lendType: type,
+
+      note: note,
+
       date: today(),
+
       time: currentTime(),
+
       createdAt: Date.now()
+
     });
 
     saveData();
+
     closeModal();
+
     updateHome();
+
   });
+
 }
 
 /* ---------- SAVINGS ---------- */
