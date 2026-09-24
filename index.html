@@ -1,555 +1,460 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8"><meta
-name="viewport"
-content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  <meta charset="UTF-8">
 
-«»
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
 
   <meta name="theme-color" content="#0b1f33">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">  <title>HISAB — Money Manager</title>  <link rel="stylesheet" href="style.css">
-</head><body><div id="app">  <!-- ================= SPLASH ================= -->  <section id="splashScreen" class="screen active"><div class="splash-logo">₹</div>
+  <meta name="apple-mobile-web-app-capable" content="yes">
 
-<h1>HISAB</h1>
+  <title>HISAB — Money Manager</title>
 
-<p>Money Manager</p>
+  <link rel="stylesheet" href="style.css">
+</head>
 
-<small>Track • Plan • Grow</small>
+<body>
 
-  </section>  <!-- ================= WELCOME ================= -->  <section id="welcomeScreen" class="screen"><div class="brand">
+<div id="app">
 
-  <div class="brand-logo">₹</div>
+  <!-- =====================================================
+       SPLASH SCREEN
+  ====================================================== -->
+  <section id="splashScreen" class="screen active">
 
-  <h1>HISAB</h1>
+    <div class="splash-logo">₹</div>
 
-  <p>Money Manager</p>
-
-</div>
-
-<div class="welcome-card">
-
-  <h2>Manage Your Money</h2>
-
-  <p>
-    Track income, expenses, savings, loans,
-    bills and daily money records in one simple place.
-  </p>
-
-  <button
-    id="continueBtn"
-    class="primary-btn"
-    type="button"
-  >
-    Continue Without Login
-  </button>
-
-</div>
-
-<p class="offline-note">
-  🔒 Your data stays on your device
-</p>
-
-  </section>  <!-- ================= HOME ================= -->  <section id="homeScreen" class="screen"><header class="topbar">
-
-  <div>
-    <span class="hello">Welcome to</span>
     <h1>HISAB</h1>
-  </div>
 
-  <button
-    id="settingsBtn"
-    class="icon-btn"
-    type="button"
-    aria-label="Settings"
-  >
-    ⚙️
-  </button>
+    <p>Money Manager</p>
 
-</header>
+    <small>Track • Plan • Grow</small>
+
+  </section>
 
 
-<!-- PERSONAL / BUSINESS -->
-<div class="mode-switch">
+  <!-- =====================================================
+       WELCOME SCREEN
+  ====================================================== -->
+  <section id="welcomeScreen" class="screen">
 
-  <button
-    id="personalBtn"
-    class="mode-btn active"
-    type="button"
-  >
-    👤 Personal
-  </button>
+    <div class="brand">
 
-  <button
-    id="businessBtn"
-    class="mode-btn"
-    type="button"
-  >
-    💼 Business
-  </button>
+      <div class="brand-logo">₹</div>
 
-</div>
+      <h1>HISAB</h1>
 
+      <p>Money Manager</p>
 
-<!-- BALANCE -->
-<div class="balance-card">
-
-  <div class="balance-title">
-
-    <span>Total Balance</span>
-
-    <span id="currencyLabel">₹</span>
-
-  </div>
-
-  <div
-    id="totalBalance"
-    class="total-balance"
-  >
-    ₹0
-  </div>
-
-  <div class="balance-row">
-
-    <div>
-      <span>Income</span>
-      <strong id="totalIncome">₹0</strong>
     </div>
 
-    <div>
-      <span>Expense</span>
-      <strong id="totalExpense">₹0</strong>
+
+    <div class="welcome-card">
+
+      <h2>Manage Your Money</h2>
+
+      <p>
+        Track income, expenses, savings, loans,
+        bills and daily money records in one simple place.
+      </p>
+
+      <button
+        id="continueBtn"
+        class="primary-btn"
+        type="button"
+      >
+        Continue Without Login
+      </button>
+
     </div>
 
-  </div>
 
-</div>
-
-
-<!-- ================= QUICK ACTIONS ================= -->
-<div class="section-header">
-  <h2>Quick Actions</h2>
-</div>
-
-<div class="quick-grid">
-
-  <button
-    class="action-card"
-    data-action="income"
-    type="button"
-  >
-    <span>💰</span>
-    <strong>Income</strong>
-    <small>Add money received</small>
-  </button>
-
-
-  <button
-    class="action-card"
-    data-action="expense"
-    type="button"
-  >
-    <span>💸</span>
-    <strong>Expense</strong>
-    <small>Record spending</small>
-  </button>
-
-
-  <button
-    class="action-card"
-    data-action="lendden"
-    type="button"
-  >
-    <span>🤝</span>
-    <strong>Paisa Len-Den</strong>
-    <small>Given & received</small>
-  </button>
-
-
-  <button
-    class="action-card"
-    data-action="savings"
-    type="button"
-  >
-    <span>🏦</span>
-    <strong>Savings</strong>
-    <small>Build your savings</small>
-  </button>
-
-</div>
-
-
-<!-- ================= MANAGE MONEY ================= -->
-<div class="section-header">
-  <h2>Manage Money</h2>
-</div>
-
-<div class="feature-list">
-
-  <button
-    class="feature-item"
-    data-action="budget"
-    type="button"
-  >
-    <span class="feature-icon">📊</span>
-
-    <span>
-      <strong>Budget</strong>
-      <small>Plan your monthly budget</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="bills"
-    type="button"
-  >
-    <span class="feature-icon">🧾</span>
-
-    <span>
-      <strong>Bills & Payments</strong>
-      <small>Track upcoming bills</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="loans"
-    type="button"
-  >
-    <span class="feature-icon">🏠</span>
-
-    <span>
-      <strong>Loans & EMI</strong>
-      <small>Track loans and installments</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="goals"
-    type="button"
-  >
-    <span class="feature-icon">🎯</span>
-
-    <span>
-      <strong>Goals & Savings</strong>
-      <small>Save for your future goals</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="transactions"
-    type="button"
-  >
-    <span class="feature-icon">💳</span>
-
-    <span>
-      <strong>Transactions</strong>
-      <small>View all money activity</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="reports"
-    type="button"
-  >
-    <span class="feature-icon">📈</span>
-
-    <span>
-      <strong>Reports & Analytics</strong>
-      <small>Understand your money</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="backup"
-    type="button"
-  >
-    <span class="feature-icon">💾</span>
-
-    <span>
-      <strong>Backup & Restore</strong>
-      <small>Keep your data safe</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-
-  <button
-    class="feature-item"
-    data-action="security"
-    type="button"
-  >
-    <span class="feature-icon">🔐</span>
-
-    <span>
-      <strong>Security</strong>
-      <small>Protect your HISAB data</small>
-    </span>
-
-    <b>›</b>
-  </button>
-
-</div>
-
-
-<!-- ================= RECENT ACTIVITY ================= -->
-<div class="section-header">
-
-  <h2>Recent Activity</h2>
-
-  <button
-    id="viewAllBtn"
-    class="text-btn"
-    type="button"
-  >
-    View All
-  </button>
-
-</div>
-
-
-<div
-  id="recentActivity"
-  class="activity-card"
-  data-recent-transactions
->
-
-  <div class="empty-state">
-
-    <div>💰</div>
-
-    <strong>No transactions yet</strong>
-
-    <p>
-      Add your first income or expense.
+    <p class="offline-note">
+      🔒 Your data stays on your device
     </p>
 
-  </div>
+  </section>
+
+
+  <!-- =====================================================
+       HOME SCREEN
+  ====================================================== -->
+  <section id="homeScreen" class="screen">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+
+      <div>
+        <span class="hello">Welcome to</span>
+        <h1>HISAB</h1>
+      </div>
+
+      <button
+        id="settingsBtn"
+        class="icon-btn"
+        type="button"
+        aria-label="Settings"
+      >
+        ⚙️
+      </button>
+
+    </header>
+
+
+    <!-- PERSONAL / BUSINESS -->
+    <div class="mode-switch">
+
+      <button
+        id="personalBtn"
+        class="mode-btn active"
+        type="button"
+      >
+        👤 Personal
+      </button>
+
+      <button
+        id="businessBtn"
+        class="mode-btn"
+        type="button"
+      >
+        💼 Business
+      </button>
+
+    </div>
+
+
+    <!-- =================================================
+         BALANCE CARD
+    ================================================== -->
+    <div class="balance-card">
+
+      <div class="balance-title">
+
+        <span>Total Balance</span>
+
+        <span id="currencyLabel">₹</span>
+
+      </div>
+
+
+      <div
+        id="totalBalance"
+        class="total-balance"
+      >
+        ₹0
+      </div>
+
+
+      <div class="balance-row">
+
+        <div>
+          <span>Income</span>
+          <strong id="totalIncome">₹0</strong>
+        </div>
+
+        <div>
+          <span>Expense</span>
+          <strong id="totalExpense">₹0</strong>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =================================================
+         QUICK ACTIONS
+    ================================================== -->
+    <div class="section-header">
+
+      <h2>Quick Actions</h2>
+
+    </div>
+
+
+    <div class="quick-grid">
+
+      <button
+        class="action-card"
+        data-action="income"
+        type="button"
+      >
+        <span>💰</span>
+        <strong>Income</strong>
+        <small>Add money received</small>
+      </button>
+
+
+      <button
+        class="action-card"
+        data-action="expense"
+        type="button"
+      >
+        <span>💸</span>
+        <strong>Expense</strong>
+        <small>Record spending</small>
+      </button>
+
+
+      <button
+        class="action-card"
+        data-action="lendden"
+        type="button"
+      >
+        <span>🤝</span>
+        <strong>Paisa Len-Den</strong>
+        <small>Given & received</small>
+      </button>
+
+
+      <button
+        class="action-card"
+        data-action="savings"
+        type="button"
+      >
+        <span>🏦</span>
+        <strong>Savings</strong>
+        <small>Build your savings</small>
+      </button>
+
+    </div>
+
+
+    <!-- =================================================
+         MANAGE MONEY
+    ================================================== -->
+    <div class="section-header">
+
+      <h2>Manage Money</h2>
+
+    </div>
+
+
+    <div class="feature-list">
+
+
+      <!-- BUDGET -->
+      <button
+        class="feature-item"
+        data-action="budget"
+        type="button"
+      >
+
+        <span class="feature-icon">📊</span>
+
+        <span>
+          <strong>Budget</strong>
+          <small>Plan your monthly budget</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- BILLS -->
+      <button
+        class="feature-item"
+        data-action="bills"
+        type="button"
+      >
+
+        <span class="feature-icon">🧾</span>
+
+        <span>
+          <strong>Bills & Payments</strong>
+          <small>Track upcoming bills</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- LOANS -->
+      <button
+        class="feature-item"
+        data-action="loans"
+        type="button"
+      >
+
+        <span class="feature-icon">🏠</span>
+
+        <span>
+          <strong>Loans & EMI</strong>
+          <small>Track loans and installments</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- GOALS -->
+      <button
+        class="feature-item"
+        data-action="goals"
+        type="button"
+      >
+
+        <span class="feature-icon">🎯</span>
+
+        <span>
+          <strong>Goals & Savings</strong>
+          <small>Save for your future goals</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- TRANSACTIONS -->
+      <button
+        class="feature-item"
+        data-action="transactions"
+        type="button"
+      >
+
+        <span class="feature-icon">💳</span>
+
+        <span>
+          <strong>Transactions</strong>
+          <small>View all money activity</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- REPORTS -->
+      <button
+        class="feature-item"
+        data-action="reports"
+        type="button"
+      >
+
+        <span class="feature-icon">📈</span>
+
+        <span>
+          <strong>Reports & Analytics</strong>
+          <small>Understand your money</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- BACKUP -->
+      <button
+        class="feature-item"
+        data-action="backup"
+        type="button"
+      >
+
+        <span class="feature-icon">💾</span>
+
+        <span>
+          <strong>Backup & Restore</strong>
+          <small>Keep your data safe</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+      <!-- SECURITY -->
+      <button
+        class="feature-item"
+        data-action="security"
+        type="button"
+      >
+
+        <span class="feature-icon">🔐</span>
+
+        <span>
+          <strong>Security</strong>
+          <small>Protect your HISAB data</small>
+        </span>
+
+        <b>›</b>
+
+      </button>
+
+
+    </div>
+
+
+    <!-- =================================================
+         RECENT ACTIVITY
+    ================================================== -->
+    <div class="section-header">
+
+      <h2>Recent Activity</h2>
+
+      <button
+        id="viewAllBtn"
+        class="text-btn"
+        type="button"
+      >
+        View All
+      </button>
+
+    </div>
+
+
+    <div
+      id="recentActivity"
+      class="activity-card"
+      data-recent-transactions
+    >
+
+      <div class="empty-state">
+
+        <div>💰</div>
+
+        <strong>No transactions yet</strong>
+
+        <p>
+          Add your first income or expense.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- =================================================
+         FOOTER
+    ================================================== -->
+    <footer class="app-footer">
+
+      <strong>HISAB</strong>
+
+      <span>Track • Plan • Grow</span>
+
+      <small>
+        Local-first • No Login Required
+      </small>
+
+    </footer>
+
+  </section>
 
 </div>
 
 
-<!-- ================= FOOTER ================= -->
-<footer class="app-footer">
-
-  <strong>HISAB</strong>
-
-  <span>Track • Plan • Grow</span>
-
-  <small>
-    Local-first • No Login Required
-  </small>
-
-</footer>
-
-  </section></div><!-- ================= APP JS ================= --><script src="app.js"></script><!-- ================= SCREEN CONNECTION ================= --><script>
-
-document.addEventListener("DOMContentLoaded", function () {
-
-  const splash = document.getElementById("splashScreen");
-  const welcome = document.getElementById("welcomeScreen");
-  const home = document.getElementById("homeScreen");
-
-  const continueBtn =
-    document.getElementById("continueBtn");
-
-  const personalBtn =
-    document.getElementById("personalBtn");
-
-  const businessBtn =
-    document.getElementById("businessBtn");
-
-  const settingsBtn =
-    document.getElementById("settingsBtn");
-
-  const viewAllBtn =
-    document.getElementById("viewAllBtn");
-
-  const currencyLabel =
-    document.getElementById("currencyLabel");
-
-
-  /* ---------- INITIAL SCREEN ---------- */
-
-  if (splash) splash.style.display = "flex";
-  if (welcome) welcome.style.display = "none";
-  if (home) home.style.display = "none";
-
-
-  /* ---------- SPLASH -> WELCOME ---------- */
-
-  setTimeout(function () {
-
-    if (splash) splash.style.display = "none";
-    if (welcome) welcome.style.display = "flex";
-
-  }, 1400);
-
-
-  /* ---------- CONTINUE ---------- */
-
-  if (continueBtn) {
-
-    continueBtn.addEventListener("click", function () {
-
-      if (welcome) welcome.style.display = "none";
-      if (home) home.style.display = "block";
-
-      if (window.updateDashboard) {
-        window.updateDashboard();
-      }
-
-    });
-
-  }
-
-
-  /* ---------- PERSONAL ---------- */
-
-  if (personalBtn) {
-
-    personalBtn.addEventListener("click", function () {
-
-      if (window.HISAB && window.HISAB.data) {
-        window.HISAB.data.mode = "personal";
-        window.HISAB.saveData();
-      }
-
-      personalBtn.classList.add("active");
-
-      if (businessBtn) {
-        businessBtn.classList.remove("active");
-      }
-
-    });
-
-  }
-
-
-  /* ---------- BUSINESS ---------- */
-
-  if (businessBtn) {
-
-    businessBtn.addEventListener("click", function () {
-
-      if (window.HISAB && window.HISAB.data) {
-        window.HISAB.data.mode = "business";
-        window.HISAB.saveData();
-      }
-
-      businessBtn.classList.add("active");
-
-      if (personalBtn) {
-        personalBtn.classList.remove("active");
-      }
-
-    });
-
-  }
-
-
-  /* ---------- SETTINGS ---------- */
-
-  if (settingsBtn) {
-
-    settingsBtn.addEventListener("click", function () {
-
-      if (window.showSettings) {
-        window.showSettings();
-      }
-
-    });
-
-  }
-
-
-  /* ---------- VIEW ALL ---------- */
-
-  if (viewAllBtn) {
-
-    viewAllBtn.addEventListener("click", function () {
-
-      if (window.showTransactions) {
-        window.showTransactions();
-      }
-
-    });
-
-  }
-
-
-  /* ---------- CURRENCY ---------- */
-
-  function refreshCurrency() {
-
-    if (
-      currencyLabel &&
-      window.HISAB &&
-      window.HISAB.data
-    ) {
-      currencyLabel.textContent =
-        window.HISAB.data.currency || "₹";
-    }
-
-  }
-
-  refreshCurrency();
-
-
-  /* ---------- INITIAL MODE ---------- */
-
-  if (
-    window.HISAB &&
-    window.HISAB.data &&
-    window.HISAB.data.mode === "business"
-  ) {
-
-    if (businessBtn) {
-      businessBtn.classList.add("active");
-    }
-
-    if (personalBtn) {
-      personalBtn.classList.remove("active");
-    }
-
-  }
-
-
-  /* ---------- BACK BUTTON FRIENDLY ---------- */
-
-  window.addEventListener("popstate", function () {
-
-    if (window.showHome) {
-      window.showHome();
-    }
-
-  });
-
-});
-
-</script></body>
+<!-- =====================================================
+     MAIN JAVASCRIPT
+====================================================== -->
+<script src="app.js"></script>
+
+</body>
 </html>
