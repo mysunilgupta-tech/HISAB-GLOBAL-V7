@@ -3004,9 +3004,1668 @@
       );
     }
   );
+/* =========================================================
+   SAVINGS
+   ========================================================= */
 
-  /* =========================================================
-     PART 1 END
-     ========================================================= */
+function showSavings() {
+  const totalSaved = data.savings.reduce(
+    (sum, item) => sum + safeNumber(item.amount),
+    0
+  );
 
-})();
+  const totalTarget = data.savings.reduce(
+    (sum, item) => sum + safeNumber(item.target),
+    0
+  );
+
+  const rows = data.savings
+    .slice()
+    .reverse()
+    .map(item => {
+      const amount = safeNumber(item.amount);
+      const target = safeNumber(item.target);
+
+      const percent =
+        target > 0
+          ? Math.min(100, Math.max(0, (amount / target) * 100))
+          : 0;
+
+      return `
+        <div style="
+          padding:14px;
+          margin-bottom:10px;
+          border:1px solid #e1e7eb;
+          border-radius:14px;
+          background:#fff;
+        ">
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+          ">
+            <strong>${esc(item.name || "Savings")}</strong>
+            <strong>${money(amount)}</strong>
+          </div>
+
+          ${
+            target > 0
+              ? `
+                <div style="
+                  margin-top:9px;
+                  height:8px;
+                  background:#edf1f3;
+                  border-radius:20px;
+                  overflow:hidden;
+                ">
+                  <div style="
+                    width:${percent}%;
+                    height:100%;
+                    background:#16a085;
+                  "></div>
+                </div>
+
+                <small>
+                  ${percent.toFixed(0)}% of ${money(target)}
+                </small>
+              `
+              : ""
+          }
+
+          ${
+            item.note
+              ? `
+                <div style="
+                  margin-top:7px;
+                  font-size:13px;
+                  opacity:.7;
+                ">
+                  ${esc(item.note)}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.date
+              ? `
+                <div style="
+                  margin-top:5px;
+                  font-size:12px;
+                  opacity:.6;
+                ">
+                  ${esc(dateOnly(item.date))}
+                </div>
+              `
+              : ""
+          }
+
+          <div style="
+            margin-top:10px;
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+          ">
+
+            <button
+              type="button"
+              data-add-saving="${esc(item.id)}"
+            >
+              + Add Money
+            </button>
+
+            <button
+              type="button"
+              data-delete-saving="${esc(item.id)}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    })
+    .join("");
+
+  const body = `
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:15px;
+    ">
+
+      <div style="
+        padding:14px;
+        border-radius:14px;
+        background:#effaf5;
+      ">
+        <small>Total Saved</small>
+        <strong style="display:block">
+          ${money(totalSaved)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:14px;
+        border-radius:14px;
+        background:#eef6ff;
+      ">
+        <small>Total Target</small>
+        <strong style="display:block">
+          ${money(totalTarget)}
+        </strong>
+      </div>
+
+    </div>
+
+    <button
+      type="button"
+      id="newSavingBtn"
+      style="width:100%; margin-bottom:14px;"
+    >
+      + Add Savings
+    </button>
+
+    ${
+      rows ||
+      `
+        <div style="
+          padding:25px;
+          text-align:center;
+          opacity:.65;
+        ">
+          No savings added yet.
+        </div>
+      `
+    }
+  `;
+
+  modal(
+    "Savings",
+    body,
+    secondaryButton("closeSavingsBtn", "Close")
+  );
+
+  const closeBtn = $("closeSavingsBtn");
+  const newBtn = $("newSavingBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick = closeHisabModal;
+  }
+
+  if (newBtn) {
+    newBtn.onclick = addSaving;
+  }
+}
+
+window.showSavings = showSavings;
+
+
+/* =========================================================
+   ADD SAVINGS
+   ========================================================= */
+
+function addSaving() {
+  const body = `
+    ${inputField(
+      "savingName",
+      "Savings Name",
+      "",
+      "text",
+      "e.g. Emergency Fund"
+    )}
+
+    ${inputField(
+      "savingAmount",
+      "Current Amount",
+      "",
+      "number",
+      "0"
+    )}
+
+    ${inputField(
+      "savingTarget",
+      "Target Amount",
+      "",
+      "number",
+      "Optional"
+    )}
+
+    ${inputField(
+      "savingNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+
+    ${inputField(
+      "savingDate",
+      "Date",
+      today(),
+      "date"
+    )}
+  `;
+
+  modal(
+    "Add Savings",
+    body,
+    primaryButton("saveSavingBtn", "Save") +
+      secondaryButton("cancelSavingBtn", "Cancel")
+  );
+
+  const cancelBtn = $("cancelSavingBtn");
+  const saveBtn = $("saveSavingBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick = closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const name = $("savingName")?.value.trim() || "";
+      const amount = safeNumber($("savingAmount")?.value);
+      const target = safeNumber($("savingTarget")?.value);
+      const note = $("savingNote")?.value.trim() || "";
+      const date = $("savingDate")?.value || today();
+
+      if (!name) {
+        alert("Please enter savings name.");
+        return;
+      }
+
+      if (amount < 0) {
+        alert("Amount cannot be negative.");
+        return;
+      }
+
+      if (target < 0) {
+        alert("Target amount cannot be negative.");
+        return;
+      }
+
+      data.savings.push({
+        id: uid("saving"),
+        name,
+        amount,
+        target,
+        note,
+        date,
+        createdAt: nowISO()
+      });
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showSavings();
+    };
+  }
+}
+
+
+/* =========================================================
+   ADD MONEY TO SAVINGS
+   ========================================================= */
+
+function addSavingMoney(id) {
+  const item = data.savings.find(x => x.id === id);
+
+  if (!item) {
+    alert("Savings entry not found.");
+    return;
+  }
+
+  const body = `
+    ${inputField(
+      "addSavingAmount",
+      "Amount to Add",
+      "",
+      "number",
+      "Enter amount"
+    )}
+
+    ${selectField(
+      "addSavingPaymentMethod",
+      "Payment Method",
+      PAYMENT_METHODS
+    )}
+
+    ${selectField(
+      "addSavingColor",
+      "Colour",
+      ENTRY_COLORS
+    )}
+
+    ${inputField(
+      "addSavingNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+
+    ${inputField(
+      "addSavingDate",
+      "Date",
+      today(),
+      "date"
+    )}
+  `;
+
+  modal(
+    "Add Money to Savings",
+    body,
+    primaryButton(
+      "confirmSavingAddBtn",
+      "Add"
+    ) +
+      secondaryButton(
+        "cancelSavingAddBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn = $("cancelSavingAddBtn");
+  const confirmBtn = $("confirmSavingAddBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick = closeHisabModal;
+  }
+
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      const amount = safeNumber(
+        $("addSavingAmount")?.value
+      );
+
+      const note =
+        $("addSavingNote")?.value.trim() || "";
+
+      const paymentMethod =
+        $("addSavingPaymentMethod")?.value || "Cash";
+
+      const color =
+        $("addSavingColor")?.value || "default";
+
+      const date =
+        $("addSavingDate")?.value || today();
+
+      if (amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      item.amount = safeNumber(item.amount) + amount;
+
+      if (note) {
+        item.note = item.note
+          ? `${item.note} | ${note}`
+          : note;
+      }
+
+      item.lastAddedAmount = amount;
+      item.lastPaymentMethod = paymentMethod;
+      item.lastColor = color;
+      item.lastAddedDate = date;
+      item.updatedAt = nowISO();
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showSavings();
+    };
+  }
+}
+
+
+/* =========================================================
+   GOALS
+   ========================================================= */
+
+function showGoals() {
+  const totalTarget = data.goals.reduce(
+    (sum, goal) => sum + safeNumber(goal.target),
+    0
+  );
+
+  const totalSaved = data.goals.reduce(
+    (sum, goal) => sum + safeNumber(goal.saved),
+    0
+  );
+
+  const rows = data.goals
+    .slice()
+    .reverse()
+    .map(goal => {
+      const target = safeNumber(goal.target);
+      const saved = safeNumber(goal.saved);
+
+      const percent =
+        target > 0
+          ? Math.min(100, Math.max(0, (saved / target) * 100))
+          : 0;
+
+      return `
+        <div style="
+          padding:14px;
+          border:1px solid #e1e7eb;
+          border-radius:14px;
+          margin-bottom:10px;
+          background:#fff;
+        ">
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+          ">
+
+            <div>
+              <strong>
+                ${esc(goal.name || "Goal")}
+              </strong>
+
+              <div style="
+                font-size:12px;
+                opacity:.65;
+                margin-top:3px;
+              ">
+                ${esc(goal.purpose || "Other")}
+              </div>
+            </div>
+
+            <strong>
+              ${money(saved)}
+            </strong>
+
+          </div>
+
+          <div style="
+            margin-top:10px;
+            height:8px;
+            border-radius:20px;
+            background:#edf1f3;
+            overflow:hidden;
+          ">
+            <div style="
+              width:${percent}%;
+              height:100%;
+              background:#087f8c;
+            "></div>
+          </div>
+
+          <div style="
+            margin-top:6px;
+            font-size:12px;
+            opacity:.7;
+          ">
+            ${percent.toFixed(0)}%
+            • Target ${money(target)}
+            ${
+              goal.deadline
+                ? ` • Due ${esc(dateOnly(goal.deadline))}`
+                : ""
+            }
+          </div>
+
+          ${
+            goal.note
+              ? `
+                <div style="
+                  margin-top:7px;
+                  font-size:13px;
+                ">
+                  ${esc(goal.note)}
+                </div>
+              `
+              : ""
+          }
+
+          <div style="
+            margin-top:10px;
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+          ">
+
+            <button
+              type="button"
+              data-add-goal-money="${esc(goal.id)}"
+            >
+              + Add Money
+            </button>
+
+            <button
+              type="button"
+              data-edit-goal="${esc(goal.id)}"
+            >
+              Edit
+            </button>
+
+            <button
+              type="button"
+              data-delete-goal="${esc(goal.id)}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    })
+    .join("");
+
+  const body = `
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:15px;
+    ">
+
+      <div style="
+        padding:13px;
+        border-radius:14px;
+        background:#eef6ff;
+      ">
+        <small>Total Target</small>
+        <strong style="display:block">
+          ${money(totalTarget)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:13px;
+        border-radius:14px;
+        background:#effaf5;
+      ">
+        <small>Total Saved</small>
+        <strong style="display:block">
+          ${money(totalSaved)}
+        </strong>
+      </div>
+
+    </div>
+
+    <button
+      type="button"
+      id="newGoalBtn"
+      style="width:100%; margin-bottom:14px;"
+    >
+      + Create Goal
+    </button>
+
+    ${
+      rows ||
+      `
+        <div style="
+          padding:25px;
+          text-align:center;
+          opacity:.65;
+        ">
+          No goals created yet.
+        </div>
+      `
+    }
+  `;
+
+  modal(
+    "Goals",
+    body,
+    secondaryButton("closeGoalsBtn", "Close")
+  );
+
+  const closeBtn = $("closeGoalsBtn");
+  const newBtn = $("newGoalBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick = closeHisabModal;
+  }
+
+  if (newBtn) {
+    newBtn.onclick = addGoal;
+  }
+}
+
+window.showGoals = showGoals;
+
+
+/* =========================================================
+   ADD GOAL
+   ========================================================= */
+
+function addGoal() {
+  const body = `
+    ${inputField(
+      "goalName",
+      "Goal Name",
+      "",
+      "text",
+      "e.g. New Bike"
+    )}
+
+    ${selectField(
+      "goalPurpose",
+      "Purpose",
+      GOAL_PURPOSES
+    )}
+
+    ${inputField(
+      "goalTarget",
+      "Target Amount",
+      "",
+      "number",
+      "Enter target"
+    )}
+
+    ${inputField(
+      "goalSaved",
+      "Already Saved",
+      "0",
+      "number",
+      "0"
+    )}
+
+    ${inputField(
+      "goalDeadline",
+      "Target Date",
+      "",
+      "date"
+    )}
+
+    ${selectField(
+      "goalColor",
+      "Colour",
+      ENTRY_COLORS
+    )}
+
+    ${inputField(
+      "goalNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+  `;
+
+  modal(
+    "Create Goal",
+    body,
+    primaryButton(
+      "saveGoalBtn",
+      "Create Goal"
+    ) +
+      secondaryButton(
+        "cancelGoalBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn = $("cancelGoalBtn");
+  const saveBtn = $("saveGoalBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick = closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const name =
+        $("goalName")?.value.trim() || "";
+
+      const target =
+        safeNumber($("goalTarget")?.value);
+
+      const saved =
+        safeNumber($("goalSaved")?.value);
+
+      if (!name) {
+        alert("Please enter goal name.");
+        return;
+      }
+
+      if (target <= 0) {
+        alert("Please enter target amount.");
+        return;
+      }
+
+      if (saved < 0) {
+        alert("Saved amount cannot be negative.");
+        return;
+      }
+
+      data.goals.push({
+        id: uid("goal"),
+        name,
+        purpose:
+          $("goalPurpose")?.value || "Other",
+        target,
+        saved,
+        deadline:
+          $("goalDeadline")?.value || "",
+        color:
+          $("goalColor")?.value || "default",
+        note:
+          $("goalNote")?.value.trim() || "",
+        createdAt: nowISO()
+      });
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showGoals();
+    };
+  }
+}
+
+
+/* =========================================================
+   ADD MONEY TO GOAL
+   ========================================================= */
+
+function addGoalMoney(id) {
+  const goal = data.goals.find(
+    x => x.id === id
+  );
+
+  if (!goal) {
+    alert("Goal not found.");
+    return;
+  }
+
+  const body = `
+    ${inputField(
+      "goalAddAmount",
+      "Amount",
+      "",
+      "number",
+      "Enter amount"
+    )}
+
+    ${selectField(
+      "goalAddPaymentMethod",
+      "Payment Method",
+      PAYMENT_METHODS
+    )}
+
+    ${selectField(
+      "goalAddColor",
+      "Colour",
+      ENTRY_COLORS
+    )}
+
+    ${inputField(
+      "goalAddNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+
+    ${inputField(
+      "goalAddDate",
+      "Date",
+      today(),
+      "date"
+    )}
+  `;
+
+  modal(
+    "Add Money to Goal",
+    body,
+    primaryButton(
+      "confirmGoalAddBtn",
+      "Add"
+    ) +
+      secondaryButton(
+        "cancelGoalAddBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn = $("cancelGoalAddBtn");
+  const confirmBtn = $("confirmGoalAddBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick = closeHisabModal;
+  }
+
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      const amount =
+        safeNumber($("goalAddAmount")?.value);
+
+      if (amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      const note =
+        $("goalAddNote")?.value.trim() || "";
+
+      const paymentMethod =
+        $("goalAddPaymentMethod")?.value ||
+        "Cash";
+
+      const color =
+        $("goalAddColor")?.value ||
+        "default";
+
+      const date =
+        $("goalAddDate")?.value ||
+        today();
+
+      goal.saved =
+        safeNumber(goal.saved) + amount;
+
+      if (note) {
+        goal.note = goal.note
+          ? `${goal.note} | ${note}`
+          : note;
+      }
+
+      goal.lastAddedAmount = amount;
+      goal.lastPaymentMethod = paymentMethod;
+      goal.lastColor = color;
+      goal.lastAddedDate = date;
+      goal.updatedAt = nowISO();
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showGoals();
+    };
+  }
+}
+
+
+/* =========================================================
+   EDIT GOAL
+   ========================================================= */
+
+function editGoal(id) {
+  const goal = data.goals.find(
+    x => x.id === id
+  );
+
+  if (!goal) {
+    alert("Goal not found.");
+    return;
+  }
+
+  const body = `
+    ${inputField(
+      "editGoalName",
+      "Goal Name",
+      goal.name || ""
+    )}
+
+    ${selectField(
+      "editGoalPurpose",
+      "Purpose",
+      GOAL_PURPOSES,
+      goal.purpose || "Other"
+    )}
+
+    ${inputField(
+      "editGoalTarget",
+      "Target Amount",
+      goal.target || 0,
+      "number"
+    )}
+
+    ${inputField(
+      "editGoalSaved",
+      "Saved Amount",
+      goal.saved || 0,
+      "number"
+    )}
+
+    ${inputField(
+      "editGoalDeadline",
+      "Target Date",
+      goal.deadline || "",
+      "date"
+    )}
+
+    ${selectField(
+      "editGoalColor",
+      "Colour",
+      ENTRY_COLORS,
+      goal.color || "default"
+    )}
+
+    ${inputField(
+      "editGoalNote",
+      "Note",
+      goal.note || ""
+    )}
+  `;
+
+  modal(
+    "Edit Goal",
+    body,
+    primaryButton(
+      "updateGoalBtn",
+      "Update"
+    ) +
+      secondaryButton(
+        "cancelEditGoalBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelEditGoalBtn");
+
+  const updateBtn =
+    $("updateGoalBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick = closeHisabModal;
+  }
+
+  if (updateBtn) {
+    updateBtn.onclick = () => {
+      const name =
+        $("editGoalName")?.value.trim() || "";
+
+      const target =
+        safeNumber($("editGoalTarget")?.value);
+
+      const saved =
+        safeNumber($("editGoalSaved")?.value);
+
+      if (!name || target <= 0) {
+        alert("Enter valid goal details.");
+        return;
+      }
+
+      if (saved < 0) {
+        alert("Saved amount cannot be negative.");
+        return;
+      }
+
+      goal.name = name;
+
+      goal.purpose =
+        $("editGoalPurpose")?.value ||
+        "Other";
+
+      goal.target = target;
+      goal.saved = saved;
+
+      goal.deadline =
+        $("editGoalDeadline")?.value || "";
+
+      goal.color =
+        $("editGoalColor")?.value ||
+        "default";
+
+      goal.note =
+        $("editGoalNote")?.value.trim() ||
+        "";
+
+      goal.updatedAt = nowISO();
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showGoals();
+    };
+  }
+}
+
+
+/* =========================================================
+   BUDGET
+   ========================================================= */
+
+function showBudget() {
+  const month =
+    today().slice(0, 7);
+
+  const currentBudgets =
+    data.budgets.filter(
+      x => x.month === month
+    );
+
+  const totalBudget =
+    currentBudgets.reduce(
+      (sum, x) =>
+        sum + safeNumber(x.amount),
+      0
+    );
+
+  const totalSpent =
+    currentBudgets.reduce(
+      (sum, x) =>
+        sum + safeNumber(x.spent),
+      0
+    );
+
+  const rows = currentBudgets
+    .map(item => {
+      const amount =
+        safeNumber(item.amount);
+
+      const spent =
+        safeNumber(item.spent);
+
+      const percent =
+        amount > 0
+          ? Math.min(
+              100,
+              Math.max(0, (spent / amount) * 100)
+            )
+          : 0;
+
+      return `
+        <div style="
+          padding:14px;
+          margin-bottom:10px;
+          border:1px solid #e1e7eb;
+          border-radius:14px;
+          background:#fff;
+        ">
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+          ">
+            <strong>
+              ${esc(item.name || "Budget")}
+            </strong>
+
+            <strong>
+              ${money(amount)}
+            </strong>
+          </div>
+
+          <div style="
+            font-size:12px;
+            opacity:.65;
+            margin-top:3px;
+          ">
+            ${esc(item.category || "Overall")}
+          </div>
+
+          <div style="
+            margin-top:9px;
+            height:8px;
+            background:#edf1f3;
+            border-radius:20px;
+            overflow:hidden;
+          ">
+            <div style="
+              width:${percent}%;
+              height:100%;
+              background:#087f8c;
+            "></div>
+          </div>
+
+          <div style="
+            margin-top:6px;
+            font-size:12px;
+          ">
+            Spent ${money(spent)}
+            • ${percent.toFixed(0)}%
+          </div>
+
+          ${
+            item.note
+              ? `
+                <div style="
+                  margin-top:6px;
+                  font-size:12px;
+                  opacity:.7;
+                ">
+                  ${esc(item.note)}
+                </div>
+              `
+              : ""
+          }
+
+          <div style="
+            display:flex;
+            gap:8px;
+            margin-top:10px;
+            flex-wrap:wrap;
+          ">
+
+            <button
+              type="button"
+              data-budget-payment="${esc(item.id)}"
+            >
+              + Payment
+            </button>
+
+            <button
+              type="button"
+              data-delete-budget="${esc(item.id)}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    })
+    .join("");
+
+  const body = `
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:15px;
+    ">
+
+      <div style="
+        padding:13px;
+        background:#eef6ff;
+        border-radius:14px;
+      ">
+        <small>Budget</small>
+        <strong style="display:block">
+          ${money(totalBudget)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:13px;
+        background:#fff4f4;
+        border-radius:14px;
+      ">
+        <small>Spent</small>
+        <strong style="display:block">
+          ${money(totalSpent)}
+        </strong>
+      </div>
+
+    </div>
+
+    <button
+      type="button"
+      id="newBudgetBtn"
+      style="width:100%; margin-bottom:14px;"
+    >
+      + Add Budget
+    </button>
+
+    ${
+      rows ||
+      `
+        <div style="
+          padding:25px;
+          text-align:center;
+          opacity:.65;
+        ">
+          No budget created for this month.
+        </div>
+      `
+    }
+  `;
+
+  modal(
+    "Budget",
+    body,
+    secondaryButton(
+      "closeBudgetBtn",
+      "Close"
+    )
+  );
+
+  const closeBtn =
+    $("closeBudgetBtn");
+
+  const newBtn =
+    $("newBudgetBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (newBtn) {
+    newBtn.onclick = addBudget;
+  }
+}
+
+window.showBudget = showBudget;
+
+
+/* =========================================================
+   ADD BUDGET
+   ========================================================= */
+
+function addBudget() {
+  const body = `
+    ${inputField(
+      "budgetName",
+      "Budget Name",
+      "",
+      "text",
+      "Monthly Budget"
+    )}
+
+    ${selectField(
+      "budgetCategory",
+      "Category",
+      [
+        "Overall",
+        ...(
+          Array.isArray(data.categories?.expense)
+            ? data.categories.expense
+            : []
+        )
+      ]
+    )}
+
+    ${inputField(
+      "budgetAmount",
+      "Budget Amount",
+      "",
+      "number",
+      "Enter amount"
+    )}
+
+    ${inputField(
+      "budgetMonth",
+      "Month",
+      today().slice(0, 7),
+      "month"
+    )}
+
+    ${inputField(
+      "budgetNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+  `;
+
+  modal(
+    "Add Budget",
+    body,
+    primaryButton(
+      "saveBudgetBtn",
+      "Save"
+    ) +
+      secondaryButton(
+        "cancelBudgetBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelBudgetBtn");
+
+  const saveBtn =
+    $("saveBudgetBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const name =
+        $("budgetName")?.value.trim() ||
+        "";
+
+      const amount =
+        safeNumber($("budgetAmount")?.value);
+
+      const category =
+        $("budgetCategory")?.value ||
+        "Overall";
+
+      const month =
+        $("budgetMonth")?.value ||
+        today().slice(0, 7);
+
+      const note =
+        $("budgetNote")?.value.trim() ||
+        "";
+
+      if (!name || amount <= 0) {
+        alert(
+          "Enter valid budget details."
+        );
+        return;
+      }
+
+      data.budgets.push({
+        id: uid("budget"),
+        name,
+        category,
+        amount,
+        spent: 0,
+        month,
+        note,
+        createdAt: nowISO()
+      });
+
+      save();
+      closeHisabModal();
+      showBudget();
+    };
+  }
+}
+
+
+/* =========================================================
+   BUDGET PAYMENT
+   ========================================================= */
+
+function addBudgetPayment(id) {
+  const budget =
+    data.budgets.find(
+      x => x.id === id
+    );
+
+  if (!budget) {
+    alert("Budget not found.");
+    return;
+  }
+
+  const body = `
+    ${inputField(
+      "budgetPaymentAmount",
+      "Payment Amount",
+      "",
+      "number",
+      "Enter amount"
+    )}
+
+    ${selectField(
+      "budgetPaymentMethod",
+      "Payment Method",
+      PAYMENT_METHODS
+    )}
+
+    ${selectField(
+      "budgetPaymentColor",
+      "Colour",
+      ENTRY_COLORS
+    )}
+
+    ${inputField(
+      "budgetPaymentNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+
+    ${inputField(
+      "budgetPaymentDate",
+      "Date",
+      today(),
+      "date"
+    )}
+  `;
+
+  modal(
+    "Budget Payment",
+    body,
+    primaryButton(
+      "saveBudgetPaymentBtn",
+      "Save Payment"
+    ) +
+      secondaryButton(
+        "cancelBudgetPaymentBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelBudgetPaymentBtn");
+
+  const saveBtn =
+    $("saveBudgetPaymentBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const amount =
+        safeNumber(
+          $("budgetPaymentAmount")?.value
+        );
+
+      if (amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      const paymentMethod =
+        $("budgetPaymentMethod")?.value ||
+        "Cash";
+
+      const color =
+        $("budgetPaymentColor")?.value ||
+        "default";
+
+      const note =
+        $("budgetPaymentNote")?.value.trim() ||
+        "";
+
+      const date =
+        $("budgetPaymentDate")?.value ||
+        today();
+
+      budget.spent =
+        safeNumber(budget.spent) +
+        amount;
+
+      /*
+       * Budget payment is also recorded
+       * in the main transaction list so
+       * Reports/Transactions can use it.
+       */
+      data.transactions.push({
+        id: uid("txn"),
+        type: "expense",
+        amount,
+        category:
+          budget.category === "Overall"
+            ? "Budget Payment"
+            : budget.category,
+        description:
+          note ||
+          `Budget: ${budget.name}`,
+        paymentMethod,
+        color,
+        scope: data.mode,
+        date,
+        budgetId: budget.id,
+        budgetName: budget.name,
+        createdAt: nowISO()
+      });
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showBudget();
+    };
+  }
+}
+
+
+/* =========================================================
+   EVENT HANDLERS
+   SAVINGS / GOALS / BUDGET
+   ========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const addSavingButton =
+      event.target.closest(
+        "[data-add-saving]"
+      );
+
+    if (addSavingButton) {
+      addSavingMoney(
+        addSavingButton.dataset.addSaving
+      );
+      return;
+    }
+
+
+    const deleteSavingButton =
+      event.target.closest(
+        "[data-delete-saving]"
+      );
+
+    if (deleteSavingButton) {
+      const id =
+        deleteSavingButton.dataset.deleteSaving;
+
+      if (
+        confirm(
+          "Delete this savings entry?"
+        )
+      ) {
+        data.savings =
+          data.savings.filter(
+            x => x.id !== id
+          );
+
+        save();
+        updateDashboard();
+        showSavings();
+      }
+
+      return;
+    }
+
+
+    const addGoalButton =
+      event.target.closest(
+        "[data-add-goal-money]"
+      );
+
+    if (addGoalButton) {
+      addGoalMoney(
+        addGoalButton.dataset.addGoalMoney
+      );
+      return;
+    }
+
+
+    const editGoalButton =
+      event.target.closest(
+        "[data-edit-goal]"
+      );
+
+    if (editGoalButton) {
+      editGoal(
+        editGoalButton.dataset.editGoal
+      );
+      return;
+    }
+
+
+    const deleteGoalButton =
+      event.target.closest(
+        "[data-delete-goal]"
+      );
+
+    if (deleteGoalButton) {
+      const id =
+        deleteGoalButton.dataset.deleteGoal;
+
+      if (
+        confirm(
+          "Delete this goal?"
+        )
+      ) {
+        data.goals =
+          data.goals.filter(
+            x => x.id !== id
+          );
+
+        save();
+        updateDashboard();
+        showGoals();
+      }
+
+      return;
+    }
+
+
+    const budgetPaymentButton =
+      event.target.closest(
+        "[data-budget-payment]"
+      );
+
+    if (budgetPaymentButton) {
+      addBudgetPayment(
+        budgetPaymentButton.dataset.budgetPayment
+      );
+      return;
+    }
+
+
+    const deleteBudgetButton =
+      event.target.closest(
+        "[data-delete-budget]"
+      );
+
+    if (deleteBudgetButton) {
+      const id =
+        deleteBudgetButton.dataset.deleteBudget;
+
+      if (
+        confirm(
+          "Delete this budget?"
+        )
+      ) {
+        data.budgets =
+          data.budgets.filter(
+            x => x.id !== id
+          );
+
+        save();
+        showBudget();
+      }
+
+      return;
+    }
+
+  }
+);
+
+
+/* =========================================================
+   GLOBAL FUNCTIONS
+   ========================================================= */
+
+window.addSaving = addSaving;
+window.addSavingMoney = addSavingMoney;
+
+window.addGoal = addGoal;
+window.addGoalMoney = addGoalMoney;
+window.editGoal = editGoal;
+
+window.addBudget = addBudget;
+window.addBudgetPayment = addBudgetPayment;
+
+
+/* =========================================================
+   PART 2 END
+   ========================================================= */
