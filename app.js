@@ -4664,8 +4664,1852 @@ window.editGoal = editGoal;
 
 window.addBudget = addBudget;
 window.addBudgetPayment = addBudgetPayment;
+/* =========================================================
+   BILLS + REMINDERS
+   ========================================================= */
+
+function showBills() {
+  const bills = data.bills
+    .slice()
+    .sort((a, b) =>
+      String(a.dueDate || "").localeCompare(
+        String(b.dueDate || "")
+      )
+    );
+
+  const total = bills.reduce(
+    (sum, x) => sum + safeNumber(x.amount),
+    0
+  );
+
+  const pending = bills
+    .filter(x => !x.paid)
+    .reduce(
+      (sum, x) => sum + safeNumber(x.amount),
+      0
+    );
+
+  const paid = bills
+    .filter(x => x.paid)
+    .reduce(
+      (sum, x) => sum + safeNumber(x.amount),
+      0
+    );
+
+  const rows = bills
+    .map(bill => {
+      return `
+        <div style="
+          padding:14px;
+          margin-bottom:10px;
+          border:1px solid #e1e7eb;
+          border-radius:14px;
+          background:#fff;
+        ">
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+          ">
+
+            <div>
+              <strong>
+                ${esc(bill.name || "Bill")}
+              </strong>
+
+              <div style="
+                font-size:12px;
+                opacity:.65;
+                margin-top:4px;
+              ">
+                ${esc(bill.category || "Bills")}
+                • Due
+                ${esc(
+                  dateOnly(
+                    bill.dueDate || today()
+                  )
+                )}
+              </div>
+            </div>
+
+            <strong>
+              ${money(bill.amount)}
+            </strong>
+
+          </div>
+
+          <div style="
+            margin-top:8px;
+            font-size:12px;
+          ">
+            ${bill.paid ? "✓ Paid" : "● Pending"}
+            ${
+              bill.recurring
+                ? " • Recurring"
+                : ""
+            }
+          </div>
+
+          ${
+            bill.note
+              ? `
+                <div style="
+                  margin-top:6px;
+                  font-size:12px;
+                  opacity:.7;
+                ">
+                  ${esc(bill.note)}
+                </div>
+              `
+              : ""
+          }
+
+          <div style="
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            margin-top:10px;
+          ">
+
+            <button
+              type="button"
+              data-toggle-bill="${esc(bill.id)}"
+            >
+              ${
+                bill.paid
+                  ? "Mark Pending"
+                  : "Mark Paid"
+              }
+            </button>
+
+            <button
+              type="button"
+              data-edit-bill="${esc(bill.id)}"
+            >
+              Edit
+            </button>
+
+            <button
+              type="button"
+              data-delete-bill="${esc(bill.id)}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    })
+    .join("");
+
+  const body = `
+    <div style="
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin-bottom:15px;
+    ">
+
+      <div style="
+        padding:11px;
+        border-radius:13px;
+        background:#eef6ff;
+      ">
+        <small>Total</small>
+        <strong style="display:block">
+          ${money(total)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:11px;
+        border-radius:13px;
+        background:#fff4f4;
+      ">
+        <small>Pending</small>
+        <strong style="display:block">
+          ${money(pending)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:11px;
+        border-radius:13px;
+        background:#effaf5;
+      ">
+        <small>Paid</small>
+        <strong style="display:block">
+          ${money(paid)}
+        </strong>
+      </div>
+
+    </div>
+
+    <button
+      type="button"
+      id="newBillBtn"
+      style="
+        width:100%;
+        margin-bottom:14px;
+      "
+    >
+      + Add Bill / Reminder
+    </button>
+
+    ${
+      rows ||
+      `
+        <div style="
+          padding:25px;
+          text-align:center;
+          opacity:.65;
+        ">
+          No bills added yet.
+        </div>
+      `
+    }
+  `;
+
+  modal(
+    "Bills & Reminders",
+    body,
+    secondaryButton(
+      "closeBillsBtn",
+      "Close"
+    )
+  );
+
+  const closeBtn =
+    $("closeBillsBtn");
+
+  const newBtn =
+    $("newBillBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (newBtn) {
+    newBtn.onclick = addBill;
+  }
+}
+
+window.showBills = showBills;
 
 
 /* =========================================================
-   PART 2 END
+   ADD / EDIT BILL
+   ========================================================= */
+
+function addBill(existing = null) {
+  const bill = existing || {};
+
+  const body = `
+    ${inputField(
+      "billName",
+      "Bill Name",
+      bill.name || "",
+      "text",
+      "Electricity, Rent, Internet..."
+    )}
+
+    ${inputField(
+      "billAmount",
+      "Amount",
+      bill.amount || "",
+      "number",
+      "Enter amount"
+    )}
+
+    ${selectField(
+      "billCategory",
+      "Category",
+      [
+        "Bills",
+        "Rent",
+        "Electricity",
+        "Water",
+        "Internet",
+        "Mobile",
+        "Insurance",
+        "Subscription",
+        "School",
+        "Other"
+      ],
+      bill.category || "Bills"
+    )}
+
+    ${inputField(
+      "billDueDate",
+      "Due Date",
+      bill.dueDate || today(),
+      "date"
+    )}
+
+    ${selectField(
+      "billPayment",
+      "Payment Method",
+      PAYMENT_METHODS,
+      bill.paymentMethod || "UPI"
+    )}
+
+    ${selectField(
+      "billFrequency",
+      "Repeat",
+      [
+        ["none", "One Time"],
+        ["monthly", "Monthly"],
+        ["quarterly", "Quarterly"],
+        ["yearly", "Yearly"]
+      ],
+      bill.frequency || "monthly"
+    )}
+
+    ${inputField(
+      "billNote",
+      "Note",
+      bill.note || "",
+      "text",
+      "Optional"
+    )}
+  `;
+
+  modal(
+    existing
+      ? "Edit Bill"
+      : "Add Bill",
+    body,
+    primaryButton(
+      "saveBillBtn",
+      existing
+        ? "Update"
+        : "Save"
+    ) +
+      secondaryButton(
+        "cancelBillBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelBillBtn");
+
+  const saveBtn =
+    $("saveBillBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const name =
+        $("billName")?.value.trim() ||
+        "";
+
+      const amount =
+        safeNumber(
+          $("billAmount")?.value
+        );
+
+      if (!name || amount <= 0) {
+        alert(
+          "Enter valid bill details."
+        );
+        return;
+      }
+
+      const obj = {
+        id:
+          existing?.id ||
+          uid("bill"),
+
+        name,
+
+        amount,
+
+        dueDate:
+          $("billDueDate")?.value ||
+          today(),
+
+        category:
+          $("billCategory")?.value ||
+          "Bills",
+
+        paymentMethod:
+          $("billPayment")?.value ||
+          "UPI",
+
+        recurring:
+          $("billFrequency")?.value !==
+          "none",
+
+        frequency:
+          $("billFrequency")?.value ||
+          "monthly",
+
+        paid:
+          existing
+            ? Boolean(existing.paid)
+            : false,
+
+        note:
+          $("billNote")?.value.trim() ||
+          "",
+
+        createdAt:
+          existing?.createdAt ||
+          nowISO()
+      };
+
+      if (existing) {
+        const index =
+          data.bills.findIndex(
+            x => x.id === existing.id
+          );
+
+        if (index >= 0) {
+          data.bills[index] = obj;
+        }
+      } else {
+        data.bills.push(obj);
+      }
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showBills();
+    };
+  }
+}
+
+
+/* =========================================================
+   TOGGLE BILL PAID / PENDING
+   ========================================================= */
+
+function toggleBill(id) {
+  const bill =
+    data.bills.find(
+      x => x.id === id
+    );
+
+  if (!bill) {
+    alert("Bill not found.");
+    return;
+  }
+
+  /*
+   * Mark Pending -> Paid
+   */
+  if (!bill.paid) {
+    const alreadyAdded =
+      data.transactions.some(
+        tx =>
+          tx.billId === id &&
+          tx.type === "expense"
+      );
+
+    if (!alreadyAdded) {
+      data.transactions.push({
+        id: uid("txn"),
+        type: "expense",
+        amount: safeNumber(
+          bill.amount
+        ),
+        category:
+          bill.category || "Bills",
+        description:
+          `Bill: ${bill.name}`,
+        paymentMethod:
+          bill.paymentMethod || "UPI",
+        color: "default",
+        scope: data.mode,
+        date: today(),
+        billId: id,
+        createdAt: nowISO()
+      });
+    }
+
+    bill.paid = true;
+  }
+
+  /*
+   * Mark Paid -> Pending
+   *
+   * Remove the transaction created
+   * for this bill so expense is not
+   * counted after marking pending.
+   */
+  else {
+    data.transactions =
+      data.transactions.filter(
+        tx =>
+          !(
+            tx.billId === id &&
+            tx.type === "expense"
+          )
+      );
+
+    bill.paid = false;
+  }
+
+  save();
+  updateDashboard();
+  showBills();
+}
+
+
+/* =========================================================
+   LOANS + EMI
+   ========================================================= */
+
+function showLoans() {
+  const loans = data.loans
+    .slice()
+    .sort((a, b) =>
+      String(a.dueDate || "").localeCompare(
+        String(b.dueDate || "")
+      )
+    );
+
+  const principal =
+    loans.reduce(
+      (sum, x) =>
+        sum + safeNumber(x.principal),
+      0
+    );
+
+  const emiTotal =
+    loans.reduce(
+      (sum, x) =>
+        sum + safeNumber(x.emi),
+      0
+    );
+
+  const rows = loans
+    .map(loan => {
+      const loanPrincipal =
+        safeNumber(loan.principal);
+
+      const loanPaid =
+        safeNumber(loan.paid);
+
+      const remaining =
+        Math.max(
+          0,
+          loanPrincipal - loanPaid
+        );
+
+      return `
+        <div style="
+          padding:14px;
+          margin-bottom:10px;
+          border:1px solid #e1e7eb;
+          border-radius:14px;
+          background:#fff;
+        ">
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+          ">
+
+            <div>
+              <strong>
+                ${esc(
+                  loan.name || "Loan"
+                )}
+              </strong>
+
+              ${
+                loan.lender
+                  ? `
+                    <div style="
+                      font-size:12px;
+                      opacity:.65;
+                      margin-top:3px;
+                    ">
+                      ${esc(loan.lender)}
+                    </div>
+                  `
+                  : ""
+              }
+            </div>
+
+            <strong>
+              ${money(loan.emi)}
+            </strong>
+
+          </div>
+
+          <div style="
+            margin-top:9px;
+            font-size:13px;
+          ">
+            Principal:
+            ${money(loanPrincipal)}
+          </div>
+
+          <div style="
+            margin-top:4px;
+            font-size:13px;
+          ">
+            Paid:
+            ${money(loanPaid)}
+            • Remaining:
+            ${money(remaining)}
+          </div>
+
+          <div style="
+            margin-top:5px;
+            font-size:12px;
+            opacity:.65;
+          ">
+            EMI Due:
+            ${esc(
+              dateOnly(
+                loan.dueDate ||
+                today()
+              )
+            )}
+          </div>
+
+          ${
+            loan.note
+              ? `
+                <div style="
+                  margin-top:6px;
+                  font-size:12px;
+                  opacity:.7;
+                ">
+                  ${esc(loan.note)}
+                </div>
+              `
+              : ""
+          }
+
+          <div style="
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            margin-top:10px;
+          ">
+
+            <button
+              type="button"
+              data-loan-payment="${esc(
+                loan.id
+              )}"
+            >
+              + EMI Payment
+            </button>
+
+            <button
+              type="button"
+              data-edit-loan="${esc(
+                loan.id
+              )}"
+            >
+              Edit
+            </button>
+
+            <button
+              type="button"
+              data-delete-loan="${esc(
+                loan.id
+              )}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    })
+    .join("");
+
+  const body = `
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:15px;
+    ">
+
+      <div style="
+        padding:13px;
+        border-radius:14px;
+        background:#eef6ff;
+      ">
+        <small>Total Principal</small>
+        <strong style="display:block">
+          ${money(principal)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:13px;
+        border-radius:14px;
+        background:#fff4f4;
+      ">
+        <small>Monthly EMI</small>
+        <strong style="display:block">
+          ${money(emiTotal)}
+        </strong>
+      </div>
+
+    </div>
+
+    <button
+      type="button"
+      id="newLoanBtn"
+      style="
+        width:100%;
+        margin-bottom:14px;
+      "
+    >
+      + Add Loan / EMI
+    </button>
+
+    ${
+      rows ||
+      `
+        <div style="
+          padding:25px;
+          text-align:center;
+          opacity:.65;
+        ">
+          No loans added yet.
+        </div>
+      `
+    }
+  `;
+
+  modal(
+    "Loans & EMI",
+    body,
+    secondaryButton(
+      "closeLoansBtn",
+      "Close"
+    )
+  );
+
+  const closeBtn =
+    $("closeLoansBtn");
+
+  const newBtn =
+    $("newLoanBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (newBtn) {
+    newBtn.onclick = addLoan;
+  }
+}
+
+window.showLoans = showLoans;
+
+
+/* =========================================================
+   ADD / EDIT LOAN
+   ========================================================= */
+
+function addLoan(existing = null) {
+  const loan = existing || {};
+
+  const body = `
+    ${inputField(
+      "loanName",
+      "Loan Name",
+      loan.name || "",
+      "text",
+      "Home Loan, Personal Loan..."
+    )}
+
+    ${inputField(
+      "loanLender",
+      "Bank / Finance Company",
+      loan.lender || "",
+      "text"
+    )}
+
+    ${inputField(
+      "loanPrincipal",
+      "Loan Amount",
+      loan.principal || "",
+      "number"
+    )}
+
+    ${inputField(
+      "loanEMI",
+      "Monthly EMI",
+      loan.emi || "",
+      "number"
+    )}
+
+    ${inputField(
+      "loanInterest",
+      "Interest Rate %",
+      loan.interest || "",
+      "number"
+    )}
+
+    ${inputField(
+      "loanTenure",
+      "Tenure (Months)",
+      loan.tenure || "",
+      "number"
+    )}
+
+    ${inputField(
+      "loanDueDate",
+      "Next EMI Date",
+      loan.dueDate || today(),
+      "date"
+    )}
+
+    ${selectField(
+      "loanPayment",
+      "Payment Method",
+      PAYMENT_METHODS,
+      loan.paymentMethod ||
+        "Bank Transfer"
+    )}
+
+    ${inputField(
+      "loanNote",
+      "Note",
+      loan.note || "",
+      "text",
+      "Optional"
+    )}
+  `;
+
+  modal(
+    existing
+      ? "Edit Loan"
+      : "Add Loan / EMI",
+    body,
+    primaryButton(
+      "saveLoanBtn",
+      existing
+        ? "Update"
+        : "Save"
+    ) +
+      secondaryButton(
+        "cancelLoanBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelLoanBtn");
+
+  const saveBtn =
+    $("saveLoanBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const name =
+        $("loanName")?.value.trim() ||
+        "";
+
+      const principal =
+        safeNumber(
+          $("loanPrincipal")?.value
+        );
+
+      const emi =
+        safeNumber(
+          $("loanEMI")?.value
+        );
+
+      const interest =
+        safeNumber(
+          $("loanInterest")?.value
+        );
+
+      const tenure =
+        safeNumber(
+          $("loanTenure")?.value
+        );
+
+      if (
+        !name ||
+        principal <= 0 ||
+        emi <= 0
+      ) {
+        alert(
+          "Enter valid loan details."
+        );
+        return;
+      }
+
+      if (
+        interest < 0 ||
+        tenure < 0
+      ) {
+        alert(
+          "Interest and tenure cannot be negative."
+        );
+        return;
+      }
+
+      const obj = {
+        id:
+          existing?.id ||
+          uid("loan"),
+
+        name,
+
+        lender:
+          $("loanLender")?.value.trim() ||
+          "",
+
+        principal,
+
+        emi,
+
+        interest,
+
+        tenure,
+
+        dueDate:
+          $("loanDueDate")?.value ||
+          today(),
+
+        paid:
+          safeNumber(
+            existing?.paid
+          ),
+
+        paymentMethod:
+          $("loanPayment")?.value ||
+          "Bank Transfer",
+
+        note:
+          $("loanNote")?.value.trim() ||
+          "",
+
+        createdAt:
+          existing?.createdAt ||
+          nowISO()
+      };
+
+      if (existing) {
+        const index =
+          data.loans.findIndex(
+            x => x.id === existing.id
+          );
+
+        if (index >= 0) {
+          data.loans[index] = obj;
+        }
+      } else {
+        data.loans.push(obj);
+      }
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showLoans();
+    };
+  }
+}
+
+
+/* =========================================================
+   ADD EMI PAYMENT
+   ========================================================= */
+
+function addLoanPayment(id) {
+  const loan =
+    data.loans.find(
+      x => x.id === id
+    );
+
+  if (!loan) {
+    alert("Loan not found.");
+    return;
+  }
+
+  const principal =
+    safeNumber(loan.principal);
+
+  const paid =
+    safeNumber(loan.paid);
+
+  const remaining =
+    Math.max(
+      0,
+      principal - paid
+    );
+
+  if (remaining <= 0) {
+    alert(
+      "This loan is already fully paid."
+    );
+    return;
+  }
+
+  const defaultAmount =
+    Math.min(
+      safeNumber(loan.emi),
+      remaining
+    );
+
+  const body = `
+    ${inputField(
+      "loanPayAmount",
+      "EMI Payment",
+      defaultAmount,
+      "number"
+    )}
+
+    ${selectField(
+      "loanPayMethod",
+      "Payment Method",
+      PAYMENT_METHODS,
+      loan.paymentMethod ||
+        "Bank Transfer"
+    )}
+
+    ${selectField(
+      "loanPayColor",
+      "Colour",
+      ENTRY_COLORS
+    )}
+
+    ${inputField(
+      "loanPayDate",
+      "Payment Date",
+      today(),
+      "date"
+    )}
+
+    ${inputField(
+      "loanPayNote",
+      "Note",
+      "",
+      "text",
+      "Optional"
+    )}
+  `;
+
+  modal(
+    "Record EMI Payment",
+    body,
+    primaryButton(
+      "saveLoanPaymentBtn",
+      "Save Payment"
+    ) +
+      secondaryButton(
+        "cancelLoanPaymentBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelLoanPaymentBtn");
+
+  const saveBtn =
+    $("saveLoanPaymentBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const amount =
+        safeNumber(
+          $("loanPayAmount")?.value
+        );
+
+      if (amount <= 0) {
+        alert(
+          "Enter a valid payment."
+        );
+        return;
+      }
+
+      if (amount > remaining) {
+        alert(
+          `Maximum remaining amount is ${money(
+            remaining
+          )}.`
+        );
+        return;
+      }
+
+      const method =
+        $("loanPayMethod")?.value ||
+        loan.paymentMethod ||
+        "Bank Transfer";
+
+      const color =
+        $("loanPayColor")?.value ||
+        "default";
+
+      const date =
+        $("loanPayDate")?.value ||
+        today();
+
+      const note =
+        $("loanPayNote")?.value.trim() ||
+        "";
+
+      loan.paid =
+        paid + amount;
+
+      loan.lastPaymentAmount =
+        amount;
+
+      loan.lastPaymentMethod =
+        method;
+
+      loan.lastPaymentColor =
+        color;
+
+      loan.lastPaymentDate =
+        date;
+
+      loan.updatedAt =
+        nowISO();
+
+      data.transactions.push({
+        id: uid("txn"),
+        type: "expense",
+        amount,
+        category: "EMI",
+        description:
+          note ||
+          `EMI: ${loan.name}`,
+        paymentMethod: method,
+        color,
+        scope: data.mode,
+        date,
+        loanId: loan.id,
+        createdAt: nowISO()
+      });
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showLoans();
+    };
+  }
+}
+
+
+/* =========================================================
+   TRANSACTIONS
+   ========================================================= */
+
+function showTransactions() {
+  const transactions =
+    data.transactions
+      .filter(
+        tx =>
+          tx.scope === data.mode
+      )
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(
+            b.createdAt || b.date || 0
+          ) -
+          new Date(
+            a.createdAt || a.date || 0
+          )
+      );
+
+  const income =
+    transactions
+      .filter(
+        x => x.type === "income"
+      )
+      .reduce(
+        (sum, x) =>
+          sum + safeNumber(x.amount),
+        0
+      );
+
+  const expense =
+    transactions
+      .filter(
+        x => x.type === "expense"
+      )
+      .reduce(
+        (sum, x) =>
+          sum + safeNumber(x.amount),
+        0
+      );
+
+  const rows =
+    transactions
+      .map(tx => {
+        return `
+          <div style="
+            padding:13px;
+            border-bottom:1px solid #edf0f2;
+          ">
+
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              gap:10px;
+            ">
+
+              <div>
+
+                <strong>
+                  ${esc(
+                    tx.description ||
+                    tx.category ||
+                    "Transaction"
+                  )}
+                </strong>
+
+                <div style="
+                  font-size:12px;
+                  opacity:.65;
+                  margin-top:3px;
+                ">
+                  ${esc(
+                    tx.category ||
+                    "Other"
+                  )}
+                  •
+                  ${esc(
+                    tx.paymentMethod ||
+                    "Cash"
+                  )}
+                  •
+                  ${esc(
+                    dateOnly(
+                      tx.date ||
+                      today()
+                    )
+                  )}
+                </div>
+
+              </div>
+
+              <strong>
+                ${
+                  tx.type === "income"
+                    ? "+"
+                    : "-"
+                }
+                ${money(tx.amount)}
+              </strong>
+
+            </div>
+
+            <div style="
+              display:flex;
+              gap:8px;
+              margin-top:9px;
+              flex-wrap:wrap;
+            ">
+
+              <button
+                type="button"
+                data-edit-transaction="${esc(
+                  tx.id
+                )}"
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                data-delete-transaction="${esc(
+                  tx.id
+                )}"
+              >
+                Delete
+              </button>
+
+            </div>
+
+          </div>
+        `;
+      })
+      .join("");
+
+  const body = `
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:14px;
+    ">
+
+      <div style="
+        padding:13px;
+        background:#effaf5;
+        border-radius:14px;
+      ">
+        <small>Income</small>
+        <strong style="display:block">
+          ${money(income)}
+        </strong>
+      </div>
+
+      <div style="
+        padding:13px;
+        background:#fff4f4;
+        border-radius:14px;
+      ">
+        <small>Expense</small>
+        <strong style="display:block">
+          ${money(expense)}
+        </strong>
+      </div>
+
+    </div>
+
+    <div style="
+      display:flex;
+      gap:8px;
+      margin-bottom:12px;
+    ">
+
+      <button
+        type="button"
+        id="transactionIncomeBtn"
+      >
+        + Income
+      </button>
+
+      <button
+        type="button"
+        id="transactionExpenseBtn"
+      >
+        + Expense
+      </button>
+
+    </div>
+
+    ${
+      rows ||
+      `
+        <div style="
+          padding:25px;
+          text-align:center;
+          opacity:.65;
+        ">
+          No transactions yet.
+        </div>
+      `
+    }
+  `;
+
+  modal(
+    "Transactions",
+    body,
+    secondaryButton(
+      "closeTransactionsBtn",
+      "Close"
+    )
+  );
+
+  const closeBtn =
+    $("closeTransactionsBtn");
+
+  const incomeBtn =
+    $("transactionIncomeBtn");
+
+  const expenseBtn =
+    $("transactionExpenseBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (incomeBtn) {
+    incomeBtn.onclick =
+      () =>
+        addTransaction(
+          "income"
+        );
+  }
+
+  if (expenseBtn) {
+    expenseBtn.onclick =
+      () =>
+        addTransaction(
+          "expense"
+        );
+  }
+}
+
+window.showTransactions =
+  showTransactions;
+
+
+/* =========================================================
+   EDIT TRANSACTION
+   ========================================================= */
+
+function editTransaction(id) {
+  const tx =
+    data.transactions.find(
+      x => x.id === id
+    );
+
+  if (!tx) {
+    alert(
+      "Transaction not found."
+    );
+    return;
+  }
+
+  const categories =
+    tx.type === "income"
+      ? data.categories.income
+      : data.categories.expense;
+
+  const body = `
+    ${selectField(
+      "editTxType",
+      "Type",
+      [
+        ["income", "Income"],
+        ["expense", "Expense"]
+      ],
+      tx.type
+    )}
+
+    ${inputField(
+      "editTxAmount",
+      "Amount",
+      tx.amount,
+      "number"
+    )}
+
+    ${selectField(
+      "editTxCategory",
+      "Category",
+      categories,
+      tx.category
+    )}
+
+    ${inputField(
+      "editTxDescription",
+      "Description",
+      tx.description || "",
+      "text"
+    )}
+
+    ${selectField(
+      "editTxPayment",
+      "Payment Method",
+      PAYMENT_METHODS,
+      tx.paymentMethod ||
+        "Cash"
+    )}
+
+    ${selectField(
+      "editTxColor",
+      "Colour",
+      ENTRY_COLORS,
+      tx.color ||
+        "default"
+    )}
+
+    ${inputField(
+      "editTxDate",
+      "Date",
+      tx.date || today(),
+      "date"
+    )}
+  `;
+
+  modal(
+    "Edit Transaction",
+    body,
+    primaryButton(
+      "updateTransactionBtn",
+      "Update"
+    ) +
+      secondaryButton(
+        "cancelEditTransactionBtn",
+        "Cancel"
+      )
+  );
+
+  const cancelBtn =
+    $("cancelEditTransactionBtn");
+
+  const updateBtn =
+    $("updateTransactionBtn");
+
+  if (cancelBtn) {
+    cancelBtn.onclick =
+      closeHisabModal;
+  }
+
+  if (updateBtn) {
+    updateBtn.onclick = () => {
+      const amount =
+        safeNumber(
+          $("editTxAmount")?.value
+        );
+
+      if (amount <= 0) {
+        alert(
+          "Enter a valid amount."
+        );
+        return;
+      }
+
+      const oldType =
+        tx.type;
+
+      const newType =
+        $("editTxType")?.value ||
+        tx.type;
+
+      /*
+       * For normal transactions,
+       * edit normally.
+       *
+       * Linked bill / loan transactions
+       * are kept linked so their source
+       * record is not accidentally broken.
+       */
+      tx.type = newType;
+      tx.amount = amount;
+
+      tx.category =
+        $("editTxCategory")?.value ||
+        "Other";
+
+      tx.description =
+        $("editTxDescription")
+          ?.value.trim() ||
+        "";
+
+      tx.paymentMethod =
+        $("editTxPayment")
+          ?.value ||
+        "Cash";
+
+      tx.color =
+        $("editTxColor")?.value ||
+        "default";
+
+      tx.date =
+        $("editTxDate")?.value ||
+        today();
+
+      tx.updatedAt =
+        nowISO();
+
+      /*
+       * If transaction type changed,
+       * it remains a transaction but
+       * source records are not silently
+       * modified.
+       */
+      if (
+        oldType !== newType &&
+        tx.billId
+      ) {
+        tx.billId = tx.billId;
+      }
+
+      save();
+      closeHisabModal();
+      updateDashboard();
+      showTransactions();
+    };
+  }
+}
+
+
+/* =========================================================
+   EVENT HANDLERS
+   BILLS / LOANS / TRANSACTIONS
+   ========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const toggleBillButton =
+      event.target.closest(
+        "[data-toggle-bill]"
+      );
+
+    if (toggleBillButton) {
+      toggleBill(
+        toggleBillButton.dataset
+          .toggleBill
+      );
+      return;
+    }
+
+
+    const editBillButton =
+      event.target.closest(
+        "[data-edit-bill]"
+      );
+
+    if (editBillButton) {
+      const bill =
+        data.bills.find(
+          x =>
+            x.id ===
+            editBillButton.dataset
+              .editBill
+        );
+
+      if (bill) {
+        addBill(bill);
+      }
+
+      return;
+    }
+
+
+    const deleteBillButton =
+      event.target.closest(
+        "[data-delete-bill]"
+      );
+
+    if (deleteBillButton) {
+      const id =
+        deleteBillButton.dataset
+          .deleteBill;
+
+      if (
+        confirm(
+          "Delete this bill?"
+        )
+      ) {
+        /*
+         * Also remove any expense
+         * transaction linked to this bill.
+         */
+        data.transactions =
+          data.transactions.filter(
+            tx =>
+              tx.billId !== id
+          );
+
+        data.bills =
+          data.bills.filter(
+            x => x.id !== id
+          );
+
+        save();
+        updateDashboard();
+        showBills();
+      }
+
+      return;
+    }
+
+
+    const loanPaymentButton =
+      event.target.closest(
+        "[data-loan-payment]"
+      );
+
+    if (loanPaymentButton) {
+      addLoanPayment(
+        loanPaymentButton.dataset
+          .loanPayment
+      );
+      return;
+    }
+
+
+    const editLoanButton =
+      event.target.closest(
+        "[data-edit-loan]"
+      );
+
+    if (editLoanButton) {
+      const loan =
+        data.loans.find(
+          x =>
+            x.id ===
+            editLoanButton.dataset
+              .editLoan
+        );
+
+      if (loan) {
+        addLoan(loan);
+      }
+
+      return;
+    }
+
+
+    const deleteLoanButton =
+      event.target.closest(
+        "[data-delete-loan]"
+      );
+
+    if (deleteLoanButton) {
+      const id =
+        deleteLoanButton.dataset
+          .deleteLoan;
+
+      if (
+        confirm(
+          "Delete this loan?"
+        )
+      ) {
+        /*
+         * Remove linked EMI transactions
+         * together with the loan.
+         */
+        data.transactions =
+          data.transactions.filter(
+            tx =>
+              tx.loanId !== id
+          );
+
+        data.loans =
+          data.loans.filter(
+            x => x.id !== id
+          );
+
+        save();
+        updateDashboard();
+        showLoans();
+      }
+
+      return;
+    }
+
+
+    const editTransactionButton =
+      event.target.closest(
+        "[data-edit-transaction]"
+      );
+
+    if (editTransactionButton) {
+      editTransaction(
+        editTransactionButton.dataset
+          .editTransaction
+      );
+      return;
+    }
+
+
+    const deleteTransactionButton =
+      event.target.closest(
+        "[data-delete-transaction]"
+      );
+
+    if (deleteTransactionButton) {
+      const id =
+        deleteTransactionButton.dataset
+          .deleteTransaction;
+
+      const tx =
+        data.transactions.find(
+          x => x.id === id
+        );
+
+      if (
+        confirm(
+          "Delete this transaction?"
+        )
+      ) {
+
+        /*
+         * Keep source records in sync.
+         */
+        if (tx?.billId) {
+          const bill =
+            data.bills.find(
+              x =>
+                x.id === tx.billId
+            );
+
+          if (bill) {
+            bill.paid = false;
+          }
+        }
+
+        if (tx?.loanId) {
+          const loan =
+            data.loans.find(
+              x =>
+                x.id === tx.loanId
+            );
+
+          if (loan) {
+            loan.paid =
+              Math.max(
+                0,
+                safeNumber(
+                  loan.paid
+                ) -
+                  safeNumber(
+                    tx.amount
+                  )
+              );
+          }
+        }
+
+        data.transactions =
+          data.transactions.filter(
+            x => x.id !== id
+          );
+
+        save();
+        updateDashboard();
+        showTransactions();
+      }
+
+      return;
+    }
+
+  }
+);
+
+
+/* =========================================================
+   GLOBAL FUNCTIONS
+   ========================================================= */
+
+window.addBill = addBill;
+window.toggleBill = toggleBill;
+
+window.addLoan = addLoan;
+window.addLoanPayment =
+  addLoanPayment;
+
+window.editTransaction =
+  editTransaction;
+
+
+/* =========================================================
+   END
    ========================================================= */
