@@ -6509,7 +6509,2723 @@ window.addLoanPayment =
 window.editTransaction =
   editTransaction;
 
-
 /* =========================================================
-   END
+   HISAB GLOBAL V7
+   REPORTS + SETTINGS + BACKUP/RESTORE + SEARCH
+   SECURITY + BUSINESS + EXPORT/PRINT
    ========================================================= */
+
+/* =========================
+   REPORTS & ANALYTICS
+   ========================= */
+
+function showReports() {
+    const income = totalIncome();
+    const expense = totalExpense();
+    const given = totalGiven();
+    const received = totalReceived();
+    const bal = balance();
+
+    const txns = data.transactions
+        .filter(t => !t.deleted)
+        .slice()
+        .sort((a, b) =>
+            String(b.date || "").localeCompare(String(a.date || ""))
+        );
+
+    const incomeRows =
+        txns
+            .filter(t => t.type === "income")
+            .slice(0, 20)
+            .map(t => `
+                <div class="activity-row">
+                    <div>
+                        <strong>${esc(t.title || t.description || "Income")}</strong>
+                        <small>
+                            ${esc(t.category || "Other")} • ${dateTime(t.date)}
+                        </small>
+                    </div>
+                    <strong class="text-success">
+                        +${money(t.amount)}
+                    </strong>
+                </div>
+            `)
+            .join("") ||
+        `<div class="empty-state">No income records yet.</div>`;
+
+    const expenseRows =
+        txns
+            .filter(t => t.type === "expense")
+            .slice(0, 20)
+            .map(t => `
+                <div class="activity-row">
+                    <div>
+                        <strong>${esc(t.title || t.description || "Expense")}</strong>
+                        <small>
+                            ${esc(t.category || "Other")} • ${dateTime(t.date)}
+                        </small>
+                    </div>
+                    <strong class="text-danger">
+                        -${money(t.amount)}
+                    </strong>
+                </div>
+            `)
+            .join("") ||
+        `<div class="empty-state">No expense records yet.</div>`;
+
+    const ledgerNet = given - received;
+
+    const body = `
+        <div class="summary-card">
+            <span>Total Income</span>
+            <strong>${money(income)}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Total Expense</span>
+            <strong>${money(expense)}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Money Given</span>
+            <strong>${money(given)}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Money Received</span>
+            <strong>${money(received)}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Net Balance</span>
+            <strong>${money(bal)}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Len-Den Net</span>
+            <strong>${money(ledgerNet)}</strong>
+        </div>
+
+        <div class="form-section">
+            <h3>Overview</h3>
+
+            <div class="activity-row">
+                <div>
+                    <strong>Total Transactions</strong>
+                    <small>Income + Expense</small>
+                </div>
+                <strong>${txns.length}</strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>Savings Records</strong>
+                    <small>All savings entries</small>
+                </div>
+                <strong>${data.savings.length}</strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>Goals</strong>
+                    <small>Active goals</small>
+                </div>
+                <strong>${data.goals.length}</strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>Bills</strong>
+                    <small>All bills</small>
+                </div>
+                <strong>${data.bills.length}</strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>Loans</strong>
+                    <small>All loans</small>
+                </div>
+                <strong>${data.loans.length}</strong>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Recent Income</h3>
+            <div class="activity-list">
+                ${incomeRows}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Recent Expenses</h3>
+            <div class="activity-list">
+                ${expenseRows}
+            </div>
+        </div>
+
+        <div class="button-row">
+            ${primaryButton(
+                "Export Report",
+                "data-export-report"
+            )}
+
+            ${secondaryButton(
+                "Print Report",
+                "data-print-report"
+            )}
+        </div>
+    `;
+
+    modal("Reports & Analytics", body);
+
+    document
+        .querySelector("[data-export-report]")
+        ?.addEventListener("click", exportReport);
+
+    document
+        .querySelector("[data-print-report]")
+        ?.addEventListener("click", printReport);
+}
+
+window.showReports = showReports;
+
+
+/* =========================
+   REPORT EXPORT
+   ========================= */
+
+function exportReport() {
+    const income = totalIncome();
+    const expense = totalExpense();
+    const given = totalGiven();
+    const received = totalReceived();
+    const bal = balance();
+
+    const rows = data.transactions
+        .filter(t => !t.deleted)
+        .slice()
+        .sort((a, b) =>
+            String(b.date || "").localeCompare(String(a.date || ""))
+        );
+
+    const htmlRows =
+        rows.map(t => `
+            <tr>
+                <td>${esc(dateOnly(t.date))}</td>
+                <td>${esc(t.type || "")}</td>
+                <td>${esc(t.title || t.description || "")}</td>
+                <td>${esc(t.category || "")}</td>
+                <td>${esc(money(t.amount))}</td>
+                <td>${esc(t.paymentMethod || "")}</td>
+            </tr>
+        `).join("") ||
+        `
+            <tr>
+                <td colspan="6">No transactions</td>
+            </tr>
+        `;
+
+    const reportHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>HISAB Report</title>
+
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    color: #222;
+                }
+
+                h1 {
+                    margin-bottom: 4px;
+                }
+
+                .date {
+                    color: #666;
+                    margin-bottom: 20px;
+                }
+
+                .summary {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                    margin-bottom: 20px;
+                }
+
+                .box {
+                    border: 1px solid #ddd;
+                    padding: 14px;
+                    border-radius: 10px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 15px;
+                }
+
+                th,
+                td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }
+
+                th {
+                    background: #f3f5f7;
+                }
+            </style>
+        </head>
+
+        <body>
+
+            <h1>HISAB</h1>
+            <div class="date">
+                Money Manager • ${esc(today())}
+            </div>
+
+            <div class="summary">
+
+                <div class="box">
+                    <strong>Total Income</strong>
+                    <br>
+                    ${money(income)}
+                </div>
+
+                <div class="box">
+                    <strong>Total Expense</strong>
+                    <br>
+                    ${money(expense)}
+                </div>
+
+                <div class="box">
+                    <strong>Money Given</strong>
+                    <br>
+                    ${money(given)}
+                </div>
+
+                <div class="box">
+                    <strong>Money Received</strong>
+                    <br>
+                    ${money(received)}
+                </div>
+
+                <div class="box">
+                    <strong>Net Balance</strong>
+                    <br>
+                    ${money(bal)}
+                </div>
+
+            </div>
+
+            <h2>Transactions</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Payment</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${htmlRows}
+                </tbody>
+            </table>
+
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob(
+        [reportHTML],
+        { type: "text/html;charset=utf-8" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = `HISAB-report-${today()}.html`;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+    }, 1000);
+}
+
+window.exportReport = exportReport;
+
+
+/* =========================
+   SEARCH
+   ========================= */
+
+function showSearch() {
+    modal(
+        "Search HISAB",
+        `
+        ${inputField(
+            "searchInput",
+            "Search income, expense, person, bill, goal, loan...",
+            "",
+            "text"
+        )}
+
+        <div
+            id="searchResults"
+            class="activity-list"
+        >
+            <div class="empty-state">
+                Type something to search your records.
+            </div>
+        </div>
+        `
+    );
+
+    const input = document.getElementById("searchInput");
+    const results = document.getElementById("searchResults");
+
+    input?.addEventListener("input", () => {
+        const q = String(input.value || "")
+            .trim()
+            .toLowerCase();
+
+        if (!q) {
+            results.innerHTML = `
+                <div class="empty-state">
+                    Type something to search your records.
+                </div>
+            `;
+            return;
+        }
+
+        const found = [];
+
+        data.transactions.forEach(t => {
+            const text = [
+                t.title,
+                t.description,
+                t.category,
+                t.note,
+                t.paymentMethod,
+                t.scope,
+                t.amount
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            if (text.includes(q)) {
+                found.push({
+                    type:
+                        t.type === "income"
+                            ? "Income"
+                            : "Expense",
+
+                    title:
+                        t.title ||
+                        t.description ||
+                        t.category ||
+                        "Transaction",
+
+                    detail:
+                        `${t.category || "Other"} • ${dateTime(t.date)}`,
+
+                    amount:
+                        `${t.type === "income" ? "+" : "-"}${money(t.amount)}`
+                });
+            }
+        });
+
+        data.ledger.forEach(p => {
+            const text = [
+                p.person,
+                p.name,
+                p.note,
+                p.kind,
+                p.amount
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            if (text.includes(q)) {
+                found.push({
+                    type:
+                        p.kind === "given"
+                            ? "Given"
+                            : "Received",
+
+                    title:
+                        p.person ||
+                        p.name ||
+                        "Person",
+
+                    detail:
+                        p.note ||
+                        "Len-Den",
+
+                    amount:
+                        money(p.amount)
+                });
+            }
+        });
+
+        data.goals.forEach(g => {
+            const text = [
+                g.name,
+                g.purpose,
+                g.note
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            if (text.includes(q)) {
+                found.push({
+                    type: "Goal",
+
+                    title: g.name || "Goal",
+
+                    detail:
+                        g.purpose ||
+                        "Goal",
+
+                    amount:
+                        `${money(g.saved || 0)} / ${money(g.target || 0)}`
+                });
+            }
+        });
+
+        data.bills.forEach(b => {
+            const text = [
+                b.name,
+                b.category,
+                b.note,
+                b.paymentMethod
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            if (text.includes(q)) {
+                found.push({
+                    type: "Bill",
+
+                    title:
+                        b.name ||
+                        "Bill",
+
+                    detail:
+                        `${b.paid ? "Paid" : "Pending"} • Due ${b.dueDate || "-"}`,
+
+                    amount:
+                        money(b.amount)
+                });
+            }
+        });
+
+        data.loans.forEach(l => {
+            const text = [
+                l.name,
+                l.lender,
+                l.note,
+                l.emi,
+                l.principal
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            if (text.includes(q)) {
+                found.push({
+                    type: "Loan",
+
+                    title:
+                        l.name ||
+                        l.lender ||
+                        "Loan",
+
+                    detail:
+                        `EMI ${money(l.emi || 0)}`,
+
+                    amount:
+                        `Paid ${money(l.paid || 0)}`
+                });
+            }
+        });
+
+        if (!found.length) {
+            results.innerHTML = `
+                <div class="empty-state">
+                    No matching records found.
+                </div>
+            `;
+            return;
+        }
+
+        results.innerHTML = found
+            .slice(0, 50)
+            .map(item => `
+                <div class="activity-row">
+                    <div>
+                        <strong>
+                            ${esc(item.title)}
+                        </strong>
+
+                        <small>
+                            ${esc(item.type)}
+                            •
+                            ${esc(item.detail)}
+                        </small>
+                    </div>
+
+                    <strong>
+                        ${esc(item.amount)}
+                    </strong>
+                </div>
+            `)
+            .join("");
+    });
+}
+
+window.showSearch = showSearch;
+
+
+/* =========================
+   BACKUP OBJECT
+   ========================= */
+
+function createBackupObject() {
+    return {
+        app: "HISAB",
+        version: APP_VERSION,
+        exportedAt: nowISO(),
+        data: deepClone(data)
+    };
+}
+
+
+/* =========================
+   BACKUP DATA
+   ========================= */
+
+function backupData() {
+    try {
+        const payload = createBackupObject();
+
+        const blob = new Blob(
+            [
+                JSON.stringify(
+                    payload,
+                    null,
+                    2
+                )
+            ],
+            {
+                type: "application/json"
+            }
+        );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const a =
+            document.createElement("a");
+
+        a.href = url;
+
+        a.download =
+            `HISAB-backup-${today()}.json`;
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 1000);
+
+        alert(
+            "Backup file created successfully."
+        );
+
+    } catch (error) {
+        console.error(
+            "Backup error:",
+            error
+        );
+
+        alert(
+            "Backup could not be created."
+        );
+    }
+}
+
+window.backupData = backupData;
+
+
+/* =========================
+   RESTORE BACKUP
+   ========================= */
+
+function restoreBackupFile(file) {
+    if (!file) return;
+
+    const reader =
+        new FileReader();
+
+    reader.onload = () => {
+        try {
+            const parsed =
+                JSON.parse(
+                    reader.result
+                );
+
+            const incoming =
+                parsed &&
+                parsed.data
+                    ? parsed.data
+                    : parsed;
+
+            if (
+                !incoming ||
+                typeof incoming !== "object" ||
+                Array.isArray(incoming)
+            ) {
+                throw new Error(
+                    "Invalid backup"
+                );
+            }
+
+            const restored =
+                normalize(incoming);
+
+            if (
+                !confirm(
+                    "Restore this backup?\n\n" +
+                    "Current local data will be replaced " +
+                    "by the selected backup."
+                )
+            ) {
+                return;
+            }
+
+            data = restored;
+
+            window.HISAB.data =
+                data;
+
+            save();
+
+            applyTheme();
+
+            updateDashboard();
+
+            updateModeButtons();
+
+            renderRecentActivity();
+
+            alert(
+                "Backup restored successfully."
+            );
+
+            closeHisabModal();
+
+        } catch (error) {
+            console.error(
+                "Restore error:",
+                error
+            );
+
+            alert(
+                "This backup file is invalid."
+            );
+        }
+    };
+
+    reader.onerror = () => {
+        alert(
+            "Could not read the backup file."
+        );
+    };
+
+    reader.readAsText(file);
+}
+
+
+/* =========================
+   BACKUP & RESTORE SCREEN
+   ========================= */
+
+function showBackup() {
+    modal(
+        "Backup & Restore",
+        `
+        <div class="form-section">
+            <h3>Protect your HISAB data</h3>
+
+            <p>
+                Your data is stored locally on this device.
+                Create a backup regularly so you can restore it later.
+            </p>
+        </div>
+
+        <div class="button-stack">
+
+            ${primaryButton(
+                "Create Backup",
+                "data-create-backup"
+            )}
+
+            ${secondaryButton(
+                "Restore Backup",
+                "data-restore-backup"
+            )}
+
+            ${secondaryButton(
+                "Export CSV",
+                "data-export-csv"
+            )}
+
+            ${secondaryButton(
+                "Print / Save PDF",
+                "data-print-report"
+            )}
+
+        </div>
+
+        <input
+            id="restoreFileInput"
+            type="file"
+            accept=".json,application/json"
+            style="display:none"
+        />
+        `
+    );
+
+    document
+        .querySelector("[data-create-backup]")
+        ?.addEventListener(
+            "click",
+            backupData
+        );
+
+    document
+        .querySelector("[data-restore-backup]")
+        ?.addEventListener(
+            "click",
+            () => {
+                document
+                    .getElementById(
+                        "restoreFileInput"
+                    )
+                    ?.click();
+            }
+        );
+
+    document
+        .getElementById(
+            "restoreFileInput"
+        )
+        ?.addEventListener(
+            "change",
+            event => {
+                const file =
+                    event.target.files?.[0];
+
+                restoreBackupFile(file);
+            }
+        );
+
+    document
+        .querySelector("[data-export-csv]")
+        ?.addEventListener(
+            "click",
+            exportCSV
+        );
+
+    document
+        .querySelector("[data-print-report]")
+        ?.addEventListener(
+            "click",
+            printReport
+        );
+}
+
+window.showBackup = showBackup;
+
+
+/* =========================
+   CSV EXPORT
+   ========================= */
+
+function exportCSV() {
+    try {
+        const rows = [
+            [
+                "Date",
+                "Type",
+                "Title",
+                "Category",
+                "Amount",
+                "Payment Method",
+                "Note"
+            ]
+        ];
+
+        data.transactions.forEach(t => {
+            rows.push([
+                t.date || "",
+                t.type || "",
+                t.title ||
+                    t.description ||
+                    "",
+                t.category || "",
+                t.amount || 0,
+                t.paymentMethod || "",
+                t.note || ""
+            ]);
+        });
+
+        const csv =
+            rows
+                .map(row =>
+                    row
+                        .map(value => {
+                            const s =
+                                String(
+                                    value ?? ""
+                                );
+
+                            return `"${s.replace(
+                                /"/g,
+                                '""'
+                            )}"`;
+                        })
+                        .join(",")
+                )
+                .join("\n");
+
+        const blob =
+            new Blob(
+                [csv],
+                {
+                    type:
+                        "text/csv;charset=utf-8"
+                }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const a =
+            document.createElement("a");
+
+        a.href = url;
+
+        a.download =
+            `HISAB-transactions-${today()}.csv`;
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 1000);
+
+    } catch (error) {
+        console.error(
+            "CSV export error:",
+            error
+        );
+
+        alert(
+            "CSV export failed."
+        );
+    }
+}
+
+window.exportCSV = exportCSV;
+
+
+/* =========================
+   PRINT / PDF READY
+   ========================= */
+
+function printReport() {
+    const income = totalIncome();
+    const expense = totalExpense();
+    const given = totalGiven();
+    const received = totalReceived();
+
+    const rows =
+        data.transactions
+            .filter(t => !t.deleted)
+            .slice()
+            .sort((a, b) =>
+                String(
+                    b.date || ""
+                ).localeCompare(
+                    String(
+                        a.date || ""
+                    )
+                )
+            )
+            .map(t => `
+                <tr>
+                    <td>${esc(dateOnly(t.date))}</td>
+                    <td>${esc(t.type || "")}</td>
+                    <td>${esc(t.title || t.description || "")}</td>
+                    <td>${esc(t.category || "")}</td>
+                    <td>${esc(money(t.amount))}</td>
+                </tr>
+            `)
+            .join("") ||
+        `
+            <tr>
+                <td colspan="5">
+                    No transactions
+                </td>
+            </tr>
+        `;
+
+    const printWindow =
+        window.open(
+            "",
+            "_blank"
+        );
+
+    if (!printWindow) {
+        alert(
+            "Please allow pop-ups to print the report."
+        );
+        return;
+    }
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+
+        <html>
+        <head>
+            <meta charset="UTF-8">
+
+            <title>
+                HISAB Report
+            </title>
+
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    color: #222;
+                }
+
+                h1 {
+                    margin-bottom: 4px;
+                }
+
+                .date {
+                    color: #666;
+                    margin-bottom: 20px;
+                }
+
+                .summary {
+                    display: grid;
+                    grid-template-columns:
+                        repeat(2, 1fr);
+                    gap: 10px;
+                    margin-bottom: 20px;
+                }
+
+                .box {
+                    border: 1px solid #ddd;
+                    padding: 14px;
+                    border-radius: 10px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse:
+                        collapse;
+                    margin-top: 15px;
+                }
+
+                th,
+                td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }
+
+                th {
+                    background: #f3f5f7;
+                }
+
+                @media print {
+                    body {
+                        padding: 10px;
+                    }
+                }
+            </style>
+        </head>
+
+        <body>
+
+            <h1>HISAB</h1>
+
+            <div class="date">
+                Money Manager • ${esc(today())}
+            </div>
+
+            <div class="summary">
+
+                <div class="box">
+                    <strong>
+                        Total Income
+                    </strong>
+                    <br>
+                    ${money(income)}
+                </div>
+
+                <div class="box">
+                    <strong>
+                        Total Expense
+                    </strong>
+                    <br>
+                    ${money(expense)}
+                </div>
+
+                <div class="box">
+                    <strong>
+                        Money Given
+                    </strong>
+                    <br>
+                    ${money(given)}
+                </div>
+
+                <div class="box">
+                    <strong>
+                        Money Received
+                    </strong>
+                    <br>
+                    ${money(received)}
+                </div>
+
+            </div>
+
+            <h2>
+                Transactions
+            </h2>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${rows}
+                </tbody>
+
+            </table>
+
+            <script>
+                window.onload = function () {
+                    window.print();
+                };
+            <\/script>
+
+        </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+}
+
+window.printReport = printReport;
+
+
+/* =========================
+   SETTINGS
+   ========================= */
+
+function showSettings() {
+    const s =
+        data.settings || {};
+
+    modal(
+        "Settings",
+        `
+        ${selectField(
+            "settingsCurrency",
+            "Currency",
+            [
+                "₹",
+                "$",
+                "€",
+                "£",
+                "¥",
+                "AED",
+                "SAR",
+                "Other"
+            ],
+            data.currency ||
+                s.currency ||
+                "₹"
+        )}
+
+        ${selectField(
+            "settingsLanguage",
+            "Language",
+            [
+                "English",
+                "Hindi",
+                "Spanish",
+                "French",
+                "Arabic"
+            ],
+            s.language ||
+                "English"
+        )}
+
+        ${selectField(
+            "settingsTheme",
+            "Theme",
+            [
+                "light",
+                "dark",
+                "system"
+            ],
+            s.theme ||
+                "light"
+        )}
+
+        <div class="form-section">
+
+            <label class="checkbox-row">
+
+                <input
+                    id="hideBalancesSetting"
+                    type="checkbox"
+                    ${s.hideBalances ? "checked" : ""}
+                >
+
+                <span>
+                    Hide balances
+                </span>
+
+            </label>
+
+        </div>
+
+        <div class="form-section">
+
+            <label class="checkbox-row">
+
+                <input
+                    id="backupReminderSetting"
+                    type="checkbox"
+                    ${
+                        s.autoBackupReminder !== false
+                            ? "checked"
+                            : ""
+                    }
+                >
+
+                <span>
+                    Backup reminder
+                </span>
+
+            </label>
+
+        </div>
+
+        <div class="button-stack">
+
+            ${primaryButton(
+                "Save Settings",
+                "data-save-settings"
+            )}
+
+            ${secondaryButton(
+                "Search",
+                "data-open-search"
+            )}
+
+            ${secondaryButton(
+                "Security / App Lock",
+                "data-open-security"
+            )}
+
+            ${secondaryButton(
+                "Backup & Restore",
+                "data-open-backup"
+            )}
+
+            ${secondaryButton(
+                "Clear All Data",
+                "data-clear-data"
+            )}
+
+        </div>
+        `
+    );
+
+    document
+        .querySelector("[data-save-settings]")
+        ?.addEventListener(
+            "click",
+            saveSettings
+        );
+
+    document
+        .querySelector("[data-open-search]")
+        ?.addEventListener(
+            "click",
+            showSearch
+        );
+
+    document
+        .querySelector("[data-open-security]")
+        ?.addEventListener(
+            "click",
+            showSecurity
+        );
+
+    document
+        .querySelector("[data-open-backup]")
+        ?.addEventListener(
+            "click",
+            showBackup
+        );
+
+    document
+        .querySelector("[data-clear-data]")
+        ?.addEventListener(
+            "click",
+            clearAllData
+        );
+}
+
+window.showSettings = showSettings;
+
+
+/* =========================
+   SAVE SETTINGS
+   ========================= */
+
+function saveSettings() {
+    const currency =
+        document.getElementById(
+            "settingsCurrency"
+        )?.value || "₹";
+
+    const language =
+        document.getElementById(
+            "settingsLanguage"
+        )?.value || "English";
+
+    const theme =
+        document.getElementById(
+            "settingsTheme"
+        )?.value || "light";
+
+    if (!data.settings) {
+        data.settings = {};
+    }
+
+    data.currency =
+        currency;
+
+    data.language =
+        language;
+
+    data.theme =
+        theme;
+
+    data.settings.currency =
+        currency;
+
+    data.settings.language =
+        language;
+
+    data.settings.theme =
+        theme;
+
+    data.settings.hideBalances =
+        !!document.getElementById(
+            "hideBalancesSetting"
+        )?.checked;
+
+    data.settings.autoBackupReminder =
+        !!document.getElementById(
+            "backupReminderSetting"
+        )?.checked;
+
+    applyTheme();
+
+    save();
+
+    updateDashboard();
+
+    closeHisabModal();
+
+    alert(
+        "Settings saved."
+    );
+}
+
+window.saveSettings = saveSettings;
+
+
+/* =========================
+   THEME
+   ========================= */
+
+function applyTheme() {
+    const theme =
+        data.settings?.theme ||
+        data.theme ||
+        "light";
+
+    document.documentElement.dataset.theme =
+        theme;
+
+    if (theme === "dark") {
+        document.body.classList.add(
+            "dark-theme"
+        );
+    } else {
+        document.body.classList.remove(
+            "dark-theme"
+        );
+    }
+}
+
+
+/* =========================
+   SECURITY / PIN
+   ========================= */
+
+function showSecurity() {
+    const enabled =
+        !!data.settings?.lockEnabled;
+
+    modal(
+        "Security",
+        `
+        <div class="form-section">
+
+            <h3>
+                App Lock
+            </h3>
+
+            <p>
+                Protect your local HISAB data
+                with a PIN.
+            </p>
+
+        </div>
+
+        <label class="checkbox-row">
+
+            <input
+                id="lockEnabledInput"
+                type="checkbox"
+                ${enabled ? "checked" : ""}
+            >
+
+            <span>
+                Enable App Lock
+            </span>
+
+        </label>
+
+        ${inputField(
+            "securityPin",
+            "New PIN (4–6 digits)",
+            "",
+            "password"
+        )}
+
+        ${inputField(
+            "securityPinConfirm",
+            "Confirm PIN",
+            "",
+            "password"
+        )}
+
+        <div class="button-stack">
+
+            ${primaryButton(
+                "Save Security",
+                "data-save-security"
+            )}
+
+            ${secondaryButton(
+                "Remove PIN",
+                "data-remove-pin"
+            )}
+
+        </div>
+        `
+    );
+
+    document
+        .querySelector("[data-save-security]")
+        ?.addEventListener(
+            "click",
+            saveSecurity
+        );
+
+    document
+        .querySelector("[data-remove-pin]")
+        ?.addEventListener(
+            "click",
+            removePIN
+        );
+}
+
+window.showSecurity = showSecurity;
+
+
+/* =========================
+   SAVE SECURITY
+   ========================= */
+
+function saveSecurity() {
+    if (!data.settings) {
+        data.settings = {};
+    }
+
+    const enabled =
+        !!document.getElementById(
+            "lockEnabledInput"
+        )?.checked;
+
+    const pin =
+        String(
+            document.getElementById(
+                "securityPin"
+            )?.value || ""
+        ).trim();
+
+    const confirmPin =
+        String(
+            document.getElementById(
+                "securityPinConfirm"
+            )?.value || ""
+        ).trim();
+
+    if (enabled) {
+
+        if (
+            !/^\d{4,6}$/.test(pin)
+        ) {
+            alert(
+                "PIN must contain 4 to 6 digits."
+            );
+            return;
+        }
+
+        if (pin !== confirmPin) {
+            alert(
+                "PIN confirmation does not match."
+            );
+            return;
+        }
+
+        data.settings.lockPIN =
+            pin;
+
+        data.settings.lockEnabled =
+            true;
+
+    } else {
+
+        data.settings.lockEnabled =
+            false;
+    }
+
+    save();
+
+    closeHisabModal();
+
+    alert(
+        data.settings.lockEnabled
+            ? "App Lock enabled."
+            : "App Lock disabled."
+    );
+}
+
+
+/* =========================
+   REMOVE PIN
+   ========================= */
+
+function removePIN() {
+    if (
+        !confirm(
+            "Remove App Lock PIN?"
+        )
+    ) {
+        return;
+    }
+
+    if (!data.settings) {
+        data.settings = {};
+    }
+
+    data.settings.lockEnabled =
+        false;
+
+    data.settings.lockPIN =
+        "";
+
+    save();
+
+    closeHisabModal();
+
+    alert(
+        "App Lock removed."
+    );
+}
+
+
+/* =========================
+   CLEAR ALL DATA
+   ========================= */
+
+function clearAllData() {
+    const first =
+        confirm(
+            "Delete ALL HISAB data from this device?"
+        );
+
+    if (!first) {
+        return;
+    }
+
+    const second =
+        confirm(
+            "This cannot be undone unless you have a backup. Continue?"
+        );
+
+    if (!second) {
+        return;
+    }
+
+    data =
+        deepClone(DEFAULT_DATA);
+
+    window.HISAB.data =
+        data;
+
+    save();
+
+    applyTheme();
+
+    updateDashboard();
+
+    updateModeButtons();
+
+    renderRecentActivity();
+
+    closeHisabModal();
+
+    alert(
+        "All local HISAB data has been cleared."
+    );
+}
+
+window.clearAllData =
+    clearAllData;
+
+
+/* =========================
+   BUSINESS MODE
+   ========================= */
+
+function showBusiness() {
+    if (!data.business) {
+        data.business = {
+            customers: [],
+            suppliers: [],
+            sales: [],
+            purchases: [],
+            transactions: []
+        };
+    }
+
+    data.business.customers =
+        Array.isArray(
+            data.business.customers
+        )
+            ? data.business.customers
+            : [];
+
+    data.business.suppliers =
+        Array.isArray(
+            data.business.suppliers
+        )
+            ? data.business.suppliers
+            : [];
+
+    data.business.sales =
+        Array.isArray(
+            data.business.sales
+        )
+            ? data.business.sales
+            : [];
+
+    data.business.purchases =
+        Array.isArray(
+            data.business.purchases
+        )
+            ? data.business.purchases
+            : [];
+
+    const salesTotal =
+        data.business.sales.reduce(
+            (sum, x) =>
+                sum +
+                safeNumber(x.amount),
+            0
+        );
+
+    const purchasesTotal =
+        data.business.purchases.reduce(
+            (sum, x) =>
+                sum +
+                safeNumber(x.amount),
+            0
+        );
+
+    modal(
+        "Business Money",
+        `
+        <div class="button-stack">
+
+            ${primaryButton(
+                "Sales",
+                "data-business-sales"
+            )}
+
+            ${secondaryButton(
+                "Purchases",
+                "data-business-purchases"
+            )}
+
+            ${secondaryButton(
+                "Customers",
+                "data-business-customers"
+            )}
+
+            ${secondaryButton(
+                "Suppliers",
+                "data-business-suppliers"
+            )}
+
+            ${secondaryButton(
+                "Business Income",
+                "data-business-income"
+            )}
+
+            ${secondaryButton(
+                "Business Expense",
+                "data-business-expense"
+            )}
+
+        </div>
+
+        <div class="form-section">
+
+            <h3>
+                Business Summary
+            </h3>
+
+            <div class="activity-row">
+                <div>
+                    <strong>
+                        Sales
+                    </strong>
+                    <small>
+                        Total recorded sales
+                    </small>
+                </div>
+
+                <strong>
+                    ${money(salesTotal)}
+                </strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>
+                        Purchases
+                    </strong>
+                    <small>
+                        Total recorded purchases
+                    </small>
+                </div>
+
+                <strong>
+                    ${money(purchasesTotal)}
+                </strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>
+                        Customers
+                    </strong>
+                    <small>
+                        Saved customer records
+                    </small>
+                </div>
+
+                <strong>
+                    ${data.business.customers.length}
+                </strong>
+            </div>
+
+            <div class="activity-row">
+                <div>
+                    <strong>
+                        Suppliers
+                    </strong>
+                    <small>
+                        Saved supplier records
+                    </small>
+                </div>
+
+                <strong>
+                    ${data.business.suppliers.length}
+                </strong>
+            </div>
+
+        </div>
+        `
+    );
+
+    document
+        .querySelector("[data-business-sales]")
+        ?.addEventListener(
+            "click",
+            () =>
+                showBusinessEntry(
+                    "sale"
+                )
+        );
+
+    document
+        .querySelector("[data-business-purchases]")
+        ?.addEventListener(
+            "click",
+            () =>
+                showBusinessEntry(
+                    "purchase"
+                )
+        );
+
+    document
+        .querySelector("[data-business-customers]")
+        ?.addEventListener(
+            "click",
+            () =>
+                showBusinessPeople(
+                    "customer"
+                )
+        );
+
+    document
+        .querySelector("[data-business-suppliers]")
+        ?.addEventListener(
+            "click",
+            () =>
+                showBusinessPeople(
+                    "supplier"
+                )
+        );
+
+    document
+        .querySelector("[data-business-income]")
+        ?.addEventListener(
+            "click",
+            () => {
+                closeHisabModal();
+                addTransaction(
+                    "income"
+                );
+            }
+        );
+
+    document
+        .querySelector("[data-business-expense]")
+        ?.addEventListener(
+            "click",
+            () => {
+                closeHisabModal();
+                addTransaction(
+                    "expense"
+                );
+            }
+        );
+}
+
+window.showBusiness =
+    showBusiness;
+
+
+/* =========================
+   BUSINESS SALE / PURCHASE
+   ========================= */
+
+function showBusinessEntry(
+    type,
+    existing = null
+) {
+    const isSale =
+        type === "sale";
+
+    const title =
+        isSale
+            ? "Sale"
+            : "Purchase";
+
+    modal(
+        existing
+            ? `Edit ${title}`
+            : `Add ${title}`,
+        `
+        ${inputField(
+            "businessParty",
+            isSale
+                ? "Customer"
+                : "Supplier",
+            existing?.party || ""
+        )}
+
+        ${inputField(
+            "businessTitle",
+            "Item / Description",
+            existing?.title || ""
+        )}
+
+        ${inputField(
+            "businessAmount",
+            "Amount",
+            existing?.amount || "",
+            "number"
+        )}
+
+        ${inputField(
+            "businessDate",
+            "Date",
+            existing?.date || today(),
+            "date"
+        )}
+
+        ${selectField(
+            "businessPaymentMethod",
+            "Payment Method",
+            PAYMENT_METHODS,
+            existing?.paymentMethod ||
+                "Cash"
+        )}
+
+        ${selectField(
+            "businessColor",
+            "Colour",
+            ENTRY_COLORS,
+            existing?.color ||
+                "default"
+        )}
+
+        ${inputField(
+            "businessNote",
+            "Notes",
+            existing?.note || ""
+        )}
+
+        <div class="button-row">
+
+            ${primaryButton(
+                existing
+                    ? "Update"
+                    : "Save",
+                "data-save-business-entry"
+            )}
+
+            ${secondaryButton(
+                "Cancel",
+                "data-cancel-business-entry"
+            )}
+
+        </div>
+        `
+    );
+
+    document
+        .querySelector(
+            "[data-save-business-entry]"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                const party =
+                    document.getElementById(
+                        "businessParty"
+                    )?.value.trim();
+
+                const itemTitle =
+                    document.getElementById(
+                        "businessTitle"
+                    )?.value.trim();
+
+                const amount =
+                    safeNumber(
+                        document.getElementById(
+                            "businessAmount"
+                        )?.value
+                    );
+
+                const date =
+                    document.getElementById(
+                        "businessDate"
+                    )?.value ||
+                    today();
+
+                const paymentMethod =
+                    document.getElementById(
+                        "businessPaymentMethod"
+                    )?.value ||
+                    "Cash";
+
+                const color =
+                    document.getElementById(
+                        "businessColor"
+                    )?.value ||
+                    "default";
+
+                const note =
+                    document.getElementById(
+                        "businessNote"
+                    )?.value.trim() ||
+                    "";
+
+                if (!party) {
+                    alert(
+                        isSale
+                            ? "Enter customer name."
+                            : "Enter supplier name."
+                    );
+                    return;
+                }
+
+                if (amount <= 0) {
+                    alert(
+                        "Enter a valid amount."
+                    );
+                    return;
+                }
+
+                const record = {
+                    id:
+                        existing?.id ||
+                        uid(
+                            isSale
+                                ? "sale"
+                                : "purchase"
+                        ),
+
+                    party,
+
+                    title:
+                        itemTitle ||
+                        title,
+
+                    amount,
+
+                    date,
+
+                    paymentMethod,
+
+                    color,
+
+                    note,
+
+                    createdAt:
+                        existing?.createdAt ||
+                        nowISO(),
+
+                    updatedAt:
+                        nowISO()
+                };
+
+                const collection =
+                    isSale
+                        ? data.business.sales
+                        : data.business.purchases;
+
+                if (existing) {
+
+                    const index =
+                        collection.findIndex(
+                            x =>
+                                x.id ===
+                                existing.id
+                        );
+
+                    if (index >= 0) {
+                        collection[index] =
+                            record;
+                    }
+
+                } else {
+
+                    collection.push(
+                        record
+                    );
+
+                    data.transactions.push({
+                        id: uid("txn"),
+
+                        type:
+                            isSale
+                                ? "income"
+                                : "expense",
+
+                        title:
+                            record.title,
+
+                        amount:
+                            record.amount,
+
+                        category:
+                            isSale
+                                ? "Business Sales"
+                                : "Business Purchase",
+
+                        paymentMethod:
+                            record.paymentMethod,
+
+                        note:
+                            `${record.party}${
+                                record.note
+                                    ? " • " +
+                                      record.note
+                                    : ""
+                            }`,
+
+                        date:
+                            record.date,
+
+                        scope:
+                            "business",
+
+                        color:
+                            record.color,
+
+                        source:
+                            isSale
+                                ? "business_sale"
+                                : "business_purchase",
+
+                        sourceId:
+                            record.id,
+
+                        createdAt:
+                            nowISO()
+                    });
+                }
+
+                save();
+
+                updateDashboard();
+
+                closeHisabModal();
+
+                alert(
+                    isSale
+                        ? "Sale saved."
+                        : "Purchase saved."
+                );
+            }
+        );
+
+    document
+        .querySelector(
+            "[data-cancel-business-entry]"
+        )
+        ?.addEventListener(
+            "click",
+            closeHisabModal
+        );
+}
+
+
+/* =========================
+   BUSINESS PEOPLE
+   ========================= */
+
+function showBusinessPeople(type) {
+    const isCustomer =
+        type === "customer";
+
+    const list =
+        isCustomer
+            ? data.business.customers
+            : data.business.suppliers;
+
+    const title =
+        isCustomer
+            ? "Customers"
+            : "Suppliers";
+
+    modal(
+        title,
+        `
+        <div class="button-row">
+
+            ${primaryButton(
+                `Add ${
+                    isCustomer
+                        ? "Customer"
+                        : "Supplier"
+                }`,
+                "data-add-business-person"
+            )}
+
+        </div>
+
+        <div class="activity-list">
+
+            ${
+                list.length
+                    ? list
+                          .map(
+                              person => `
+                    <div class="activity-row">
+
+                        <div>
+                            <strong>
+                                ${esc(
+                                    person.name ||
+                                    ""
+                                )}
+                            </strong>
+
+                            <small>
+                                ${esc(
+                                    person.phone ||
+                                    ""
+                                )}
+
+                                ${
+                                    person.note
+                                        ? " • " +
+                                          esc(
+                                              person.note
+                                          )
+                                        : ""
+                                }
+                            </small>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="icon-btn"
+                            data-delete-business-person="${esc(
+                                person.id
+                            )}"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+                `
+                          )
+                          .join("")
+                    : `
+                        <div class="empty-state">
+                            No ${title.toLowerCase()}
+                            added yet.
+                        </div>
+                    `
+            }
+
+        </div>
+        `
+    );
+
+    document
+        .querySelector(
+            "[data-add-business-person]"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                addBusinessPerson(
+                    type
+                )
+        );
+
+    document
+        .querySelectorAll(
+            "[data-delete-business-person]"
+        )
+        .forEach(btn => {
+
+            btn.addEventListener(
+                "click",
+                () => {
+
+                    const id =
+                        btn.getAttribute(
+                            "data-delete-business-person"
+                        );
+
+                    const index =
+                        list.findIndex(
+                            x =>
+                                x.id ===
+                                id
+                        );
+
+                    if (index < 0) {
+                        return;
+                    }
+
+                    if (
+                        !confirm(
+                            `Delete this ${
+                                isCustomer
+                                    ? "customer"
+                                    : "supplier"
+                            }?`
+                        )
+                    ) {
+                        return;
+                    }
+
+                    list.splice(
+                        index,
+                        1
+                    );
+
+                    save();
+
+                    showBusinessPeople(
+                        type
+                    );
+                }
+            );
+
+        });
+}
+
+
+/* =========================
+   ADD BUSINESS PERSON
+   ========================= */
+
+function addBusinessPerson(type) {
+    const isCustomer =
+        type === "customer";
+
+    const title =
+        isCustomer
+            ? "Customer"
+            : "Supplier";
+
+    modal(
+        `Add ${title}`,
+        `
+        ${inputField(
+            "personName",
+            "Name"
+        )}
+
+        ${inputField(
+            "personPhone",
+            "Phone"
+        )}
+
+        ${inputField(
+            "personEmail",
+            "Email"
+        )}
+
+        ${inputField(
+            "personAddress",
+            "Address"
+        )}
+
+        ${inputField(
+            "personNote",
+            "Notes"
+        )}
+
+        <div class="button-row">
+
+            ${primaryButton(
+                "Save",
+                "data-save-business-person"
+            )}
+
+            ${secondaryButton(
+                "Cancel",
+                "data-cancel-business-person"
+            )}
+
+        </div>
+        `
+    );
+
+    document
+        .querySelector(
+            "[data-save-business-person]"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                const name =
+                    document.getElementById(
+                        "personName"
+                    )?.value.trim();
+
+                if (!name) {
+                    alert(
+                        "Enter a name."
+                    );
+                    return;
+                }
+
+                const person = {
+                    id:
+                        uid(
+                            isCustomer
+                                ? "customer"
+                                : "supplier"
+                        ),
+
+                    name,
+
+                    phone:
+                        document.getElementById(
+                            "personPhone"
+                        )?.value.trim() ||
+                        "",
+
+                    email:
+                        document.getElementById(
+                            "personEmail"
+                        )?.value.trim() ||
+                        "",
+
+                    address:
+                        document.getElementById(
+                            "personAddress"
+                        )?.value.trim() ||
+                        "",
+
+                    note:
+                        document.getElementById(
+                            "personNote"
+                        )?.value.trim() ||
+                        "",
+
+                    createdAt:
+                        nowISO()
+                };
+
+                if (isCustomer) {
+                    data.business.customers.push(
+                        person
+                    );
+                } else {
+                    data.business.suppliers.push(
+                        person
+                    );
+                }
+
+                save();
+
+                showBusinessPeople(
+                    type
+                );
+            }
+        );
+
+    document
+        .querySelector(
+            "[data-cancel-business-person]"
+        )
+        ?.addEventListener(
+            "click",
+            closeHisabModal
+        );
+}
+
+
+/* =========================
+   DELETE ALL TRANSACTIONS
+   ========================= */
+
+function deleteAllTransactions() {
+    if (!data.transactions.length) {
+        alert(
+            "No transactions to delete."
+        );
+        return;
+    }
+
+    if (
+        !confirm(
+            "Delete all transactions?"
+        )
+    ) {
+        return;
+    }
+
+    data.transactions = [];
+
+    save();
+
+    showTransactions();
+
+    updateDashboard();
+}
+
+window.deleteAllTransactions =
+    deleteAllTransactions;
+
+
+/* =========================
+   EXTRA DATA ACTIONS
+   =========================
+   
+   Part 1 already handles:
+   income, expense, lendden, savings,
+   budget, bills, loans, goals,
+   transactions, reports, backup,
+   security, settings.
+
+   Therefore we only handle the
+   additional Part 4 actions here.
+   ========================= */
+
+document.addEventListener(
+    "click",
+    event => {
+
+        const actionButton =
+            event.target.closest(
+                "[data-action]"
+            );
+
+        if (!actionButton) {
+            return;
+        }
+
+        const action =
+            actionButton.getAttribute(
+                "data-action"
+            );
+
+        if (!action) {
+            return;
+        }
+
+        switch (action) {
+
+            case "search":
+                showSearch();
+                break;
+
+            case "business":
+                setMode("business");
+                showBusiness();
+                break;
+
+            case "personal":
+                setMode("personal");
+                showHome();
+                break;
+
+            default:
+                break;
+        }
+    }
+);
+
+
+/* =========================
+   ESC / KEYBOARD CLOSE
+   ========================= */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key ===
+            "Escape"
+        ) {
+            closeHisabModal();
+        }
+
+    }
+);
+
+
+/* =========================
+   APP REFRESH
+   ========================= */
+
+function refreshApp() {
+    applyTheme();
+
+    updateDashboard();
+
+    updateModeButtons();
+
+    renderRecentActivity();
+}
+
+window.refreshApp =
+    refreshApp;
+
+
+/* =========================
+   FINAL COMPATIBILITY
+   ========================= */
+
+window.showHome =
+    showHome;
+
+window.showIncome =
+    showIncome;
+
+window.showExpense =
+    showExpense;
+
+window.showLendDen =
+    showLendDen;
+
+window.showSavings =
+    showSavings;
+
+window.showGoals =
+    showGoals;
+
+window.showBudget =
+    showBudget;
+
+window.showBills =
+    showBills;
+
+window.showLoans =
+    showLoans;
+
+window.showTransactions =
+    showTransactions;
+
+window.showReports =
+    showReports;
+
+window.showBackup =
+    showBackup;
+
+window.showSettings =
+    showSettings;
+
+window.showSecurity =
+    showSecurity;
+
+window.showSearch =
+    showSearch;
+
+window.showBusiness =
+    showBusiness;
+
+window.updateDashboard =
+    updateDashboard;
+
+
+/* =========================
+   APP START
+   ========================= */
+
+function initializeHISAB() {
+    try {
+
+        data =
+            normalize(data);
+
+        window.HISAB.data =
+            data;
+
+        applyTheme();
+
+        updateDashboard();
+
+        updateModeButtons();
+
+        renderRecentActivity();
+
+    } catch (error) {
+
+        console.error(
+            "HISAB initialization error:",
+            error
+        );
+
+    }
+}
+
+
+/* =========================
+   DOM READY
+   ========================= */
+
+if (
+    document.readyState ===
+    "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeHISAB,
+        {
+            once: true
+        }
+    );
+
+} else {
+
+    initializeHISAB();
+
+}
