@@ -1,1752 +1,826 @@
-/* =========================================================
-   HISAB GLOBAL V7 — FINAL APP CONTROLLER
-   Compatible with fixed HISAB V7 index.html
-   Local-first • Offline • Personal + Business
-   ========================================================= */
-
-(() => {
-  "use strict";
-
-  const KEY = "hisab_v7_final";
-  const LEGACY_KEY = "hisabData";
-
-  const $ = id => document.getElementById(id);
-
-  const uid = () =>
-    Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-
-  const today = () => new Date().toISOString().slice(0, 10);
-
-  const num = v => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const money = n => {
-    const value = num(n);
-    return `${D.currency || "₹"}${value.toLocaleString("en-IN", {
-      maximumFractionDigits: 2
-    })}`;
-  };
-
-  const esc = value =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-
-  const safeArray = v => Array.isArray(v) ? v : [];
-
-  const DEFAULT = {
-    version: 7,
-    mode: "personal",
-    currency: "₹",
-    lang: "hi",
-    pin: "",
-    locked: false,
-
-    personal: [],
-    business: [],
-    transactions: [],
-    bills: [],
-    reminders: [],
-    goals: [],
-    budgets: [],
-    insurance: [],
-    schools: [],
-    vehicles: [],
-    family: [],
-    shopping: [],
-    utilities: [],
-    docs: [],
-    annual: [],
-    limits: []
-  };
-
-  let D = loadData();
-
-  function loadData() {
-    let raw = null;
-
-    try {
-      raw = localStorage.getItem(KEY);
-    } catch (_) {}
-
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        return normalize(parsed);
-      } catch (_) {}
-    }
-
-    let legacy = null;
-
-    try {
-      legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "null");
-    } catch (_) {}
-
-    const d = normalize(legacy || {});
-
-    try {
-      const oldBills = JSON.parse(
-        localStorage.getItem("hisabBills") || "[]"
-      );
-      const oldTx = JSON.parse(
-        localStorage.getItem("hisabTransactions") || "[]"
-      );
-      const oldRem = JSON.parse(
-        localStorage.getItem("hisabReminders") || "[]"
-      );
-      const oldIns = JSON.parse(
-        localStorage.getItem("hisabInsurance") || "[]"
-      );
-      const oldSchools = JSON.parse(
-        localStorage.getItem("hisabSchools") || "[]"
-      );
-      const oldVehicles = JSON.parse(
-        localStorage.getItem("hisabVehicles") || "[]"
-      );
-
-      if (!d.bills.length) d.bills = safeArray(oldBills);
-      if (!d.transactions.length) d.transactions = safeArray(oldTx);
-      if (!d.reminders.length) d.reminders = safeArray(oldRem);
-      if (!d.insurance.length) d.insurance = safeArray(oldIns);
-      if (!d.schools.length) d.schools = safeArray(oldSchools);
-      if (!d.vehicles.length) d.vehicles = safeArray(oldVehicles);
-    } catch (_) {}
-
-    return d;
-  }
-
-  function normalize(x) {
-    const d = { ...DEFAULT, ...(x || {}) };
-
-    [
-      "personal",
-      "business",
-      "transactions",
-      "bills",
-      "reminders",
-      "goals",
-      "budgets",
-      "insurance",
-      "schools",
-      "vehicles",
-      "family",
-      "shopping",
-      "utilities",
-      "docs",
-      "annual",
-      "limits"
-    ].forEach(k => {
-      d[k] = safeArray(d[k]);
-    });
-
-    if (d.mode !== "business") d.mode = "personal";
-    if (!d.currency) d.currency = "₹";
-
-    return d;
-  }
-
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(D));
-      localStorage.setItem(LEGACY_KEY, JSON.stringify({
-        personal: D.personal,
-        business: D.business
-      }));
-    } catch (_) {}
-
-    renderAll();
-  }
-
-  function toast(message) {
-    let box = $("hisabToast");
-
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "hisabToast";
-      box.style.cssText =
-        "position:fixed;left:50%;bottom:85px;transform:translateX(-50%);" +
-        "background:#10253a;color:#fff;padding:12px 18px;border-radius:12px;" +
-        "z-index:99999;font-size:14px;max-width:90%;text-align:center;" +
-        "box-shadow:0 5px 20px rgba(0,0,0,.25)";
-      document.body.appendChild(box);
-    }
-
-    box.textContent = message;
-    box.style.display = "block";
-
-    clearTimeout(box._timer);
-    box._timer = setTimeout(() => {
-      box.style.display = "none";
-    }, 2200);
-  }
-
-  /* =========================
-     GUEST MODE
-     ========================= */
-
-  function enterGuestMode() {
-    try {
-      localStorage.setItem("hisabGuestMode", "1");
-    } catch (_) {}
-
-    if ($("guestGate")) $("guestGate").classList.add("hidden");
-    if ($("appShell")) $("appShell").classList.remove("hidden");
-
-    show("home");
-  }
-
-  function showGuestGate() {
-    let guest = false;
-
-    try {
-      guest = localStorage.getItem("hisabGuestMode") === "1";
-    } catch (_) {}
-
-    if (guest) {
-      if ($("guestGate")) $("guestGate").classList.add("hidden");
-      if ($("appShell")) $("appShell").classList.remove("hidden");
-    } else {
-      if ($("guestGate")) $("guestGate").classList.remove("hidden");
-      if ($("appShell")) $("appShell").classList.add("hidden");
-    }
-  }
-
-  function resetGuestMode() {
-    try {
-      localStorage.removeItem("hisabGuestMode");
-    } catch (_) {}
-
-    location.reload();
-  }
-
-  /* =========================
-     NAVIGATION
-     ========================= */
-
-  function show(id) {
-    if (!$(id)) return;
-
-    document.querySelectorAll(".screen").forEach(screen => {
-      screen.classList.add("hidden");
-    });
-
-    $(id).classList.remove("hidden");
-
-    if (id === "personal") D.mode = "personal";
-    if (id === "business") D.mode = "business";
-
-    saveModeOnly();
-    renderAll();
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function saveModeOnly() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(D));
-    } catch (_) {}
-  }
-
-  function currentPeople() {
-    return D.mode === "business" ? D.business : D.personal;
-  }
-
-  function peopleKey() {
-    return D.mode === "business" ? "business" : "personal";
-  }
-
-  /* =========================
-     PERSONAL / BUSINESS UDHAR
-     ========================= */
-
-  function addPerson(type = D.mode) {
-    const isBusiness = type === "business";
-
-    const name = prompt(
-      isBusiness
-        ? "Customer / Supplier name"
-        : "Person name"
-    );
-
-    if (!name || !name.trim()) return;
-
-    const amountText = prompt("Amount");
-    const amount = num(amountText);
-
-    if (amount <= 0) {
-      toast("Valid amount enter karein");
-      return;
-    }
-
-    const direction = prompt(
-      "Type likhein: Give ya Receive",
-      "Give"
-    );
-
-    const dir =
-      String(direction || "Give").toLowerCase() === "receive"
-        ? "receive"
-        : "give";
-
-    const note = prompt("Note (optional)") || "";
-
-    D[isBusiness ? "business" : "personal"].push({
-      id: uid(),
-      name: name.trim(),
-      amount,
-      direction: dir,
-      date: today(),
-      note,
-      status: "pending",
-      paymentMethod: "Cash"
-    });
-
-    D.mode = isBusiness ? "business" : "personal";
-
-    save();
-    toast(`${dir === "give" ? "Give" : "Receive"} entry added`);
-  }
-
-  function totalGiven(list = currentPeople()) {
-    return list
-      .filter(x => String(x.direction).toLowerCase() === "give")
-      .reduce((s, x) => s + num(x.amount), 0);
-  }
-
-  function totalReceived(list = currentPeople()) {
-    return list
-      .filter(x => String(x.direction).toLowerCase() === "receive")
-      .reduce((s, x) => s + num(x.amount), 0);
-  }
-
-  function renderPeople() {
-    const list = currentPeople();
-
-    const target = D.mode === "business"
-      ? $("businessList")
-      : $("personalList");
-
-    if (!target) return;
-
-    if (!list.length) {
-      target.innerHTML =
-        `<div class="empty-state">No entries yet</div>`;
-      return;
-    }
-
-    target.innerHTML = list.map(x => {
-      const give =
-        String(x.direction).toLowerCase() === "give";
-
-      return `
-        <div class="list-item">
-          <div>
-            <b>${esc(x.name)}</b>
-            <small>
-              ${esc(x.date || "")}
-              ${x.note ? " • " + esc(x.note) : ""}
-            </small>
-          </div>
-
-          <div style="text-align:right">
-            <b style="color:${give ? "#d93025" : "#159447"}">
-              ${give ? "Give" : "Receive"} ${money(x.amount)}
-            </b>
-            <small>${esc(x.status || "pending")}</small>
-          </div>
-        </div>`;
-    }).join("");
-  }
-
-  function renderHome() {
-    const list = currentPeople();
-
-    const given = totalGiven(list);
-    const received = totalReceived(list);
-
-    if ($("receivable"))
-      $("receivable").textContent = money(given);
-
-    if ($("payable"))
-      $("payable").textContent = money(received);
-  }
-
-  function renderPersonalTotals() {
-    const list = D.personal;
-
-    const given = totalGiven(list);
-    const received = totalReceived(list);
-    const net = given - received;
-
-    if ($("ledgerGiven"))
-      $("ledgerGiven").textContent =
-        given.toLocaleString("en-IN");
-
-    if ($("ledgerReceived"))
-      $("ledgerReceived").textContent =
-        received.toLocaleString("en-IN");
-
-    if ($("ledgerNet"))
-      $("ledgerNet").textContent = money(net);
-  }
-
-  function filterPersonal(type = "all") {
-    document.querySelectorAll(
-      "#personal .filter-row button"
-    ).forEach(b => b.classList.remove("active"));
-
-    const buttons = document.querySelectorAll(
-      "#personal .filter-row button"
-    );
-
-    const index =
-      type === "given" ? 1 :
-      type === "received" ? 2 :
-      type === "pending" ? 3 : 0;
-
-    if (buttons[index])
-      buttons[index].classList.add("active");
-
-    const box = $("personalList");
-    if (!box) return;
-
-    let list = D.personal.slice();
-
-    if (type === "given") {
-      list = list.filter(x =>
-        String(x.direction).toLowerCase() === "give"
-      );
-    }
-
-    if (type === "received") {
-      list = list.filter(x =>
-        String(x.direction).toLowerCase() === "receive"
-      );
-    }
-
-    if (type === "pending") {
-      list = list.filter(x =>
-        String(x.status || "pending").toLowerCase() === "pending"
-      );
-    }
-
-    if (!list.length) {
-      box.innerHTML =
-        `<div class="empty-state">No matching entries</div>`;
-      return;
-    }
-
-    box.innerHTML = list.map(x => `
-      <div class="list-item">
-        <div>
-          <b>${esc(x.name)}</b>
-          <small>${esc(x.date || "")}</small>
-          ${x.note ? `<small>${esc(x.note)}</small>` : ""}
-        </div>
-        <div style="text-align:right">
-          <b style="color:${
-            String(x.direction).toLowerCase() === "give"
-              ? "#d93025"
-              : "#159447"
-          }">
-            ${
-              String(x.direction).toLowerCase() === "give"
-                ? "Give"
-                : "Receive"
-            }
-            ${money(x.amount)}
-          </b>
-        </div>
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#082b45">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>HISAB Money Manager</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- ================= GUEST GATE ================= -->
+<div id="guestGate" class="screen">
+  <div class="logo">₹</div>
+  <h1>HISAB</h1>
+  <p>Track • Plan • Grow</p>
+  <button onclick="enterGuestMode()">Start Using HISAB</button>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="appShell" class="app-shell">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div>
+      <div class="brand">₹ HISAB</div>
+      <small>Track • Plan • Grow</small>
+    </div>
+
+    <div class="top-actions">
+      <button onclick="toggleLanguage()" title="Language">EN/हि</button>
+      <button onclick="toggleCurrency()" title="Currency">₹</button>
+      <button onclick="show('reminders')" title="Reminders">🔔</button>
+    </div>
+  </header>
+
+  <!-- ================= WELCOME ================= -->
+  <section id="welcome" class="page">
+    <div class="hero-card">
+      <h2>Welcome to HISAB</h2>
+      <p>Your simple personal & business money manager.</p>
+
+      <div class="mode-cards">
+        <button class="mode-card" onclick="setMode('personal')">
+          <span>👤</span>
+          <strong>Personal</strong>
+          <small>Manage your daily money</small>
+        </button>
+
+        <button class="mode-card" onclick="setMode('business')">
+          <span>💼</span>
+          <strong>Business</strong>
+          <small>Manage customers & business</small>
+        </button>
       </div>
-    `).join("");
-  }
-
-  /* =========================
-     TRANSACTIONS
-     ========================= */
-
-  function addTransaction() {
-    const type = $("txType")?.value || "Expense";
-    const amount = num($("txAmount")?.value);
-    const category =
-      $("txCat")?.value?.trim() || "General";
-    const note =
-      $("txNote")?.value?.trim() || "";
-
-    if (amount <= 0) {
-      toast("Amount enter karein");
-      return;
-    }
-
-    D.transactions.push({
-      id: uid(),
-      type,
-      amount,
-      category,
-      note,
-      date: today()
-    });
-
-    [
-      "txAmount",
-      "txCat",
-      "txNote"
-    ].forEach(id => {
-      if ($(id)) $(id).value = "";
-    });
-
-    save();
-    toast("Transaction added");
-  }
-
-  function renderTransactions() {
-    const box = $("txList");
-    if (!box) return;
-
-    if (!D.transactions.length) {
-      box.innerHTML =
-        `<div class="empty-state">No transactions yet</div>`;
-      return;
-    }
-
-    box.innerHTML = D.transactions
-      .slice()
-      .reverse()
-      .map(x => `
-        <div class="list-item">
-          <div>
-            <b>${esc(x.category)}</b>
-            <small>
-              ${esc(x.type)} • ${esc(x.date)}
-            </small>
-            ${x.note ? `<small>${esc(x.note)}</small>` : ""}
-          </div>
-          <b>${money(x.amount)}</b>
-        </div>
-      `)
-      .join("");
-  }
-
-  /* =========================
-     REPORTS
-     ========================= */
-
-  function totalIncome() {
-    return D.transactions
-      .filter(x =>
-        String(x.type).toLowerCase() === "income"
-      )
-      .reduce((s, x) => s + num(x.amount), 0);
-  }
-
-  function totalExpense() {
-    return D.transactions
-      .filter(x =>
-        String(x.type).toLowerCase() === "expense"
-      )
-      .reduce((s, x) => s + num(x.amount), 0);
-  }
-
-  function renderReports() {
-    const income = totalIncome();
-    const expense = totalExpense();
-    const saving = income - expense;
-
-    if ($("rIncome")) $("rIncome").textContent = money(income);
-    if ($("rExpense")) $("rExpense").textContent = money(expense);
-    if ($("rSaving")) $("rSaving").textContent = money(saving);
-    if ($("rCount"))
-      $("rCount").textContent = D.transactions.length;
-
-    const cat = {};
-
-    D.transactions.forEach(x => {
-      const key = x.category || "General";
-      cat[key] = (cat[key] || 0) + num(x.amount);
-    });
-
-    if ($("catSummary")) {
-      $("catSummary").innerHTML =
-        Object.keys(cat).length
-          ? Object.entries(cat)
-              .map(([k, v]) =>
-                `<div class="list-item">
-                  <span>${esc(k)}</span>
-                  <b>${money(v)}</b>
-                </div>`
-              ).join("")
-          : `<div class="empty-state">No category data</div>`;
-    }
-
-    renderTransactions();
-  }
-
-  function exportSummary() {
-    const text =
-`HISAB — Money Summary
-Date: ${today()}
-
-Income: ${money(totalIncome())}
-Expense: ${money(totalExpense())}
-Savings: ${money(totalIncome() - totalExpense())}
-
-Money Given: ${money(totalGiven())}
-Money Received: ${money(totalReceived())}
-
-Transactions: ${D.transactions.length}
-`;
-
-    downloadText(
-      "HISAB-Summary.txt",
-      text
-    );
-  }
-
-  /* =========================
-     BUDGET
-     ========================= */
-
-  function calcBudget() {
-    const income = num($("mIncome")?.value);
-    const budget = num($("mBudget")?.value);
-    const saving = num($("mSaving")?.value);
-
-    const remaining = income - budget - saving;
-
-    const result =
-      `Income ${money(income)} • Budget ${money(budget)} • ` +
-      `Saving ${money(saving)} • Remaining ${money(remaining)}`;
-
-    if ($("budgetResult"))
-      $("budgetResult").textContent = result;
-
-    toast(result);
-  }
-
-  /* =========================
-     GOALS
-     ========================= */
-
-  function calcGoal() {
-    const name = $("gName")?.value?.trim() || "Goal";
-    const target = num($("gTarget")?.value);
-    const current = num($("gCurrent")?.value);
-    const monthly = num($("gMonthly")?.value);
-
-    if (target <= 0) {
-      toast("Goal target enter karein");
-      return;
-    }
-
-    const remaining = Math.max(0, target - current);
-    const months =
-      monthly > 0
-        ? Math.ceil(remaining / monthly)
-        : 0;
-
-    const result =
-      `${name}: ${money(remaining)} remaining` +
-      (months ? ` • approx ${months} months` : "");
-
-    if ($("goalResult"))
-      $("goalResult").textContent = result;
-
-    D.goals.push({
-      id: uid(),
-      name,
-      target,
-      current,
-      monthly,
-      date: today()
-    });
-
-    save();
-    toast("Goal saved");
-  }
-
-  /* =========================
-     EMI
-     ========================= */
-
-  function calcEMI() {
-    const principal = num($("loan")?.value);
-    const annualRate = num($("rate")?.value);
-    const months = num($("tenure")?.value);
-
-    if (
-      principal <= 0 ||
-      annualRate < 0 ||
-      months <= 0
-    ) {
-      toast("Loan, rate aur tenure enter karein");
-      return;
-    }
-
-    const r = annualRate / 12 / 100;
-
-    let emi;
-
-    if (r === 0) {
-      emi = principal / months;
-    } else {
-      emi =
-        principal * r * Math.pow(1 + r, months) /
-        (Math.pow(1 + r, months) - 1);
-    }
-
-    const total = emi * months;
-    const interest = total - principal;
-
-    const result =
-      `EMI ${money(emi)} • Total ${money(total)} • ` +
-      `Interest ${money(interest)}`;
-
-    if ($("emiResult"))
-      $("emiResult").textContent = result;
-
-    toast(result);
-  }
-
-  /* =========================
-     BILLS
-     ========================= */
-
-  function addBill(kind = "Bill") {
-    const isCard = kind === "Credit Card";
-
-    const name = isCard
-      ? "Credit Card"
-      : ($("billName")?.value?.trim() || "Bill");
-
-    const amount = isCard
-      ? num($("cardBill")?.value)
-      : num($("billAmount")?.value);
-
-    const due = isCard
-      ? ($("cardDue")?.value || today())
-      : ($("billDue")?.value || today());
-
-    if (amount <= 0) {
-      toast("Bill amount enter karein");
-      return;
-    }
-
-    D.bills.push({
-      id: uid(),
-      name,
-      amount,
-      due,
-      kind,
-      status: "pending"
-    });
-
-    if (isCard) {
-      if ($("cardBill")) $("cardBill").value = "";
-      if ($("cardDue")) $("cardDue").value = "";
-    } else {
-      if ($("billName")) $("billName").value = "";
-      if ($("billAmount")) $("billAmount").value = "";
-      if ($("billDue")) $("billDue").value = "";
-    }
-
-    save();
-    toast(`${kind} added`);
-  }
-
-  function renderBills() {
-    const box = $("billList");
-    if (!box) return;
-
-    if (!D.bills.length) {
-      box.innerHTML =
-        `<div class="empty-state">No bills added</div>`;
-      return;
-    }
-
-    box.innerHTML = D.bills
-      .slice()
-      .reverse()
-      .map(x => `
-        <div class="list-item">
-          <div>
-            <b>${esc(x.name)}</b>
-            <small>Due: ${esc(x.due)}</small>
-          </div>
-          <div style="text-align:right">
-            <b>${money(x.amount)}</b>
-            <small>${esc(x.status || "pending")}</small>
-          </div>
-        </div>
-      `)
-      .join("");
-  }
-
-  /* =========================
-     REMINDERS
-     ========================= */
-
-  function addReminder() {
-    const name =
-      $("remName")?.value?.trim() || "Reminder";
-
-    const type =
-      $("remType")?.value?.trim() || "General";
-
-    const date =
-      $("remDate")?.value || today();
-
-    const amount =
-      num($("remAmount")?.value);
-
-    const note =
-      $("remNote")?.value?.trim() || "";
-
-    D.reminders.push({
-      id: uid(),
-      name,
-      type,
-      date,
-      amount,
-      note,
-      status: "pending"
-    });
-
-    [
-      "remName",
-      "remType",
-      "remDate",
-      "remAmount",
-      "remNote"
-    ].forEach(id => {
-      if ($(id)) $(id).value = "";
-    });
-
-    save();
-    toast("Reminder added");
-  }
-
-  function renderReminders() {
-    const box = $("remList");
-    if (!box) return;
-
-    const pending = D.reminders.filter(
-      x => x.status !== "done"
-    );
-
-    if ($("remSummary")) {
-      $("remSummary").textContent =
-        `${pending.length} pending reminder(s)`;
-    }
-
-    if (!D.reminders.length) {
-      box.innerHTML =
-        `<div class="empty-state">No reminders</div>`;
-      return;
-    }
-
-    box.innerHTML = D.reminders
-      .slice()
-      .reverse()
-      .map(x => `
-        <div class="list-item">
-          <div>
-            <b>${esc(x.name)}</b>
-            <small>${esc(x.type)} • ${esc(x.date)}</small>
-            ${x.note ? `<small>${esc(x.note)}</small>` : ""}
-          </div>
-          <b>${money(x.amount)}</b>
-        </div>
-      `)
-      .join("");
-  }
-
-  /* =========================
-     SECURITY
-     ========================= */
-
-  function setPin() {
-    const pin = prompt(
-      "4 digit PIN set karein"
-    );
-
-    if (!pin) return;
-
-    if (!/^\d{4}$/.test(pin)) {
-      toast("PIN exactly 4 digits ka hona chahiye");
-      return;
-    }
-
-    D.pin = pin;
-    D.locked = false;
-
-    save();
-    toast("PIN saved");
-  }
-
-  function lockApp() {
-    if (!D.pin) {
-      toast("Pehle PIN set karein");
-      return;
-    }
-
-    D.locked = true;
-    saveModeOnly();
-
-    const overlay = document.createElement("div");
-
-    overlay.id = "hisabLockScreen";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:#0b1f33;color:#fff;" +
-      "z-index:999999;display:flex;flex-direction:column;" +
-      "align-items:center;justify-content:center;padding:30px;text-align:center";
-
-    overlay.innerHTML = `
-      <div style="font-size:46px">₹</div>
-      <h2>HISAB Locked</h2>
-      <p>Enter your 4 digit PIN</p>
-      <input id="unlockPin"
+    </div>
+  </section>
+
+  <!-- ================= HOME ================= -->
+  <section id="home" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Dashboard</h2>
+        <p id="modeLabel">Personal</p>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="overview-strip">
+      <div class="summary-card">
+        <small>Receivable</small>
+        <strong id="receivable">₹0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Payable</small>
+        <strong id="payable">₹0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Balance</small>
+        <strong id="homeBalance">₹0</strong>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="section-head">
+      <h3>Quick Actions</h3>
+    </div>
+
+    <div class="feature-grid">
+
+      <button onclick="show('personal')">
+        <span>💰</span>
+        <b>Money</b>
+        <small>Income & Expense</small>
+      </button>
+
+      <button onclick="openKhataForm('personal')">
+        <span>📒</span>
+        <b>Udhar</b>
+        <small>Give / Receive</small>
+      </button>
+
+      <button onclick="show('planning')">
+        <span>🎯</span>
+        <b>Planning</b>
+        <small>Budget & Goals</small>
+      </button>
+
+      <button onclick="show('credit')">
+        <span>💳</span>
+        <b>Payments</b>
+        <small>Bills & EMI</small>
+      </button>
+
+      <button onclick="show('reports')">
+        <span>📊</span>
+        <b>Reports</b>
+        <small>Analytics</small>
+      </button>
+
+      <button onclick="show('privacy')">
+        <span>🔐</span>
+        <b>Security</b>
+        <small>PIN & Privacy</small>
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ================= PERSONAL ================= -->
+  <section id="personal" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Personal Money</h2>
+        <p>Income, Expense & Udhar</p>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button onclick="show('transactions')">➕ Add Transaction</button>
+      <button onclick="openKhataForm('personal')">📒 Add Udhar</button>
+    </div>
+
+    <div class="search-box">
+      <input
+        id="personalSearch"
+        type="search"
+        placeholder="Search person..."
+        oninput="searchKhata('personal')">
+    </div>
+
+    <div class="totals-row">
+      <div>
+        <small>Total Give</small>
+        <strong id="ledgerGiven">₹0</strong>
+      </div>
+
+      <div>
+        <small>Total Receive</small>
+        <strong id="ledgerReceived">₹0</strong>
+      </div>
+
+      <div>
+        <small>Net</small>
+        <strong id="ledgerNet">₹0</strong>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <button onclick="filterKhata('personal','all',this)">All</button>
+      <button onclick="filterKhata('personal','give',this)">Give</button>
+      <button onclick="filterKhata('personal','receive',this)">Receive</button>
+      <button onclick="filterKhata('personal','pending',this)">Pending</button>
+    </div>
+
+    <div id="personalList" class="list"></div>
+
+  </section>
+
+  <!-- ================= BUSINESS ================= -->
+  <section id="business" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Business</h2>
+        <p>Customers, Suppliers & Cashflow</p>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button onclick="openKhataForm('business')">➕ Add Entry</button>
+      <button onclick="show('transactions')">💰 Money</button>
+    </div>
+
+    <div class="business-tabs">
+      <button onclick="businessFilter('customer',this)">Customers</button>
+      <button onclick="businessFilter('supplier',this)">Suppliers</button>
+      <button onclick="businessFilter('sales',this)">Sales</button>
+      <button onclick="businessFilter('purchase',this)">Purchase</button>
+    </div>
+
+    <div class="search-box">
+      <input
+        id="businessSearch"
+        type="search"
+        placeholder="Search business..."
+        oninput="searchKhata('business')">
+    </div>
+
+    <div class="totals-row">
+      <div>
+        <small>Total Give</small>
+        <strong id="businessGiven">₹0</strong>
+      </div>
+
+      <div>
+        <small>Total Receive</small>
+        <strong id="businessReceived">₹0</strong>
+      </div>
+
+      <div>
+        <small>Net</small>
+        <strong id="businessNet">₹0</strong>
+      </div>
+    </div>
+
+    <div id="businessList" class="list"></div>
+
+  </section>
+
+  <!-- ================= KHATA ENTRY ================= -->
+  <section id="khataEntry" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Udhar Entry</h2>
+        <p>Give / Receive</p>
+      </div>
+      <button onclick="closeKhataForm()">✕</button>
+    </div>
+
+    <div class="form-card">
+
+      <label>Person / Customer</label>
+      <input id="khataPerson" type="text" placeholder="Name">
+
+      <label>Entry Type</label>
+      <select id="khataType">
+        <option value="give">Give</option>
+        <option value="receive">Receive</option>
+      </select>
+
+      <label>Amount</label>
+      <input id="khataAmount" type="number" inputmode="decimal" placeholder="0">
+
+      <label>Date</label>
+      <input id="khataDate" type="date">
+
+      <label>Payment Method</label>
+      <select id="khataMethod">
+        <option value="Cash">Cash</option>
+        <option value="UPI">UPI</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="Debit Card">Debit Card</option>
+        <option value="Credit Card">Credit Card</option>
+        <option value="Wallet">Wallet</option>
+        <option value="Cheque">Cheque</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label>Status</label>
+      <select id="khataStatus">
+        <option value="pending">Pending</option>
+        <option value="settled">Settled</option>
+      </select>
+
+      <label>Note</label>
+      <textarea id="khataNote" placeholder="Note"></textarea>
+
+      <button class="primary-btn" onclick="saveKhataEntry()">
+        Save Entry
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ================= KHATA DETAIL ================= -->
+  <section id="khataDetail" class="page">
+
+    <div class="page-title">
+      <button onclick="closeKhataDetail()">←</button>
+
+      <div>
+        <h2 id="detailPersonName">Khata</h2>
+        <p>Complete History</p>
+      </div>
+    </div>
+
+    <div class="khata-summary">
+
+      <div>
+        <small>Give</small>
+        <strong id="detailGive">₹0</strong>
+      </div>
+
+      <div>
+        <small>Receive</small>
+        <strong id="detailReceive">₹0</strong>
+      </div>
+
+      <div>
+        <small>Balance</small>
+        <strong id="detailBalance">₹0</strong>
+      </div>
+
+    </div>
+
+    <div class="filter-row">
+      <button onclick="detailFilter('all',this)">All</button>
+      <button onclick="detailFilter('give',this)">Give</button>
+      <button onclick="detailFilter('receive',this)">Receive</button>
+      <button onclick="detailFilter('pending',this)">Pending</button>
+    </div>
+
+    <div id="khataHistory" class="list"></div>
+
+    <div class="action-row">
+      <button onclick="openPaymentEntry()">💵 Payment</button>
+      <button onclick="shareKhata()">📤 Share</button>
+      <button onclick="exportKhataPDF()">📄 PDF</button>
+    </div>
+
+  </section>
+
+  <!-- ================= TRANSACTIONS ================= -->
+  <section id="transactions" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Transactions</h2>
+        <p>Income & Expense</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <label>Type</label>
+      <select id="transactionType">
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+
+      <label>Amount</label>
+      <input id="transactionAmount" type="number" inputmode="decimal" placeholder="0">
+
+      <label>Category</label>
+      <input id="transactionCategory" type="text" placeholder="Category">
+
+      <label>Note</label>
+      <input id="transactionNote" type="text" placeholder="Note">
+
+      <label>Date</label>
+      <input id="transactionDate" type="date">
+
+      <button class="primary-btn" onclick="addTransaction()">
+        Add Transaction
+      </button>
+
+    </div>
+
+    <div id="transactionList" class="list"></div>
+
+  </section>
+
+  <!-- ================= PLANNING ================= -->
+  <section id="planning" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Planning</h2>
+        <p>Budget • Savings • Goals</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <h3>Budget</h3>
+
+      <label>Monthly Budget</label>
+      <input id="budgetAmount" type="number" inputmode="decimal">
+
+      <button onclick="calcBudget()">Save Budget</button>
+
+      <hr>
+
+      <h3>Goal / Savings</h3>
+
+      <label>Goal Name</label>
+      <input id="goalName" type="text" placeholder="e.g. Bike">
+
+      <label>Target Amount</label>
+      <input id="goalTarget" type="number" inputmode="decimal">
+
+      <label>Saved Amount</label>
+      <input id="goalSaved" type="number" inputmode="decimal">
+
+      <label>Goal Date</label>
+      <input id="goalDate" type="date">
+
+      <button onclick="calcGoal()">Save Goal</button>
+
+    </div>
+
+    <div id="goalList" class="list"></div>
+
+  </section>
+
+  <!-- ================= CREDIT / PAYMENTS ================= -->
+  <section id="credit" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Payments</h2>
+        <p>Bills • Credit Card • Loans & EMI</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <h3>Bill</h3>
+
+      <label>Bill Name</label>
+      <input id="billName" type="text" placeholder="Electricity">
+
+      <label>Amount</label>
+      <input id="billAmount" type="number" inputmode="decimal">
+
+      <label>Due Date</label>
+      <input id="billDue" type="date">
+
+      <button onclick="addBill('Bill')">Add Bill</button>
+
+      <hr>
+
+      <h3>Credit Card</h3>
+
+      <label>Card Bill Amount</label>
+      <input id="cardBill" type="number" inputmode="decimal">
+
+      <label>Due Date</label>
+      <input id="cardDue" type="date">
+
+      <button onclick="addBill('Credit Card')">
+        Add Credit Card Bill
+      </button>
+
+      <hr>
+
+      <h3>Loan / EMI</h3>
+
+      <label>Loan Amount</label>
+      <input id="emiPrincipal" type="number" inputmode="decimal">
+
+      <label>Interest %</label>
+      <input id="emiRate" type="number" inputmode="decimal">
+
+      <label>Tenure (Months)</label>
+      <input id="emiMonths" type="number" inputmode="numeric">
+
+      <button onclick="calcEMI()">Calculate EMI</button>
+
+      <div id="emiResult"></div>
+
+    </div>
+
+    <div id="billList" class="list"></div>
+
+  </section>
+
+  <!-- ================= REPORTS ================= -->
+  <section id="reports" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Reports & Analytics</h2>
+        <p>Your money overview</p>
+      </div>
+    </div>
+
+    <div class="report-cards">
+
+      <div class="summary-card">
+        <small>Total Income</small>
+        <strong id="reportIncome">₹0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Total Expense</small>
+        <strong id="reportExpense">₹0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Give</small>
+        <strong id="reportGive">₹0</strong>
+      </div>
+
+      <div class="summary-card">
+        <small>Receive</small>
+        <strong id="reportReceive">₹0</strong>
+      </div>
+
+    </div>
+
+    <div id="reportContent"></div>
+
+    <div class="action-row">
+      <button onclick="exportSummary()">📤 Export</button>
+      <button onclick="exportSummaryPDF()">📄 PDF</button>
+    </div>
+
+  </section>
+
+  <!-- ================= REMINDERS ================= -->
+  <section id="reminders" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Reminders</h2>
+        <p>Bills & important dates</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <label>Reminder</label>
+      <input id="reminderName" type="text" placeholder="Reminder">
+
+      <label>Date</label>
+      <input id="reminderDate" type="date">
+
+      <button onclick="addReminder()">Add Reminder</button>
+
+    </div>
+
+    <div id="reminderList" class="list"></div>
+
+  </section>
+
+  <!-- ================= PRIVACY / SECURITY ================= -->
+  <section id="privacy" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Security & Backup</h2>
+        <p>Keep your HISAB safe</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <h3>Security PIN</h3>
+
+      <input
+        id="pinInput"
         type="password"
         inputmode="numeric"
-        maxlength="4"
-        style="font-size:24px;text-align:center;padding:12px;border-radius:10px">
-      <button id="unlockBtn"
-        style="margin-top:15px;padding:12px 25px;border:0;border-radius:10px">
-        Unlock
+        maxlength="6"
+        placeholder="Enter PIN">
+
+      <button onclick="setPin()">Set PIN</button>
+      <button onclick="lockApp()">Lock App</button>
+
+      <hr>
+
+      <h3>Backup & Restore</h3>
+
+      <button onclick="exportBackup()">⬇ Backup</button>
+
+      <label class="file-btn">
+        ⬆ Restore Backup
+        <input
+          type="file"
+          accept=".json,application/json"
+          onchange="importBackup(event)"
+          hidden>
+      </label>
+
+    </div>
+
+  </section>
+
+  <!-- ================= FAMILY ================= -->
+  <section id="family" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Family</h2>
+        <p>Family money planning</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <label>Family Member</label>
+      <input id="familyName" type="text" placeholder="Name">
+
+      <button onclick="addFamilyMember()">Add Member</button>
+
+    </div>
+
+    <div id="familyList" class="list"></div>
+
+  </section>
+
+  <!-- ================= ADS ================= -->
+  <section id="ads" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>HISAB Free</h2>
+        <p>Supported by advertisements</p>
+      </div>
+    </div>
+
+    <div id="adContainer"></div>
+
+  </section>
+
+  <!-- ================= FAMILY TOOLS ================= -->
+  <section id="familytools" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Family Tools</h2>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+
+      <button onclick="show('family')">
+        👨‍👩‍👧 Family
       </button>
-    `;
-
-    document.body.appendChild(overlay);
-
-    $("unlockBtn").onclick = () => {
-      if ($("unlockPin").value === D.pin) {
-        D.locked = false;
-        saveModeOnly();
-        overlay.remove();
-        toast("Unlocked");
-      } else {
-        toast("Wrong PIN");
-      }
-    };
-  }
-
-  /* =========================
-     BACKUP / RESTORE
-     ========================= */
-
-  function exportBackup() {
-    const backup = {
-      app: "HISAB",
-      version: 7,
-      exportedAt: new Date().toISOString(),
-      data: D
-    };
-
-    downloadText(
-      `HISAB-Backup-${today()}.json`,
-      JSON.stringify(backup, null, 2)
-    );
-
-    toast("Backup exported");
-  }
-
-  function importBackup(event) {
-    const file =
-      event?.target?.files?.[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      try {
-        const parsed =
-          JSON.parse(reader.result);
-
-        const imported =
-          parsed.data || parsed;
-
-        D = normalize(imported);
-
-        save();
-
-        toast("Backup restored");
-      } catch (_) {
-        toast("Invalid backup file");
-      }
-
-      if (event.target)
-        event.target.value = "";
-    };
-
-    reader.readAsText(file);
-  }
-
-  function downloadText(filename, text) {
-    try {
-      const blob =
-        new Blob([text], {
-          type: "text/plain;charset=utf-8"
-        });
-
-      const url =
-        URL.createObjectURL(blob);
-
-      const a =
-        document.createElement("a");
-
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      setTimeout(() =>
-        URL.revokeObjectURL(url), 1000);
-    } catch (_) {
-      toast("Export failed");
-    }
-  }
-
-  /* =========================
-     FAMILY / FINANCIAL TOOLS
-     ========================= */
-
-  function calcFD() {
-    const p = num($("fdP")?.value);
-    const rate = num($("fdR")?.value);
-    const years = num($("fdN")?.value);
-
-    if (p <= 0 || years <= 0) {
-      toast("FD details enter karein");
-      return;
-    }
-
-    const maturity =
-      p * Math.pow(
-        1 + rate / 100,
-        years
-      );
-
-    const result =
-      `Maturity: ${money(maturity)} • ` +
-      `Interest: ${money(maturity - p)}`;
-
-    if ($("fdResult"))
-      $("fdResult").textContent = result;
-
-    toast(result);
-  }
-
-  function addInsurance() {
-    const name =
-      $("insName")?.value?.trim() || "Insurance";
-
-    const premium =
-      num($("insPremium")?.value);
-
-    const date =
-      $("insDate")?.value || today();
-
-    if (premium <= 0) {
-      toast("Premium enter karein");
-      return;
-    }
-
-    D.insurance.push({
-      id: uid(),
-      name,
-      premium,
-      date
-    });
-
-    save();
-    toast("Insurance saved");
-  }
-
-  function addSchool() {
-    const child =
-      $("child")?.value?.trim() || "Child";
-
-    const fee =
-      num($("schoolFee")?.value);
-
-    const due =
-      $("schoolDue")?.value || today();
-
-    const books =
-      num($("schoolBooks")?.value);
-
-    D.schools.push({
-      id: uid(),
-      child,
-      fee,
-      due,
-      books
-    });
-
-    save();
-    toast("School record saved");
-  }
-
-  function addVehicle() {
-    const vehicle =
-      $("vehicle")?.value?.trim() || "Vehicle";
-
-    D.vehicles.push({
-      id: uid(),
-      vehicle,
-      fuel: num($("fuel")?.value),
-      service: num($("service")?.value),
-      insurance: num($("vehicleIns")?.value),
-      puc: $("puc")?.value || ""
-    });
-
-    save();
-    toast("Vehicle record saved");
-  }
-
-  function addFamilyMember() {
-    const name =
-      $("fmName")?.value?.trim();
-
-    if (!name) {
-      toast("Family member name enter karein");
-      return;
-    }
-
-    D.family.push({
-      id: uid(),
-      name
-    });
-
-    save();
-    toast("Family member added");
-  }
-
-  function addShopping() {
-    const item =
-      $("shopItem")?.value?.trim() || "Shopping";
-
-    D.shopping.push({
-      id: uid(),
-      item,
-      budget: num($("shopBudget")?.value)
-    });
-
-    save();
-    toast("Shopping item added");
-  }
-
-  function addUtility() {
-    const name =
-      $("utilityName")?.value?.trim() || "Utility";
-
-    D.utilities.push({
-      id: uid(),
-      name,
-      amount: num($("utilityAmount")?.value),
-      month:
-        $("utilityMonth")?.value || today().slice(0, 7)
-    });
-
-    save();
-    toast("Utility added");
-  }
-
-  function renderComparison() {
-    const income = totalIncome();
-    const expense = totalExpense();
-    const saving = income - expense;
-
-    const result =
-      `Income: ${money(income)} • ` +
-      `Expense: ${money(expense)} • ` +
-      `Saving: ${money(saving)}`;
-
-    if ($("compareResult"))
-      $("compareResult").textContent = result;
-
-    toast(result);
-  }
-
-  function calcEmergency() {
-    const expense =
-      num($("emExpense")?.value);
-
-    const months =
-      num($("emMonths")?.value);
-
-    const current =
-      num($("emCurrent")?.value);
-
-    const required =
-      expense * months;
-
-    const remaining =
-      Math.max(0, required - current);
-
-    const result =
-      `Required: ${money(required)} • ` +
-      `Current: ${money(current)} • ` +
-      `Remaining: ${money(remaining)}`;
-
-    if ($("emResult"))
-      $("emResult").textContent = result;
-
-    toast(result);
-  }
-
-  function addDoc() {
-    D.docs.push({
-      id: uid(),
-      name:
-        $("docName")?.value?.trim() || "Document",
-      date:
-        $("docDate")?.value || today()
-    });
-
-    save();
-    toast("Document record added");
-  }
-
-  function addAnnual() {
-    D.annual.push({
-      id: uid(),
-      name:
-        $("annualName")?.value?.trim() || "Annual Expense",
-      amount:
-        num($("annualAmount")?.value),
-      month:
-        $("annualMonth")?.value || today().slice(0, 7)
-    });
-
-    save();
-    toast("Annual expense added");
-  }
-
-  function saveLimit() {
-    const category =
-      $("limitCat")?.value?.trim() || "General";
-
-    const amount =
-      num($("limitAmount")?.value);
-
-    if (amount <= 0) {
-      toast("Limit amount enter karein");
-      return;
-    }
-
-    D.limits.push({
-      id: uid(),
-      category,
-      amount
-    });
-
-    save();
-    toast("Limit saved");
-  }
-
-  /* =========================
-     SMART SEARCH
-     ========================= */
-
-  function searchAllData(value) {
-    if (value === undefined) {
-      value = $("searchAll")?.value || "";
-    }
-
-    const q =
-      String(value).toLowerCase().trim();
-
-    const box = $("searchResults");
-
-    if (!box) return;
-
-    if (!q) {
-      box.innerHTML = "";
-      return;
-    }
-
-    const results = [];
-
-    D.personal.forEach(x => {
-      if (
-        `${x.name} ${x.note} ${x.direction}`
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push({
-          title: x.name,
-          text:
-            `${x.direction} ${money(x.amount)} • ${x.date}`
-        });
-      }
-    });
-
-    D.business.forEach(x => {
-      if (
-        `${x.name} ${x.note} ${x.direction}`
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push({
-          title: `Business: ${x.name}`,
-          text:
-            `${x.direction} ${money(x.amount)} • ${x.date}`
-        });
-      }
-    });
-
-    D.transactions.forEach(x => {
-      if (
-        `${x.type} ${x.category} ${x.note}`
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push({
-          title: x.category,
-          text:
-            `${x.type} ${money(x.amount)} • ${x.date}`
-        });
-      }
-    });
-
-    D.bills.forEach(x => {
-      if (
-        `${x.name} ${x.kind}`
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push({
-          title: x.name,
-          text:
-            `Bill ${money(x.amount)} • Due ${x.due}`
-        });
-      }
-    });
-
-    D.reminders.forEach(x => {
-      if (
-        `${x.name} ${x.type} ${x.note}`
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push({
-          title: x.name,
-          text:
-            `Reminder • ${x.date}`
-        });
-      }
-    });
-
-    if (!results.length) {
-      box.innerHTML =
-        `<div class="empty-state">No result found</div>`;
-      return;
-    }
-
-    box.innerHTML =
-      results.slice(0, 50).map(x => `
-        <div class="list-item">
-          <div>
-            <b>${esc(x.title)}</b>
-            <small>${esc(x.text)}</small>
-          </div>
-        </div>
-      `).join("");
-  }
-
-  /* =========================
-     SHARE
-     ========================= */
-
-  async function shareHisab() {
-    const text =
-`HISAB Money Manager
-
-Income: ${money(totalIncome())}
-Expense: ${money(totalExpense())}
-Money Given: ${money(totalGiven())}
-Money Received: ${money(totalReceived())}
-`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "HISAB Summary",
-          text
-        });
-        return;
-      }
-    } catch (err) {
-      if (err?.name === "AbortError")
-        return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(text);
-      toast("Summary copied");
-    } catch (_) {
-      downloadText(
-        "HISAB-Share.txt",
-        text
-      );
-    }
-  }
-
-  /* =========================
-     LANGUAGE / CURRENCY
-     ========================= */
-
-  function changeCurrency() {
-    const value = prompt(
-      "Currency symbol enter karein",
-      D.currency
-    );
-
-    if (!value) return;
-
-    D.currency = value.trim();
-    save();
-
-    toast("Currency updated");
-  }
-
-  function changeLanguage() {
-    const value = prompt(
-      "Language: hi ya en",
-      D.lang
-    );
-
-    if (!value) return;
-
-    D.lang =
-      value.toLowerCase().startsWith("en")
-        ? "en"
-        : "hi";
-
-    save();
-
-    toast(
-      D.lang === "en"
-        ? "English selected"
-        : "Hindi selected"
-    );
-  }
-
-  /* =========================
-     RENDER HELPERS
-     ========================= */
-
-  function renderSimpleList(id, list, formatter) {
-    const box = $(id);
-    if (!box) return;
-
-    if (!list.length) {
-      box.innerHTML =
-        `<div class="empty-state">No records yet</div>`;
-      return;
-    }
-
-    box.innerHTML =
-      list.slice().reverse().map(formatter).join("");
-  }
-
-  function renderExtraLists() {
-    renderSimpleList(
-      "insList",
-      D.insurance,
-      x => `
-        <div class="list-item">
-          <div><b>${esc(x.name)}</b>
-          <small>${esc(x.date)}</small></div>
-          <b>${money(x.premium)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "schoolList",
-      D.schools,
-      x => `
-        <div class="list-item">
-          <div><b>${esc(x.child)}</b>
-          <small>Due: ${esc(x.due)}</small></div>
-          <b>${money(x.fee + x.books)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "vehicleList",
-      D.vehicles,
-      x => `
-        <div class="list-item">
-          <div><b>${esc(x.vehicle)}</b>
-          <small>PUC: ${esc(x.puc)}</small></div>
-          <b>${money(x.fuel + x.service + x.insurance)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "fmList",
-      D.family,
-      x => `
-        <div class="list-item">
-          <b>${esc(x.name)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "shopList",
-      D.shopping,
-      x => `
-        <div class="list-item">
-          <b>${esc(x.item)}</b>
-          <b>${money(x.budget)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "utilityList",
-      D.utilities,
-      x => `
-        <div class="list-item">
-          <div><b>${esc(x.name)}</b>
-          <small>${esc(x.month)}</small></div>
-          <b>${money(x.amount)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "docList",
-      D.docs,
-      x => `
-        <div class="list-item">
-          <b>${esc(x.name)}</b>
-          <small>${esc(x.date)}</small>
-        </div>`
-    );
-
-    renderSimpleList(
-      "annualList",
-      D.annual,
-      x => `
-        <div class="list-item">
-          <div><b>${esc(x.name)}</b>
-          <small>${esc(x.month)}</small></div>
-          <b>${money(x.amount)}</b>
-        </div>`
-    );
-
-    renderSimpleList(
-      "limitList",
-      D.limits,
-      x => `
-        <div class="list-item">
-          <b>${esc(x.category)}</b>
-          <b>${money(x.amount)}</b>
-        </div>`
-    );
-  }
-
-  function renderAll() {
-    renderHome();
-    renderPeople();
-    renderPersonalTotals();
-    renderReports();
-    renderBills();
-    renderReminders();
-    renderExtraLists();
-
-    const modeText =
-      D.mode === "business"
-        ? "Business"
-        : "Personal";
-
-    document.querySelectorAll(
-      ".personal-mode"
-    ).forEach(x => {
-      x.setAttribute(
-        "aria-pressed",
-        D.mode === "personal"
-          ? "true"
-          : "false"
-      );
-    });
-
-    document.querySelectorAll(
-      ".business-mode"
-    ).forEach(x => {
-      x.setAttribute(
-        "aria-pressed",
-        D.mode === "business"
-          ? "true"
-          : "false"
-      );
-    });
-  }
-
-  /* =========================
-     INLINE BUTTON WIRING
-     ========================= */
-
-  function wireUI() {
-    /* Header language */
-    const headerButtons =
-      document.querySelectorAll(".top-actions .icon-btn");
-
-    if (headerButtons[0]) {
-      headerButtons[0].onclick =
-        changeLanguage;
-    }
-
-    if (headerButtons[1]) {
-      headerButtons[1].onclick =
-        changeCurrency;
-    }
-
-    /* Personal filters */
-    const filters =
-      document.querySelectorAll(
-        "#personal .filter-row button"
-      );
-
-    if (filters[0])
-      filters[0].onclick = () =>
-        filterPersonal("all");
-
-    if (filters[1])
-      filters[1].onclick = () =>
-        filterPersonal("given");
-
-    if (filters[2])
-      filters[2].onclick = () =>
-        filterPersonal("received");
-
-    if (filters[3])
-      filters[3].onclick = () =>
-        filterPersonal("pending");
-
-    /* Personal search */
-    const personalSearch =
-      document.querySelector(
-        "#personal .search-box input"
-      );
-
-    if (personalSearch) {
-      personalSearch.oninput = () => {
-        const q =
-          personalSearch.value
-            .toLowerCase()
-            .trim();
-
-        const list =
-          D.personal.filter(x =>
-            `${x.name} ${x.note} ${x.direction}`
-              .toLowerCase()
-              .includes(q)
-          );
-
-        const box = $("personalList");
-
-        if (!box) return;
-
-        if (!q) {
-          renderPeople();
-          return;
-        }
-
-        box.innerHTML =
-          list.length
-            ? list.map(x => `
-              <div class="list-item">
-                <div>
-                  <b>${esc(x.name)}</b>
-                  <small>${esc(x.date)}</small>
-                </div>
-                <b>${money(x.amount)}</b>
-              </div>
-            `).join("")
-            : `<div class="empty-state">No result found</div>`;
-      };
-    }
-
-    /* Smart Search */
-    if ($("searchAll")) {
-      $("searchAll").oninput = () =>
-        searchAllData();
-    }
-  }
-
-  /* =========================
-     GLOBAL EXPORTS
-     Required by inline HTML
-     ========================= */
-
-  window.enterGuestMode = enterGuestMode;
-  window.showGuestGate = showGuestGate;
-  window.resetGuestMode = resetGuestMode;
-
-  window.show = show;
-  window.addPerson = addPerson;
-
-  window.addTransaction = addTransaction;
-
-  window.calcBudget = calcBudget;
-  window.calcGoal = calcGoal;
-  window.calcEMI = calcEMI;
-
-  window.addBill = addBill;
-  window.addReminder = addReminder;
-
-  window.setPin = setPin;
-  window.lockApp = lockApp;
-
-  window.exportBackup = exportBackup;
-  window.importBackup = importBackup;
-  window.exportSummary = exportSummary;
-
-  window.calcFD = calcFD;
-  window.addInsurance = addInsurance;
-  window.addSchool = addSchool;
-  window.addVehicle = addVehicle;
-
-  window.addFamilyMember = addFamilyMember;
-  window.addShopping = addShopping;
-  window.addUtility = addUtility;
-  window.renderComparison = renderComparison;
-  window.calcEmergency = calcEmergency;
-
-  window.addDoc = addDoc;
-  window.addAnnual = addAnnual;
-  window.saveLimit = saveLimit;
-
-  window.searchAllData = searchAllData;
-  window.shareHisab = shareHisab;
-
-  /* =========================
-     STARTUP
-     ========================= */
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-      wireUI();
-      renderAll();
-      showGuestGate();
-    },
-    { once: true }
-  );
-
-  /* index.html already calls showGuestGate()
-     after loading app.js, so expose it immediately. */
-
-  try {
-    renderAll();
-  } catch (_) {}
-
-})();
+
+      <button onclick="show('planning')">
+        🎯 Goals
+      </button>
+
+      <button onclick="show('credit')">
+        💳 Payments
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- ================= TOOLS ================= -->
+  <section id="tools13" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>More Tools</h2>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+
+      <button onclick="calcFD()">
+        🏦 FD Calculator
+      </button>
+
+      <button onclick="addInsurance()">
+        🛡 Insurance
+      </button>
+
+      <button onclick="addSchool()">
+        🎓 School
+      </button>
+
+      <button onclick="addVehicle()">
+        🚗 Vehicle
+      </button>
+
+      <button onclick="addShopping()">
+        🛒 Shopping
+      </button>
+
+      <button onclick="addUtility()">
+        💡 Utility
+      </button>
+
+      <button onclick="calcEmergency()">
+        🚨 Emergency Fund
+      </button>
+
+      <button onclick="addDoc()">
+        📄 Documents
+      </button>
+
+      <button onclick="addAnnual()">
+        📅 Annual Planning
+      </button>
+
+    </div>
+
+    <div class="form-card">
+
+      <h3>FD Calculator</h3>
+
+      <input
+        id="fdPrincipal"
+        type="number"
+        placeholder="Principal">
+
+      <input
+        id="fdRate"
+        type="number"
+        placeholder="Interest %">
+
+      <input
+        id="fdN"
+        type="number"
+        placeholder="Months">
+
+      <button onclick="calcFD()">Calculate FD</button>
+
+      <div id="fdResult"></div>
+
+    </div>
+
+  </section>
+
+  <!-- ================= FINAL / SETTINGS ================= -->
+  <section id="final" class="page">
+
+    <div class="page-title">
+      <div>
+        <h2>Settings</h2>
+        <p>HISAB preferences</p>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <label>Search Everything</label>
+
+      <input
+        id="searchAll"
+        type="search"
+        placeholder="Search HISAB..."
+        oninput="searchAllData(this.value)">
+
+      <div id="searchResults" class="list"></div>
+
+      <hr>
+
+      <button onclick="toggleLanguage()">
+        🌐 Language
+      </button>
+
+      <button onclick="toggleCurrency()">
+        💱 Currency
+      </button>
+
+      <button onclick="exportBackup()">
+        💾 Backup
+      </button>
+
+      <button onclick="exportSummary()">
+        📤 Share Summary
+      </button>
+
+      <button onclick="exportSummaryPDF()">
+        📄 Export Summary PDF
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- ================= BOTTOM NAV ================= -->
+  <nav class="bottom-nav">
+
+    <button onclick="show('home')">
+      <span>⌂</span>
+      <small>Home</small>
+    </button>
+
+    <button onclick="show('transactions')">
+      <span>↔</span>
+      <small>Transactions</small>
+    </button>
+
+    <button class="add-btn" onclick="openQuickAdd()">
+      <span>＋</span>
+    </button>
+
+    <button onclick="show('reports')">
+      <span>▥</span>
+      <small>Reports</small>
+    </button>
+
+    <button onclick="show('final')">
+      <span>☰</span>
+      <small>More</small>
+    </button>
+
+  </nav>
+
+</div>
+
+<!-- ================= APP JS ================= -->
+<script src="app.js"></script>
+
+<script>
+showGuestGate();
+</script>
+
+</body>
+</html>
