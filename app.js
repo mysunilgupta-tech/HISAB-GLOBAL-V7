@@ -1,2303 +1,671 @@
+/* =========================================================
+   HISAB V7 — COMPACT COMPLETE CONTROLLER
+   Personal + Business | Udhaar | Money | Planning
+   Reports | Backup | Security | Share/PDF
+========================================================= */
 (() => {
-  "use strict";
+"use strict";
 
-  /* =========================================================
-     HISAB GLOBAL V7
-     Single Controller
-     Personal + Business
-     Khatabook-style Udhaar / Khata
-     Transactions + Budget + Goals + Bills + EMI
-     Reports + Backup + Search + Share/Print
-     Local-first / Offline
-  ========================================================= */
+const KEY="hisab_v7_data";
 
-  const STORAGE_KEY = "hisab_v7_data";
-  const OLD_KEYS = [
-    "hisab_v7_complete",
-    "hisab_v7_final",
-    "hisabData"
-  ];
+const DEF={
+  version:7, mode:"personal", currency:"₹", language:"en",
+  transactions:[], lendDen:[], people:[],
+  businessPeople:[], sales:[], purchases:[],
+  goals:[], savings:[], budgets:[], bills:[], loans:[],
+  reminders:[], settings:{}, pin:""
+};
 
-  const $ = id => document.getElementById(id);
+let D=load(), currentPerson="", khataFilter="all", bizFilter="customer";
 
-  const uid = () =>
-    Date.now().toString(36) +
-    Math.random().toString(36).slice(2, 8);
+/* ---------- BASIC ---------- */
+const $=id=>document.getElementById(id);
+const val=id=>$(id)?.value?.trim()||"";
+const num=id=>Number(val(id))||0;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
 
-  const today = () => {
-    const d = new Date();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${d.getFullYear()}-${m}-${day}`;
-  };
-
-  const num = v => {
-    const n = Number(String(v ?? "").replace(/,/g, ""));
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const esc = value =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-  const DEFAULT_DATA = {
-    version: 7,
-    mode: "personal",
-    currency: "₹",
-    lang: "hi",
-    pin: "",
-    locked: false,
-
-    personal: [],
-    business: [],
-
-    transactions: [],
-    bills: [],
-    reminders: [],
-    goals: [],
-    budgets: [],
-
-    insurance: [],
-    schools: [],
-    vehicles: [],
-    family: [],
-    shopping: [],
-    utilities: [],
-    docs: [],
-    annual: [],
-    limits: []
-  };
-
-  let D = loadData();
-  let selectedMode = D.mode || "personal";
-  let selectedPersonId = null;
-  let editingEntryId = null;
-  let editingPersonId = null;
-  let currentBusinessFilter = "customer";
-
-  /* =========================================================
-     STORAGE
-  ========================================================= */
-
-  function normaliseData(data) {
-    const x = data && typeof data === "object" ? data : {};
-
-    const out = {
-      ...DEFAULT_DATA,
-      ...x
-    };
-
-    const arrays = [
-      "personal",
-      "business",
-      "transactions",
-      "bills",
-      "reminders",
-      "goals",
-      "budgets",
-      "insurance",
-      "schools",
-      "vehicles",
-      "family",
-      "shopping",
-      "utilities",
-      "docs",
-      "annual",
-      "limits"
-    ];
-
-    arrays.forEach(k => {
-      if (!Array.isArray(out[k])) out[k] = [];
+function load(){
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY)||"null")||{};
+    const d={...DEF,...x};
+    Object.keys(DEF).forEach(k=>{
+      if(Array.isArray(DEF[k])) d[k]=Array.isArray(x[k])?x[k]:[];
     });
-
-    out.personal = out.personal.map(normalisePerson);
-    out.business = out.business.map(normalisePerson);
-
-    return out;
-  }
-
-  function normalisePerson(p) {
-    const person = {
-      id: p.id || uid(),
-      name: String(p.name || p.person || p.customer || "Unnamed"),
-      phone: p.phone || "",
-      category: p.category || p.type || "person",
-      mode: p.mode || "personal",
-      entries: Array.isArray(p.entries) ? p.entries : []
-    };
-
-    person.entries = person.entries.map(e => ({
-      id: e.id || uid(),
-      type: e.type === "receive" ? "receive" : "give",
-      amount: num(e.amount),
-      date: e.date || today(),
-      method: e.method || "Cash",
-      status: e.status === "settled" ? "settled" : "pending",
-      note: e.note || "",
-      createdAt: e.createdAt || Date.now()
-    }));
-
-    return person;
-  }
-
-  function loadData() {
-    try {
-      const current = localStorage.getItem(STORAGE_KEY);
-
-      if (current) {
-        return normaliseData(JSON.parse(current));
-      }
-
-      for (const key of OLD_KEYS) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const migrated = normaliseData(JSON.parse(raw));
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-          return migrated;
-        }
-      }
-    } catch (e) {
-      console.error("HISAB load error", e);
-    }
-
-    return normaliseData(DEFAULT_DATA);
-  }
-
-  function save() {
-    try {
-      D.version = 7;
-      D.mode = selectedMode;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(D));
-    } catch (e) {
-      console.error("HISAB save error", e);
-      toast("Data save nahi ho paya");
-    }
-
-    renderAll();
-  }
-
-  /* =========================================================
-     BASIC UI
-  ========================================================= */
-
-  function toast(message) {
-    let box = $("hisabToast");
-
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "hisabToast";
-      box.style.cssText =
-        "position:fixed;left:50%;bottom:85px;transform:translateX(-50%);" +
-        "background:#082b45;color:#fff;padding:12px 18px;border-radius:12px;" +
-        "z-index:99999;font-size:14px;max-width:90%;text-align:center;" +
-        "box-shadow:0 8px 25px rgba(0,0,0,.25)";
-      document.body.appendChild(box);
-    }
-
-    box.textContent = message;
-    box.style.display = "block";
-
-    clearTimeout(box._timer);
-    box._timer = setTimeout(() => {
-      box.style.display = "none";
-    }, 2200);
-  }
-
-  function show(id) {
-    const target = $(id);
-    if (!target) return;
-
-    document.querySelectorAll(
-      "#home,#personal,#business,#planning,#credit,#reports,#reminders," +
-      "#privacy,#family,#ads,#familytools,#tools13,#final,#khataEntry,#khataDetail"
-    ).forEach(el => {
-      el.style.display = "none";
-    });
-
-    target.style.display = "block";
-
-    try {
-      target.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    } catch (_) {}
-
-    renderAll();
-  }
-
-  function enterGuestMode() {
-    const gate = $("guestGate");
-    if (gate) gate.style.display = "none";
-
-    const shell = $("appShell");
-    if (shell) shell.style.display = "block";
-
-    const welcome = $("welcome");
-    if (welcome) welcome.style.display = "none";
-
-    selectedMode = D.mode || "personal";
-    renderAll();
-  }
-
-  function setMode(mode) {
-    mode = mode === "business" ? "business" : "personal";
-
-    selectedMode = mode;
-    D.mode = mode;
-    save();
-
-    toast(
-      mode === "business"
-        ? "Business Mode selected"
-        : "Personal Mode selected"
-    );
-
-    show("home");
-  }
-
-  function toggleLanguage() {
-    D.lang = D.lang === "hi" ? "en" : "hi";
-    save();
-    toast(D.lang === "hi" ? "Hindi selected" : "English selected");
-  }
-
-  function toggleCurrency() {
-    D.currency = D.currency === "₹" ? "$" : "₹";
-    save();
-    toast(`Currency: ${D.currency}`);
-  }
-
-  function money(value) {
-    return `${D.currency}${num(value).toLocaleString("en-IN", {
-      maximumFractionDigits: 2
-    })}`;
-  }
-
-  /* =========================================================
-     PEOPLE / KHATA
-  ========================================================= */
-
-  function currentPeople(mode = selectedMode) {
-    return mode === "business" ? D.business : D.personal;
-  }
-
-  function peopleArray(mode) {
-    return mode === "business" ? D.business : D.personal;
-  }
-
-  function totalGiven(people) {
-    return people.reduce(
-      (sum, p) =>
-        sum +
-        p.entries
-          .filter(e => e.type === "give")
-          .reduce((a, e) => a + num(e.amount), 0),
-      0
-    );
-  }
-
-  function totalReceived(people) {
-    return people.reduce(
-      (sum, p) =>
-        sum +
-        p.entries
-          .filter(e => e.type === "receive")
-          .reduce((a, e) => a + num(e.amount), 0),
-      0
-    );
-  }
-
-  function personGiven(person) {
-    return person.entries
-      .filter(e => e.type === "give")
-      .reduce((a, e) => a + num(e.amount), 0);
-  }
-
-  function personReceived(person) {
-    return person.entries
-      .filter(e => e.type === "receive")
-      .reduce((a, e) => a + num(e.amount), 0);
-  }
-
-  function personBalance(person) {
-    return personGiven(person) - personReceived(person);
-  }
-
-  function openKhataForm(mode = selectedMode, personId = null) {
-    selectedMode = mode === "business" ? "business" : "personal";
-    editingPersonId = personId || null;
-    editingEntryId = null;
-
-    const person = personId
-      ? peopleArray(selectedMode).find(p => p.id === personId)
-      : null;
-
-    if ($("khataPerson")) {
-      $("khataPerson").value = person ? person.name : "";
-    }
-
-    if ($("khataType")) $("khataType").value = "give";
-    if ($("khataAmount")) $("khataAmount").value = "";
-    if ($("khataDate")) $("khataDate").value = today();
-    if ($("khataMethod")) $("khataMethod").value = "Cash";
-    if ($("khataStatus")) $("khataStatus").value = "pending";
-    if ($("khataNote")) $("khataNote").value = "";
-
-    show("khataEntry");
-  }
-
-  function closeKhataForm() {
-    show(selectedMode === "business" ? "business" : "personal");
-  }
-
-  function saveKhataEntry() {
-    const name = String($("khataPerson")?.value || "").trim();
-    const type =
-      $("khataType")?.value === "receive" ? "receive" : "give";
-    const amount = num($("khataAmount")?.value);
-    const date = $("khataDate")?.value || today();
-    const method = $("khataMethod")?.value || "Cash";
-    const status =
-      $("khataStatus")?.value === "settled" ? "settled" : "pending";
-    const note = String($("khataNote")?.value || "").trim();
-
-    if (!name) {
-      toast("Person ka naam enter karein");
-      return;
-    }
-
-    if (amount <= 0) {
-      toast("Amount enter karein");
-      return;
-    }
-
-    const list = peopleArray(selectedMode);
-
-    let person = editingPersonId
-      ? list.find(p => p.id === editingPersonId)
-      : null;
-
-    if (!person) {
-      person = list.find(
-        p => p.name.trim().toLowerCase() === name.toLowerCase()
-      );
-    }
-
-    if (!person) {
-      person = {
-        id: uid(),
-        name,
-        phone: "",
-        category:
-          selectedMode === "business" ? "customer" : "person",
-        mode: selectedMode,
-        entries: []
-      };
-
-      list.push(person);
-    } else {
-      person.name = name;
-    }
-
-    if (editingEntryId) {
-      const entry = person.entries.find(e => e.id === editingEntryId);
-
-      if (entry) {
-        entry.type = type;
-        entry.amount = amount;
-        entry.date = date;
-        entry.method = method;
-        entry.status = status;
-        entry.note = note;
-      }
-
-      toast("Khata entry updated");
-    } else {
-      person.entries.push({
-        id: uid(),
-        type,
-        amount,
-        date,
-        method,
-        status,
-        note,
-        createdAt: Date.now()
-      });
-
-      toast(
-        type === "give"
-          ? "Give entry added"
-          : "Receive entry added"
-      );
-    }
-
-    selectedPersonId = person.id;
-    editingPersonId = null;
-    editingEntryId = null;
-
-    save();
-    openKhataDetail(selectedMode, person.id);
-  }
-
-  function openKhataDetail(mode, personId) {
-    selectedMode = mode === "business" ? "business" : "personal";
-
-    const person = peopleArray(selectedMode).find(
-      p => p.id === personId
-    );
-
-    if (!person) {
-      toast("Khata nahi mila");
-      return;
-    }
-
-    selectedPersonId = person.id;
-
-    if ($("detailPersonName"))
-      $("detailPersonName").textContent = person.name;
-
-    if ($("detailGive"))
-      $("detailGive").textContent = money(personGiven(person));
-
-    if ($("detailReceive"))
-      $("detailReceive").textContent = money(personReceived(person));
-
-    if ($("detailBalance"))
-      $("detailBalance").textContent = money(personBalance(person));
-
-    renderKhataHistory(person, "all");
-    show("khataDetail");
-  }
-
-  function closeKhataDetail() {
-    show(selectedMode === "business" ? "business" : "personal");
-  }
-
-  function renderKhataHistory(person, filter = "all") {
-    const box = $("khataHistory");
-    if (!box) return;
-
-    let entries = [...person.entries].sort(
-      (a, b) =>
-        new Date(b.date || 0) - new Date(a.date || 0) ||
-        num(b.createdAt) - num(a.createdAt)
-    );
-
-    if (filter === "give") {
-      entries = entries.filter(e => e.type === "give");
-    }
-
-    if (filter === "receive") {
-      entries = entries.filter(e => e.type === "receive");
-    }
-
-    if (filter === "pending") {
-      entries = entries.filter(e => e.status === "pending");
-    }
-
-    if (!entries.length) {
-      box.innerHTML =
-        '<div style="padding:15px;text-align:center">No entries found</div>';
-      return;
-    }
-
-    box.innerHTML = entries
-      .map(e => {
-        const isGive = e.type === "give";
-        const amountColor = isGive ? "#d33" : "#159447";
-        const typeText = isGive ? "GIVE" : "RECEIVE";
-
-        return `
-          <div style="
-            padding:12px;
-            margin:8px 0;
-            border-radius:12px;
-            background:#fff;
-            border:1px solid #e4e8ed;
-          ">
-            <div style="display:flex;justify-content:space-between;gap:8px">
-              <strong style="color:${amountColor}">
-                ${typeText} ${money(e.amount)}
-              </strong>
-              <span>${esc(e.date)}</span>
-            </div>
-
-            <div style="font-size:13px;margin-top:5px">
-              ${esc(e.method)} • ${esc(e.status)}
-            </div>
-
-            ${
-              e.note
-                ? `<div style="font-size:13px;margin-top:5px">${esc(
-                    e.note
-                  )}</div>`
-                : ""
-            }
-
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">
-              <button onclick="editKhataEntry('${person.id}','${e.id}')">
-                Edit
-              </button>
-
-              <button onclick="toggleKhataStatus('${person.id}','${e.id}')">
-                ${e.status === "pending" ? "Settle" : "Pending"}
-              </button>
-
-              <button onclick="deleteKhataEntry('${person.id}','${e.id}')">
-                Delete
-              </button>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  function detailFilter(filter, button) {
-    if (button) {
-      document
-        .querySelectorAll("#khataDetail button[data-filter]")
-        .forEach(b => b.classList.remove("active"));
-
-      button.classList.add("active");
-    }
-
-    const person = peopleArray(selectedMode).find(
-      p => p.id === selectedPersonId
-    );
-
-    if (person) renderKhataHistory(person, filter);
-  }
-
-  function editKhataEntry(personId, entryId) {
-    const person = peopleArray(selectedMode).find(
-      p => p.id === personId
-    );
-
-    if (!person) return;
-
-    const entry = person.entries.find(e => e.id === entryId);
-
-    if (!entry) return;
-
-    editingPersonId = person.id;
-    editingEntryId = entry.id;
-
-    if ($("khataPerson")) $("khataPerson").value = person.name;
-    if ($("khataType")) $("khataType").value = entry.type;
-    if ($("khataAmount")) $("khataAmount").value = entry.amount;
-    if ($("khataDate")) $("khataDate").value = entry.date;
-    if ($("khataMethod")) $("khataMethod").value = entry.method;
-    if ($("khataStatus")) $("khataStatus").value = entry.status;
-    if ($("khataNote")) $("khataNote").value = entry.note;
-
-    show("khataEntry");
-  }
-
-  function deleteKhataEntry(personId, entryId) {
-    const person = peopleArray(selectedMode).find(
-      p => p.id === personId
-    );
-
-    if (!person) return;
-
-    person.entries = person.entries.filter(e => e.id !== entryId);
-
-    save();
-
-    toast("Entry deleted");
-
-    openKhataDetail(selectedMode, person.id);
-  }
-
-  function toggleKhataStatus(personId, entryId) {
-    const person = peopleArray(selectedMode).find(
-      p => p.id === personId
-    );
-
-    if (!person) return;
-
-    const entry = person.entries.find(e => e.id === entryId);
-
-    if (!entry) return;
-
-    entry.status =
-      entry.status === "pending" ? "settled" : "pending";
-
-    save();
-
-    openKhataDetail(selectedMode, person.id);
-
-    toast(
-      entry.status === "settled"
-        ? "Payment settled"
-        : "Payment pending"
-    );
-  }
-
-  function openPaymentEntry() {
-    if (selectedPersonId) {
-      openKhataForm(selectedMode, selectedPersonId);
-    } else {
-      openKhataForm(selectedMode);
-    }
-  }
-
-  function shareKhata() {
-    const person = peopleArray(selectedMode).find(
-      p => p.id === selectedPersonId
-    );
-
-    if (!person) return;
-
-    const text = createKhataText(person);
-
-    if (navigator.share) {
-      navigator.share({
-        title: `HISAB - ${person.name}`,
-        text
-      }).catch(() => {});
-    } else {
-      copyText(text);
-      toast("Khata text copied");
-    }
-  }
-
-  function createKhataText(person) {
-    let text = `HISAB - Khata\n`;
-    text += `Person: ${person.name}\n`;
-    text += `Total Give: ${money(personGiven(person))}\n`;
-    text += `Total Receive: ${money(personReceived(person))}\n`;
-    text += `Balance: ${money(personBalance(person))}\n`;
-    text += `-------------------------\n`;
-
-    person.entries
-      .slice()
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .forEach(e => {
-        text += `${e.date} | ${e.type.toUpperCase()} | `;
-        text += `${money(e.amount)} | ${e.method} | ${e.status}`;
-        if (e.note) text += ` | ${e.note}`;
-        text += `\n`;
-      });
-
-    return text;
-  }
-
-  /* =========================================================
-     SEARCH / FILTER
-  ========================================================= */
-
-  function searchKhata(mode, value) {
-    const q = String(
-      value ??
-        (mode === "business"
-          ? $("businessSearch")?.value
-          : $("personalSearch")?.value) ??
-        ""
-    )
-      .toLowerCase()
-      .trim();
-
-    renderPeople(mode, q);
-  }
-
-  function filterKhata(mode, filter, button) {
-    if (button) {
-      const parent = button.parentElement;
-      if (parent) {
-        parent
-          .querySelectorAll("button")
-          .forEach(b => b.classList.remove("active"));
-      }
-
-      button.classList.add("active");
-    }
-
-    const q =
-      mode === "business"
-        ? String($("businessSearch")?.value || "").toLowerCase()
-        : String($("personalSearch")?.value || "").toLowerCase();
-
-    renderPeople(mode, q, filter);
-  }
-
-  function businessFilter(filter, button) {
-    currentBusinessFilter = filter;
-
-    if (button) {
-      const parent = button.parentElement;
-      if (parent) {
-        parent
-          .querySelectorAll("button")
-          .forEach(b => b.classList.remove("active"));
-      }
-
-      button.classList.add("active");
-    }
-
-    renderBusiness(filter);
-  }
-
-  function renderPeople(mode, query = "", filter = "all") {
-    const box =
-      mode === "business"
-        ? $("businessList")
-        : $("personalList");
-
-    if (!box) return;
-
-    let list = peopleArray(mode);
-
-    if (query) {
-      list = list.filter(p =>
-        `${p.name} ${p.phone || ""} ${p.category || ""}`
-          .toLowerCase()
-          .includes(query)
-      );
-    }
-
-    if (filter === "give") {
-      list = list.filter(p => personGiven(p) > 0);
-    }
-
-    if (filter === "receive") {
-      list = list.filter(p => personReceived(p) > 0);
-    }
-
-    if (filter === "pending") {
-      list = list.filter(p =>
-        p.entries.some(e => e.status === "pending")
-      );
-    }
-
-    if (!list.length) {
-      box.innerHTML =
-        '<div style="padding:15px;text-align:center">No Khata found</div>';
-      return;
-    }
-
-    box.innerHTML = list
-      .map(p => {
-        const bal = personBalance(p);
-
-        return `
-          <div style="
-            padding:13px;
-            margin:8px 0;
-            background:#fff;
-            border-radius:14px;
-            border:1px solid #e2e7ec;
-          ">
-            <div style="display:flex;justify-content:space-between;gap:8px">
-              <strong>${esc(p.name)}</strong>
-              <strong>${money(bal)}</strong>
-            </div>
-
-            <div style="font-size:13px;margin-top:5px">
-              <span style="color:#d33">
-                Give: ${money(personGiven(p))}
-              </span>
-              &nbsp;|&nbsp;
-              <span style="color:#159447">
-                Receive: ${money(personReceived(p))}
-              </span>
-            </div>
-
-            <div style="font-size:12px;margin-top:5px">
-              ${p.entries.length} entries
-              ${p.category ? " • " + esc(p.category) : ""}
-            </div>
-
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">
-              <button onclick="openKhataDetail('${mode}','${p.id}')">
-                Open Khata
-              </button>
-
-              <button onclick="openKhataForm('${mode}','${p.id}')">
-                Add Entry
-              </button>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  /* =========================================================
-     BUSINESS
-  ========================================================= */
-
-  function addBusinessPerson(category) {
-    const label =
-      category === "supplier"
-        ? "Supplier"
-        : "Customer";
-
-    const name = prompt(`${label} name enter karein`);
-
-    if (!name || !name.trim()) return;
-
-    const person = {
-      id: uid(),
-      name: name.trim(),
-      phone: "",
-      category,
-      mode: "business",
-      entries: []
-    };
-
-    D.business.push(person);
-
-    save();
-
-    toast(`${label} added`);
-    renderBusiness(category);
-  }
-
-  function addBusinessSale() {
-    const customer = prompt("Customer name");
-    if (!customer) return;
-
-    const amount = num(prompt("Sale amount"));
-
-    if (amount <= 0) {
-      toast("Valid amount enter karein");
-      return;
-    }
-
-    let person = D.business.find(
-      p =>
-        p.name.toLowerCase() === customer.trim().toLowerCase() &&
-        p.category === "customer"
-    );
-
-    if (!person) {
-      person = {
-        id: uid(),
-        name: customer.trim(),
-        phone: "",
-        category: "customer",
-        mode: "business",
-        entries: []
-      };
-
-      D.business.push(person);
-    }
-
-    person.entries.push({
-      id: uid(),
-      type: "receive",
-      amount,
-      date: today(),
-      method: "Other",
-      status: "pending",
-      note: "Sale",
-      createdAt: Date.now()
-    });
-
-    save();
-    toast("Sale added");
-  }
-
-  function addBusinessPurchase() {
-    const supplier = prompt("Supplier name");
-    if (!supplier) return;
-
-    const amount = num(prompt("Purchase amount"));
-
-    if (amount <= 0) {
-      toast("Valid amount enter karein");
-      return;
-    }
-
-    let person = D.business.find(
-      p =>
-        p.name.toLowerCase() === supplier.trim().toLowerCase() &&
-        p.category === "supplier"
-    );
-
-    if (!person) {
-      person = {
-        id: uid(),
-        name: supplier.trim(),
-        phone: "",
-        category: "supplier",
-        mode: "business",
-        entries: []
-      };
-
-      D.business.push(person);
-    }
-
-    person.entries.push({
-      id: uid(),
-      type: "give",
-      amount,
-      date: today(),
-      method: "Other",
-      status: "pending",
-      note: "Purchase",
-      createdAt: Date.now()
-    });
-
-    save();
-    toast("Purchase added");
-  }
-
-  function renderBusiness(filter = currentBusinessFilter) {
-    const list = D.business.filter(p => {
-      if (filter === "customer") return p.category === "customer";
-      if (filter === "supplier") return p.category === "supplier";
-      if (filter === "sales")
-        return p.entries.some(e => e.note === "Sale");
-      if (filter === "purchase")
-        return p.entries.some(e => e.note === "Purchase");
-      return true;
-    });
-
-    const box = $("businessList");
-    if (!box) return;
-
-    const q = String($("businessSearch")?.value || "")
-      .toLowerCase()
-      .trim();
-
-    const filtered = list.filter(p =>
-      p.name.toLowerCase().includes(q)
-    );
-
-    if (!filtered.length) {
-      box.innerHTML =
-        '<div style="padding:15px;text-align:center">No business records found</div>';
-      return;
-    }
-
-    box.innerHTML = filtered
-      .map(p => {
-        const sales = p.entries
-          .filter(e => e.note === "Sale")
-          .reduce((a, e) => a + num(e.amount), 0);
-
-        const purchases = p.entries
-          .filter(e => e.note === "Purchase")
-          .reduce((a, e) => a + num(e.amount), 0);
-
-        return `
-          <div style="
-            padding:13px;
-            margin:8px 0;
-            background:#fff;
-            border:1px solid #e2e7ec;
-            border-radius:14px;
-          ">
-            <strong>${esc(p.name)}</strong>
-            <div style="font-size:12px;margin-top:4px">
-              ${esc(p.category)}
-            </div>
-
-            <div style="margin-top:6px">
-              Balance: <strong>${money(personBalance(p))}</strong>
-            </div>
-
-            <div style="font-size:12px;margin-top:4px">
-              Sales: ${money(sales)} |
-              Purchase: ${money(purchases)}
-            </div>
-
-            <div style="display:flex;gap:6px;margin-top:9px">
-              <button onclick="openKhataDetail('business','${p.id}')">
-                Open Khata
-              </button>
-              <button onclick="openKhataForm('business','${p.id}')">
-                Add Entry
-              </button>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  /* =========================================================
-     TRANSACTIONS
-  ========================================================= */
-
-  function addTransaction(type) {
-    const amount =
-      num($("transactionAmount")?.value) ||
-      num($("amount")?.value) ||
-      num(prompt(`${type || "Transaction"} amount`));
-
-    if (amount <= 0) {
-      toast("Valid amount enter karein");
-      return;
-    }
-
-    const name =
-      $("transactionNote")?.value ||
-      $("expenseNote")?.value ||
-      $("incomeNote")?.value ||
-      prompt("Note / description") ||
-      "";
-
-    D.transactions.push({
-      id: uid(),
-      type:
-        String(type || "").toLowerCase().includes("income") ||
-        String(type || "").toLowerCase().includes("receive")
-          ? "income"
-          : "expense",
-      amount,
-      date: today(),
-      note: name,
-      mode: selectedMode
-    });
-
-    if ($("transactionAmount")) $("transactionAmount").value = "";
-
-    save();
-    toast("Transaction added");
-  }
-
-  function totalIncome() {
-    return D.transactions
-      .filter(
-        t =>
-          t.type === "income" &&
-          (!t.mode || t.mode === selectedMode)
-      )
-      .reduce((a, t) => a + num(t.amount), 0);
-  }
-
-  function totalExpense() {
-    return D.transactions
-      .filter(
-        t =>
-          t.type === "expense" &&
-          (!t.mode || t.mode === selectedMode)
-      )
-      .reduce((a, t) => a + num(t.amount), 0);
-  }
-
-  /* =========================================================
-     BUDGET
-  ========================================================= */
-
-  function calcBudget() {
-    const amount =
-      num($("budgetAmount")?.value) ||
-      num(prompt("Monthly budget amount"));
-
-    if (amount <= 0) {
-      toast("Budget amount enter karein");
-      return;
-    }
-
-    const category =
-      $("budgetCategory")?.value ||
-      prompt("Budget category") ||
-      "General";
-
-    D.budgets.push({
-      id: uid(),
-      category,
-      amount,
-      month: new Date().toISOString().slice(0, 7)
-    });
-
-    save();
-    toast("Budget saved");
-  }
-
-  /* =========================================================
-     GOALS + SAVINGS
-  ========================================================= */
-
-  function calcGoal() {
-    const name =
-      $("goalName")?.value ||
-      prompt("Goal name / kis liye paisa chahiye?");
-
-    if (!name) return;
-
-    const target =
-      num($("goalTarget")?.value) ||
-      num(prompt("Target amount"));
-
-    if (target <= 0) {
-      toast("Target amount enter karein");
-      return;
-    }
-
-    const saved =
-      num($("goalSaved")?.value) ||
-      num(prompt("Already saved amount") || 0);
-
-    const deadline =
-      $("goalDate")?.value ||
-      $("goalDeadline")?.value ||
-      "";
-
-    D.goals.push({
-      id: uid(),
-      name,
-      target,
-      saved,
-      deadline,
-      createdAt: Date.now()
-    });
-
-    save();
-    renderGoals();
-
-    toast("Goal saved");
-  }
-
-  function renderGoals() {
-    const box = $("goalList");
-    if (!box) return;
-
-    if (!D.goals.length) {
-      box.innerHTML =
-        '<div style="padding:12px">No goals yet</div>';
-      return;
-    }
-
-    box.innerHTML = D.goals
-      .map(g => {
-        const percent =
-          g.target > 0
-            ? Math.min(100, (g.saved / g.target) * 100)
-            : 0;
-
-        return `
-          <div style="
-            padding:12px;
-            margin:8px 0;
-            background:#fff;
-            border-radius:12px;
-          ">
-            <strong>${esc(g.name)}</strong>
-            <div>${money(g.saved)} / ${money(g.target)}</div>
-            <div style="margin-top:5px">
-              ${percent.toFixed(0)}% complete
-            </div>
-            <button onclick="deleteGoal('${g.id}')">
-              Delete
-            </button>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  function deleteGoal(id) {
-    D.goals = D.goals.filter(g => g.id !== id);
-    save();
-    toast("Goal deleted");
-  }
-
-  /* =========================================================
-     BILLS
-  ========================================================= */
-
-  function addBill(kind = "Bill") {
-    const isCard = kind === "Credit Card";
-
-    const name = isCard
-      ? "Credit Card"
-      : $("billName")?.value || "Bill";
-
-    const amount = isCard
-      ? num($("cardBill")?.value)
-      : num($("billAmount")?.value);
-
-    const due = isCard
-      ? $("cardDue")?.value || today()
-      : $("billDue")?.value || today();
-
-    if (amount <= 0) {
-      toast("Bill amount enter karein");
-      return;
-    }
-
-    D.bills.push({
-      id: uid(),
-      name,
-      amount,
-      due,
-      kind,
-      status: "pending"
-    });
-
-    save();
-    toast(`${kind} added`);
-  }
-
-  /* =========================================================
-     EMI
-  ========================================================= */
-
-  function calcEMI() {
-    const principal =
-      num($("loanAmount")?.value) ||
-      num(prompt("Loan amount"));
-
-    const rate =
-      num($("loanRate")?.value) ||
-      num(prompt("Annual interest %") || 0);
-
-    const months =
-      num($("loanTenure")?.value) ||
-      num(prompt("Tenure months"));
-
-    if (principal <= 0 || months <= 0) {
-      toast("Loan details enter karein");
-      return;
-    }
-
-    const r = rate / 12 / 100;
-
-    const emi =
-      r === 0
-        ? principal / months
-        : principal * r * Math.pow(1 + r, months) /
-          (Math.pow(1 + r, months) - 1);
-
-    const text = `EMI: ${money(emi)}`;
-
-    if ($("emiResult"))
-      $("emiResult").textContent = text;
-
-    toast(text);
-  }
-
-  /* =========================================================
-     REMINDERS
-  ========================================================= */
-
-  function addReminder() {
-    const text =
-      $("reminderText")?.value ||
-      $("reminderName")?.value ||
-      prompt("Reminder");
-
-    if (!text) return;
-
-    const date =
-      $("reminderDate")?.value ||
-      today();
-
-    D.reminders.push({
-      id: uid(),
-      text,
-      date,
-      done: false
-    });
-
-    save();
-    toast("Reminder added");
-  }
-
-  /* =========================================================
-     REPORTS
-  ========================================================= */
-
-  function showReports() {
-    const income = totalIncome();
-    const expense = totalExpense();
-    const people = currentPeople();
-
-    const given = totalGiven(people);
-    const received = totalReceived(people);
-    const balance = income - expense;
-
-    const html = `
-      <div style="padding:12px">
-        <h3>HISAB Report</h3>
-        <p>Income: <strong>${money(income)}</strong></p>
-        <p>Expense: <strong>${money(expense)}</strong></p>
-        <p>Net Cashflow: <strong>${money(balance)}</strong></p>
-        <hr>
-        <p>Give: <strong>${money(given)}</strong></p>
-        <p>Receive: <strong>${money(received)}</strong></p>
-        <p>Khata Balance: <strong>${money(given - received)}</strong></p>
-        <p>Transactions: ${D.transactions.length}</p>
-        <p>People: ${people.length}</p>
-      </div>
-    `;
-
-    const box =
-      $("reports")?.querySelector(".report-content") ||
-      $("reportContent");
-
-    if (box) box.innerHTML = html;
-
-    show("reports");
-  }
-
-  function createSummaryText() {
-    const people = currentPeople();
-
-    return [
-      "HISAB MONEY MANAGER",
-      "====================",
-      `Mode: ${selectedMode}`,
-      `Date: ${today()}`,
-      "",
-      `Income: ${money(totalIncome())}`,
-      `Expense: ${money(totalExpense())}`,
-      `Net: ${money(totalIncome() - totalExpense())}`,
-      "",
-      `Give: ${money(totalGiven(people))}`,
-      `Receive: ${money(totalReceived(people))}`,
-      `Khata Balance: ${money(
-        totalGiven(people) - totalReceived(people)
-      )}`,
-      "",
-      `People: ${people.length}`,
-      `Transactions: ${D.transactions.length}`,
-      `Bills: ${D.bills.length}`,
-      `Goals: ${D.goals.length}`
-    ].join("\n");
-  }
-
-  function exportSummary() {
-    const text = createSummaryText();
-
-    const blob = new Blob([text], {
-      type: "text/plain;charset=utf-8"
-    });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `HISAB-Summary-${today()}.txt`;
-    a.click();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-    toast("Summary exported");
-  }
-
-  /* =========================================================
-     PRINT / PDF
-  ========================================================= */
-
-  function printHtml(title, content) {
-    const win = window.open("", "_blank");
-
-    if (!win) {
-      toast("Popup allow karein");
-      return;
-    }
-
-    win.document.open();
-
-    win.document.write(`
-      <!doctype html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${esc(title)}</title>
-        <style>
-          body{
-            font-family:Arial,sans-serif;
-            padding:20px;
-            color:#111;
-          }
-          h1,h2,h3{margin-top:0}
-          table{
-            width:100%;
-            border-collapse:collapse;
-            margin-top:15px;
-          }
-          th,td{
-            border:1px solid #bbb;
-            padding:8px;
-            text-align:left;
-          }
-          .give{color:#c62828}
-          .receive{color:#16823b}
-        </style>
-      </head>
-      <body>
-        ${content}
-        <script>
-          setTimeout(function(){
-            window.print();
-          },300);
-        <\/script>
-      </body>
-      </html>
-    `);
-
-    win.document.close();
-  }
-
-  function exportKhataPDF() {
-    const person = peopleArray(selectedMode).find(
-      p => p.id === selectedPersonId
-    );
-
-    if (!person) {
-      toast("Khata select karein");
-      return;
-    }
-
-    const rows = person.entries
-      .slice()
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .map(
-        e => `
-          <tr>
-            <td>${esc(e.date)}</td>
-            <td class="${e.type}">
-              ${e.type.toUpperCase()}
-            </td>
-            <td>${money(e.amount)}</td>
-            <td>${esc(e.method)}</td>
-            <td>${esc(e.status)}</td>
-            <td>${esc(e.note)}</td>
-          </tr>
-        `
-      )
-      .join("");
-
-    const content = `
-      <h1>HISAB - Khata</h1>
-      <h2>${esc(person.name)}</h2>
-
-      <p>
-        Total Give:
-        <strong>${money(personGiven(person))}</strong>
-      </p>
-
-      <p>
-        Total Receive:
-        <strong>${money(personReceived(person))}</strong>
-      </p>
-
-      <p>
-        Balance:
-        <strong>${money(personBalance(person))}</strong>
-      </p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>Method</th>
-            <th>Status</th>
-            <th>Note</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
-
-    printHtml(`HISAB Khata - ${person.name}`, content);
-  }
-
-  function exportSummaryPDF() {
-    const people = currentPeople();
-
-    const rows = people
-      .map(
-        p => `
-          <tr>
-            <td>${esc(p.name)}</td>
-            <td>${money(personGiven(p))}</td>
-            <td>${money(personReceived(p))}</td>
-            <td>${money(personBalance(p))}</td>
-          </tr>
-        `
-      )
-      .join("");
-
-    const content = `
-      <h1>HISAB Money Manager</h1>
-      <p>Mode: ${esc(selectedMode)}</p>
-      <p>Date: ${today()}</p>
-
-      <h3>Summary</h3>
-      <p>Income: ${money(totalIncome())}</p>
-      <p>Expense: ${money(totalExpense())}</p>
-      <p>Net: ${money(totalIncome() - totalExpense())}</p>
-
-      <h3>Khata Summary</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Person</th>
-            <th>Give</th>
-            <th>Receive</th>
-            <th>Balance</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
-
-    printHtml("HISAB Summary", content);
-  }
-
-  /* =========================================================
-     BACKUP / RESTORE
-  ========================================================= */
-
-  function exportBackup() {
-    const blob = new Blob(
-      [JSON.stringify(D, null, 2)],
-      { type: "application/json" }
-    );
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `HISAB-Backup-${today()}.json`;
-    a.click();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-    toast("Backup downloaded");
-  }
-
-  function importBackup(event) {
-    const file = event?.target?.files?.[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      try {
-        const imported = normaliseData(
-          JSON.parse(reader.result)
-        );
-
-        D = imported;
-        selectedMode = D.mode || "personal";
-
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(D)
-        );
-
-        renderAll();
-
-        toast("Backup restored");
-      } catch (e) {
-        console.error(e);
-        toast("Invalid backup file");
-      }
-    };
-
-    reader.readAsText(file);
-  }
-
-  /* =========================================================
-     SECURITY
-  ========================================================= */
-
-  function setPin() {
-    const pin = prompt("4 digit PIN set karein");
-
-    if (!pin) return;
-
-    if (!/^\d{4}$/.test(pin)) {
-      toast("PIN exactly 4 digits ka hona chahiye");
-      return;
-    }
-
-    D.pin = pin;
-    save();
-
-    toast("PIN saved");
-  }
-
-  function lockApp() {
-    if (!D.pin) {
-      toast("Pehle PIN set karein");
-      return;
-    }
-
-    D.locked = true;
-    save();
-
-    showLockScreen();
-  }
-
-  function showLockScreen() {
-    let lock = $("hisabLockScreen");
-
-    if (!lock) {
-      lock = document.createElement("div");
-      lock.id = "hisabLockScreen";
-      lock.style.cssText =
-        "position:fixed;inset:0;background:#082b45;color:#fff;" +
-        "z-index:100000;display:flex;align-items:center;" +
-        "justify-content:center;padding:25px;text-align:center";
-
-      lock.innerHTML = `
-        <div style="width:100%;max-width:320px">
-          <h2>HISAB Locked</h2>
-          <p>Enter your PIN</p>
-          <input id="unlockPin"
-            type="password"
-            inputmode="numeric"
-            maxlength="4"
-            style="width:100%;padding:13px;border-radius:10px">
-          <button id="unlockBtn"
-            style="margin-top:12px;padding:12px 20px">
-            Unlock
-          </button>
-        </div>
-      `;
-
-      document.body.appendChild(lock);
-
-      $("unlockBtn").onclick = unlockApp;
-    }
-
-    lock.style.display = "flex";
-  }
-
-  function unlockApp() {
-    const pin = $("unlockPin")?.value || "";
-
-    if (pin !== D.pin) {
-      toast("Wrong PIN");
-      return;
-    }
-
-    D.locked = false;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(D));
-
-    const lock = $("hisabLockScreen");
-    if (lock) lock.style.display = "none";
-
-    toast("App unlocked");
-  }
-
-  /* =========================================================
-     OTHER TOOLS
-  ========================================================= */
-
-  function calcFD() {
-    const principal =
-      num($("fdAmount")?.value) ||
-      num(prompt("FD amount"));
-
-    const rate =
-      num($("fdRate")?.value) ||
-      num(prompt("Annual interest %"));
-
-    const months =
-      num($("fdN")?.value) ||
-      num(prompt("FD months"));
-
-    if (principal <= 0 || months <= 0) {
-      toast("FD details enter karein");
-      return;
-    }
-
-    const maturity =
-      principal *
-      Math.pow(
-        1 + rate / 100,
-        months / 12
-      );
-
-    const interest = maturity - principal;
-
-    const text =
-      `Maturity: ${money(maturity)} | Interest: ${money(interest)}`;
-
-    if ($("fdResult"))
-      $("fdResult").textContent = text;
-
-    toast("FD calculated");
-  }
-
-  function addInsurance() {
-    const name =
-      $("insuranceName")?.value ||
-      prompt("Insurance name");
-
-    if (!name) return;
-
-    D.insurance.push({
-      id: uid(),
-      name,
-      date: $("insuranceDate")?.value || today(),
-      amount: num($("insuranceAmount")?.value)
-    });
-
-    save();
-    toast("Insurance added");
-  }
-
-  function addSchool() {
-    const name =
-      $("schoolName")?.value ||
-      prompt("School / education name");
-
-    if (!name) return;
-
-    D.schools.push({
-      id: uid(),
-      name,
-      amount: num($("schoolAmount")?.value),
-      date: $("schoolDate")?.value || today()
-    });
-
-    save();
-    toast("Education entry added");
-  }
-
-  function addVehicle() {
-    const name =
-      $("vehicleName")?.value ||
-      prompt("Vehicle name");
-
-    if (!name) return;
-
-    D.vehicles.push({
-      id: uid(),
-      name,
-      serviceDate:
-        $("vehicleService")?.value ||
-        $("serviceDate")?.value ||
-        "",
-      insuranceDate:
-        $("vehicleIns")?.value ||
-        $("vehicleInsurance")?.value ||
-        "",
-      pucDate:
-        $("vehiclePuc")?.value ||
-        $("pucDate")?.value ||
-        ""
-    });
-
-    save();
-    toast("Vehicle added");
-  }
-
-  function addFamilyMember() {
-    const name =
-      $("familyName")?.value ||
-      prompt("Family member name");
-
-    if (!name) return;
-
-    D.family.push({
-      id: uid(),
-      name
-    });
-
-    save();
-    toast("Family member added");
-  }
-
-  function addShopping() {
-    const name =
-      $("shoppingName")?.value ||
-      prompt("Shopping item");
-
-    if (!name) return;
-
-    D.shopping.push({
-      id: uid(),
-      name,
-      amount: num($("shoppingAmount")?.value)
-    });
-
-    save();
-    toast("Shopping item added");
-  }
-
-  function addUtility() {
-    const name =
-      $("utilityName")?.value ||
-      prompt("Utility");
-
-    if (!name) return;
-
-    D.utilities.push({
-      id: uid(),
-      name,
-      amount: num($("utilityAmount")?.value),
-      due: $("utilityDue")?.value || today()
-    });
-
-    save();
-    toast("Utility added");
-  }
-
-  function renderComparison() {
-    const income = totalIncome();
-    const expense = totalExpense();
-
-    const text =
-      `Income ${money(income)} | Expense ${money(expense)} | ` +
-      `Net ${money(income - expense)}`;
-
-    if ($("comparisonResult"))
-      $("comparisonResult").textContent = text;
-
-    toast("Comparison updated");
-  }
-
-  function calcEmergency() {
-    const monthly =
-      num($("monthlyExpense")?.value) ||
-      num(prompt("Monthly expense"));
-
-    const months =
-      num($("emergencyMonths")?.value) ||
-      num(prompt("How many months"));
-
-    if (monthly <= 0 || months <= 0) {
-      toast("Details enter karein");
-      return;
-    }
-
-    const result = monthly * months;
-
-    if ($("emergencyResult"))
-      $("emergencyResult").textContent =
-        `Emergency Fund: ${money(result)}`;
-
-    toast(`Emergency Fund: ${money(result)}`);
-  }
-
-  function addDoc() {
-    const name =
-      $("docName")?.value ||
-      prompt("Document name");
-
-    if (!name) return;
-
-    D.docs.push({
-      id: uid(),
-      name,
-      date: today()
-    });
-
-    save();
-    toast("Document added");
-  }
-
-  function addAnnual() {
-    const name =
-      $("annualName")?.value ||
-      prompt("Annual expense");
-
-    if (!name) return;
-
-    D.annual.push({
-      id: uid(),
-      name,
-      amount: num($("annualAmount")?.value)
-    });
-
-    save();
-    toast("Annual expense added");
-  }
-
-  function saveLimit() {
-    const name =
-      $("limitName")?.value ||
-      prompt("Limit name");
-
-    if (!name) return;
-
-    const amount =
-      num($("limitAmount")?.value) ||
-      num(prompt("Limit amount"));
-
-    if (amount <= 0) return;
-
-    D.limits.push({
-      id: uid(),
-      name,
-      amount
-    });
-
-    save();
-    toast("Limit saved");
-  }
-
-  /* =========================================================
-     GLOBAL SEARCH
-  ========================================================= */
-
-  function searchAllData(value) {
-    if (value === undefined) {
-      value = $("searchAll")?.value || "";
-    }
-
-    const q = String(value).toLowerCase().trim();
-
-    if (!q) {
-      toast("Search name, note, amount...");
-      return;
-    }
-
-    const results = [];
-
-    D.transactions.forEach(t => {
-      const text =
-        `${t.type} ${t.amount} ${t.note} ${t.date}`.toLowerCase();
-
-      if (text.includes(q)) {
-        results.push(
-          `Transaction: ${t.type} ${money(t.amount)} ${t.note || ""}`
-        );
-      }
-    });
-
-    [...D.personal, ...D.business].forEach(p => {
-      if (p.name.toLowerCase().includes(q)) {
-        results.push(`Khata: ${p.name}`);
-      }
-
-      p.entries.forEach(e => {
-        const text =
-          `${p.name} ${e.type} ${e.amount} ${e.note} ${e.method}`
-            .toLowerCase();
-
-        if (text.includes(q)) {
-          results.push(
-            `Khata: ${p.name} - ${e.type} ${money(e.amount)}`
-          );
-        }
-      });
-    });
-
-    D.bills.forEach(b => {
-      if (
-        `${b.name} ${b.amount} ${b.kind}`
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push(`Bill: ${b.name} ${money(b.amount)}`);
-      }
-    });
-
-    if (!results.length) {
-      toast("Kuch nahi mila");
-      return;
-    }
-
-    alert(results.slice(0, 30).join("\n"));
-  }
-
-  /* =========================================================
-     SHARE HISAB
-  ========================================================= */
-
-  function copyText(text) {
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  }
-
-  function fallbackCopy(text) {
-    const area = document.createElement("textarea");
-    area.value = text;
-    area.style.position = "fixed";
-    area.style.left = "-9999px";
-
-    document.body.appendChild(area);
-    area.select();
-
-    try {
-      document.execCommand("copy");
-    } catch (_) {}
-
-    area.remove();
-  }
-
-  function shareHisab() {
-    const text = createSummaryText();
-
-    if (navigator.share) {
-      navigator
-        .share({
-          title: "HISAB Money Manager",
-          text
-        })
-        .catch(() => {});
-    } else {
-      copyText(text);
-      toast("HISAB summary copied");
-    }
-  }
-
-  /* =========================================================
-     QUICK ADD
-  ========================================================= */
-
-  function openQuickAdd() {
-    const choice = prompt(
-      "Quick Add:\n" +
-      "1 = Give\n" +
-      "2 = Receive\n" +
-      "3 = Income\n" +
-      "4 = Expense"
-    );
-
-    if (choice === "1") {
-      openKhataForm(selectedMode);
-      if ($("khataType")) $("khataType").value = "give";
-      return;
-    }
-
-    if (choice === "2") {
-      openKhataForm(selectedMode);
-      if ($("khataType")) $("khataType").value = "receive";
-      return;
-    }
-
-    if (choice === "3") {
-      addTransaction("Income");
-      return;
-    }
-
-    if (choice === "4") {
-      addTransaction("Expense");
-    }
-  }
-
-  /* =========================================================
-     HOME RENDER
-  ========================================================= */
-
-  function renderHome() {
-    const list = currentPeople();
-
-    const given = totalGiven(list);
-    const received = totalReceived(list);
-
-    if ($("receivable"))
-      $("receivable").textContent = money(given);
-
-    if ($("payable"))
-      $("payable").textContent = money(received);
-
-    if ($("totalIncome"))
-      $("totalIncome").textContent = money(totalIncome());
-
-    if ($("totalExpense"))
-      $("totalExpense").textContent = money(totalExpense());
-  }
-
-  function renderPersonal() {
-    const list = D.personal;
-
-    if ($("ledgerGiven"))
-      $("ledgerGiven").textContent = money(totalGiven(list));
-
-    if ($("ledgerReceived"))
-      $("ledgerReceived").textContent =
-        money(totalReceived(list));
-
-    if ($("ledgerNet"))
-      $("ledgerNet").textContent =
-        money(totalGiven(list) - totalReceived(list));
-
-    const q = String($("personalSearch")?.value || "")
-      .toLowerCase()
-      .trim();
-
-    renderPeople("personal", q);
-  }
-
-  function renderBusinessSummary() {
-    const given = totalGiven(D.business);
-    const received = totalReceived(D.business);
-
-    if ($("businessGiven"))
-      $("businessGiven").textContent = money(given);
-
-    if ($("businessReceived"))
-      $("businessReceived").textContent = money(received);
-
-    if ($("businessNet"))
-      $("businessNet").textContent = money(given - received);
-  }
-
-  /* =========================================================
-     GENERAL RENDER
-  ========================================================= */
-
-  function renderAll() {
-    renderHome();
-    renderPersonal();
-    renderBusinessSummary();
-    renderBusiness(currentBusinessFilter);
-    renderGoals();
-
-    if (
-      $("detailPersonName") &&
-      selectedPersonId
-    ) {
-      const person = peopleArray(selectedMode).find(
-        p => p.id === selectedPersonId
-      );
-
-      if (person) {
-        $("detailPersonName").textContent = person.name;
-
-        if ($("detailGive"))
-          $("detailGive").textContent =
-            money(personGiven(person));
-
-        if ($("detailReceive"))
-          $("detailReceive").textContent =
-            money(personReceived(person));
-
-        if ($("detailBalance"))
-          $("detailBalance").textContent =
-            money(personBalance(person));
-      }
-    }
-  }
-
-  /* =========================================================
-     INITIAL SETUP
-  ========================================================= */
-
-  function init() {
-    if ($("guestGate")) {
-      $("guestGate").style.display = "block";
-    }
-
-    const shell = $("appShell");
-
-    if (shell) {
-      shell.style.display = "block";
-    }
-
-    document.querySelectorAll(
-      "#khataEntry,#khataDetail"
-    ).forEach(el => {
-      el.style.display = "none";
-    });
-
-    if ($("khataDate"))
-      $("khataDate").value = today();
-
-    if ($("fdN")) {
-      $("fdN").setAttribute(
-        "placeholder",
-        "Months"
-      );
-    }
-
-    renderAll();
-
-    if (D.locked && D.pin) {
-      setTimeout(showLockScreen, 100);
-    }
-  }
-
-  /* =========================================================
-     WINDOW EXPORTS
-     IMPORTANT:
-     Inline HTML onclick handlers need window functions.
-  ========================================================= */
-
-  window.enterGuestMode = enterGuestMode;
-  window.show = show;
-  window.setMode = setMode;
-
-  window.toggleLanguage = toggleLanguage;
-  window.toggleCurrency = toggleCurrency;
-
-  window.openKhataForm = openKhataForm;
-  window.closeKhataForm = closeKhataForm;
-  window.saveKhataEntry = saveKhataEntry;
-
-  window.openKhataDetail = openKhataDetail;
-  window.closeKhataDetail = closeKhataDetail;
-
-  window.searchKhata = searchKhata;
-  window.filterKhata = filterKhata;
-  window.detailFilter = detailFilter;
-  window.businessFilter = businessFilter;
-
-  window.editKhataEntry = editKhataEntry;
-  window.deleteKhataEntry = deleteKhataEntry;
-  window.toggleKhataStatus = toggleKhataStatus;
-
-  window.openPaymentEntry = openPaymentEntry;
-  window.shareKhata = shareKhata;
-  window.exportKhataPDF = exportKhataPDF;
-  window.exportSummaryPDF = exportSummaryPDF;
-
-  window.addBusinessPerson = addBusinessPerson;
-  window.addBusinessSale = addBusinessSale;
-  window.addBusinessPurchase = addBusinessPurchase;
-
-  window.addTransaction = addTransaction;
-  window.calcBudget = calcBudget;
-  window.calcGoal = calcGoal;
-  window.deleteGoal = deleteGoal;
-  window.calcEMI = calcEMI;
-  window.addBill = addBill;
-  window.addReminder = addReminder;
-
-  window.showReports = showReports;
-  window.exportSummary = exportSummary;
-
-  window.setPin = setPin;
-  window.lockApp = lockApp;
-
-  window.exportBackup = exportBackup;
-  window.importBackup = importBackup;
-
-  window.calcFD = calcFD;
-  window.addInsurance = addInsurance;
-  window.addSchool = addSchool;
-  window.addVehicle = addVehicle;
-  window.addFamilyMember = addFamilyMember;
-  window.addShopping = addShopping;
-  window.addUtility = addUtility;
-  window.renderComparison = renderComparison;
-  window.calcEmergency = calcEmergency;
-  window.addDoc = addDoc;
-  window.addAnnual = addAnnual;
-  window.saveLimit = saveLimit;
-
-  window.searchAllData = searchAllData;
-  window.shareHisab = shareHisab;
-  window.openQuickAdd = openQuickAdd;
-
-  /* =========================================================
-     START
-  ========================================================= */
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+    return d;
+  }catch(e){return {...DEF};}
+}
+
+function save(){localStorage.setItem(KEY,JSON.stringify(D));}
+
+function esc(v){
+  return String(v??"")
+   .replace(/&/g,"&amp;")
+   .replace(/</g,"&lt;")
+   .replace(/>/g,"&gt;")
+   .replace(/"/g,"&quot;")
+   .replace(/'/g,"&#39;");
+}
+
+function money(n){
+  return `${D.currency}${Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2})}`;
+}
+
+function toast(msg){
+  let x=$("hisabToast");
+  if(!x){
+    x=document.createElement("div");
+    x.id="hisabToast";
+    x.style.cssText="position:fixed;left:50%;bottom:85px;transform:translateX(-50%);z-index:99999;background:#102a43;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;box-shadow:0 8px 25px #0003";
+    document.body.appendChild(x);
+  }
+  x.textContent=msg;x.style.display="block";
+  clearTimeout(x.t);x.t=setTimeout(()=>x.style.display="none",2200);
+}
+
+function pageIds(){
+ return ["home","personal","business","khataEntry","khataDetail",
+ "planning","credit","reports","reminders","privacy","family",
+ "ads","familytools","tools13","final","transactions"];
+}
+
+function show(id){
+ pageIds().forEach(x=>{if($(x))$(x).style.display="none";});
+ if($(id))$(id).style.display="block";
+ window.scrollTo(0,0);
+ renderAll();
+}
+
+function setText(id,t){if($(id))$(id).textContent=t;}
+function setVal(id,t){if($(id))$(id).value=t??"";}
+
+/* ---------- GUEST / START ---------- */
+function showGuestGate(){
+ if($("guestGate"))$("guestGate").style.display="flex";
+ if($("appShell"))$("appShell").style.display="none";
+}
+
+function enterGuestMode(){
+ if($("guestGate"))$("guestGate").style.display="none";
+ if($("appShell"))$("appShell").style.display="block";
+ if($("welcome"))$("welcome").style.display="none";
+ show("home");
+}
+
+function toggleLanguage(){
+ D.language=D.language==="en"?"hi":"en";
+ save();renderAll();
+ toast(D.language==="hi"?"हिंदी चालू":"English ON");
+}
+
+function toggleCurrency(){
+ D.currency=D.currency==="₹"?"$":"₹";
+ save();renderAll();
+}
+
+/* ---------- MODE ---------- */
+function setMode(mode){
+ D.mode=mode==="business"?"business":"personal";
+ save();renderAll();show(D.mode==="business"?"business":"personal");
+}
+
+function modeData(a){return a.filter(x=>(x.mode||"personal")===D.mode);}
+
+/* ---------- TRANSACTIONS ---------- */
+function addTransaction(type){
+ const t=type||val("transactionType")||"expense";
+ const amount=num("transactionAmount")||Number(prompt("Amount")||0);
+ if(amount<=0)return toast("Amount enter karo");
+
+ const category=val("transactionCategory")||prompt("Category","General")||"General";
+ const note=val("transactionNote")||prompt("Note","")||"";
+ const date=val("transactionDate")||today();
+
+ D.transactions.push({
+   id:uid(),type:t,amount,date,category,note,mode:D.mode
+ });
+ save();clearTransaction();renderAll();toast("Transaction saved");
+}
+
+function clearTransaction(){
+ ["transactionAmount","transactionCategory","transactionDate","transactionNote"]
+ .forEach(x=>setVal(x,""));
+}
+
+function renderTransactions(){
+ const box=$("transactionList");if(!box)return;
+ const a=modeData(D.transactions).slice().reverse();
+ box.innerHTML=a.length?a.map(x=>`
+  <div class="entry-card">
+   <div class="entry-top">
+    <b>${esc(x.category||x.type)}</b>
+    <strong>${x.type==="income"?"+":"-"}${money(x.amount)}</strong>
+   </div>
+   <div class="entry-meta">${esc(x.date||"")} • ${esc(x.note||"")}</div>
+   <button class="small-btn" onclick="deleteTransaction('${x.id}')">Delete</button>
+  </div>`).join(""):`<div class="empty-state">No transactions yet</div>`;
+}
+
+function deleteTransaction(id){
+ if(!confirm("Delete transaction?"))return;
+ D.transactions=D.transactions.filter(x=>x.id!==id);
+ save();renderAll();toast("Deleted");
+}
+
+/* ---------- UDHAR / KHATA ---------- */
+function khataEntries(){
+ return modeData(D.lendDen);
+}
+
+function peopleForMode(){
+ const names=[...D.people,...khataEntries().map(x=>x.person)]
+   .filter(Boolean);
+ return [...new Set(names)];
+}
+
+function openKhataForm(mode){
+ if(mode)setMode(mode);
+ setVal("khataPerson",currentPerson);
+ setVal("khataDate",today());
+ if($("khataType"))$("khataType").value="give";
+ if($("khataStatus"))$("khataStatus").value="pending";
+ show("khataEntry");
+}
+
+function closeKhataForm(){show(D.mode==="business"?"business":"personal");}
+
+function saveKhataEntry(){
+ const person=val("khataPerson");
+ const amount=num("khataAmount");
+ if(!person)return toast("Person name enter karo");
+ if(amount<=0)return toast("Amount enter karo");
+
+ const e={
+  id:uid(),person,
+  type:val("khataType")||"give",
+  amount,
+  date:val("khataDate")||today(),
+  method:val("khataMethod")||"Cash",
+  status:val("khataStatus")||"pending",
+  note:val("khataNote")||"",
+  mode:D.mode
+ };
+
+ D.lendDen.push(e);
+ if(!D.people.includes(person))D.people.push(person);
+ currentPerson=person;
+ save();
+
+ ["khataAmount","khataNote"].forEach(x=>setVal(x,""));
+ renderAll();
+ openKhataDetail(person);
+ toast("Khata entry saved");
+}
+
+function openKhataDetail(person){
+ currentPerson=person;
+ setText("detailPersonName",person);
+ show("khataDetail");
+ renderKhataDetail();
+}
+
+function closeKhataDetail(){
+ show(D.mode==="business"?"business":"personal");
+}
+
+function detailFilter(f,btn){
+ khataFilter=f||"all";
+ document.querySelectorAll(".filter-chip,.chip").forEach(x=>x.classList.remove("active"));
+ if(btn)btn.classList.add("active");
+ renderKhataDetail();
+}
+
+function renderKhataDetail(){
+ const a=khataEntries().filter(x=>x.person===currentPerson);
+ let give=a.filter(x=>x.type==="give").reduce((s,x)=>s+x.amount,0);
+ let receive=a.filter(x=>x.type==="receive").reduce((s,x)=>s+x.amount,0);
+
+ setText("detailGive",money(give));
+ setText("detailReceive",money(receive));
+ setText("detailBalance",money(give-receive));
+
+ let list=a;
+ if(khataFilter==="give")list=a.filter(x=>x.type==="give");
+ if(khataFilter==="receive")list=a.filter(x=>x.type==="receive");
+ if(khataFilter==="pending")list=a.filter(x=>x.status!=="settled");
+
+ const box=$("khataHistory");if(!box)return;
+
+ box.innerHTML=list.length?list.slice().reverse().map(x=>`
+ <div class="entry-card">
+  <div class="entry-top">
+   <b>${x.type==="give"?"Give":"Receive"}</b>
+   <strong class="${x.type==="give"?"give":"receive"}">
+    ${money(x.amount)}
+   </strong>
+  </div>
+  <div class="entry-meta">
+   ${esc(x.date)} • ${esc(x.method)} • ${esc(x.status)}
+  </div>
+  <div class="entry-note">${esc(x.note||"")}</div>
+  <div class="entry-actions">
+   <button onclick="editKhata('${x.id}')">Edit</button>
+   <button onclick="settleKhata('${x.id}')">Settle</button>
+   <button onclick="deleteKhata('${x.id}')">Delete</button>
+  </div>
+ </div>`).join(""):`<div class="empty-state">No Khata entries</div>`;
+}
+
+function editKhata(id){
+ const x=D.lendDen.find(a=>a.id===id);if(!x)return;
+ const amount=Number(prompt("Amount",x.amount));
+ if(!amount)return;
+ x.amount=amount;
+ x.note=prompt("Note",x.note||"")??x.note;
+ x.method=prompt("Payment method",x.method||"Cash")||x.method;
+ save();renderAll();renderKhataDetail();toast("Updated");
+}
+
+function settleKhata(id){
+ const x=D.lendDen.find(a=>a.id===id);if(!x)return;
+ x.status="settled";save();renderAll();renderKhataDetail();toast("Settled");
+}
+
+function deleteKhata(id){
+ if(!confirm("Delete this entry?"))return;
+ D.lendDen=D.lendDen.filter(x=>x.id!==id);
+ save();renderAll();renderKhataDetail();toast("Deleted");
+}
+
+function searchKhata(mode){
+ const q=(val(mode==="business"?"businessSearch":"personalSearch")).toLowerCase();
+ renderPeople(q,mode||D.mode);
+}
+
+function filterKhata(mode,filter,btn){
+ const q=val(mode==="business"?"businessSearch":"personalSearch").toLowerCase();
+ const box=$(mode==="business"?"businessList":"personalList");
+ if(!box)return;
+
+ document.querySelectorAll(".filter-chip").forEach(x=>x.classList.remove("active"));
+ if(btn)btn.classList.add("active");
+
+ let a=peopleForMode().filter(n=>n.toLowerCase().includes(q));
+ if(filter==="give")
+  a=a.filter(n=>khataEntries().some(x=>x.person===n&&x.type==="give"));
+ if(filter==="receive")
+  a=a.filter(n=>khataEntries().some(x=>x.person===n&&x.type==="receive"));
+ if(filter==="pending")
+  a=a.filter(n=>khataEntries().some(x=>x.person===n&&x.status!=="settled"));
+
+ renderPeopleList(a,mode);
+}
+
+function renderPeople(q="",mode=D.mode){
+ const names=peopleForMode().filter(n=>n.toLowerCase().includes(q));
+ renderPeopleList(names,mode);
+}
+
+function renderPeopleList(names,mode){
+ const box=$(mode==="business"?"businessList":"personalList");
+ if(!box)return;
+
+ box.innerHTML=names.length?names.map(person=>{
+   const a=khataEntries().filter(x=>x.person===person);
+   const g=a.filter(x=>x.type==="give").reduce((s,x)=>s+x.amount,0);
+   const r=a.filter(x=>x.type==="receive").reduce((s,x)=>s+x.amount,0);
+   return `<div class="person-card" onclick="openKhataDetail('${esc(person).replace(/'/g,"&#39;")}')">
+    <div class="person-avatar">${esc(person[0].toUpperCase())}</div>
+    <div class="person-info">
+     <b>${esc(person)}</b>
+     <small>Give ${money(g)} • Receive ${money(r)}</small>
+    </div>
+    <strong>${money(g-r)}</strong>
+   </div>`;
+ }).join(""):`<div class="empty-state">No people yet</div>`;
+}
+
+function khataTotals(mode){
+ const a=D.lendDen.filter(x=>(x.mode||"personal")===mode);
+ return {
+  give:a.filter(x=>x.type==="give").reduce((s,x)=>s+x.amount,0),
+  receive:a.filter(x=>x.type==="receive").reduce((s,x)=>s+x.amount,0)
+ };
+}
+
+/* ---------- BUSINESS ---------- */
+function businessFilter(type,btn){
+ bizFilter=type;
+ document.querySelectorAll("#business .filter-chip").forEach(x=>x.classList.remove("active"));
+ if(btn)btn.classList.add("active");
+ renderBusiness();
+}
+
+function renderBusiness(){
+ const t=khataTotals("business");
+ setText("businessGiven",money(t.give));
+ setText("businessReceived",money(t.receive));
+ setText("businessNet",money(t.give-t.receive));
+
+ const box=$("businessList");if(!box)return;
+
+ if(bizFilter==="sales"||bizFilter==="purchase"){
+   const arr=bizFilter==="sales"?D.sales:D.purchases;
+   box.innerHTML=arr.length?arr.slice().reverse().map(x=>`
+    <div class="entry-card">
+     <div class="entry-top"><b>${esc(x.name)}</b><strong>${money(x.amount)}</strong></div>
+     <div class="entry-meta">${esc(x.date||today())}</div>
+    </div>`).join(""):`<div class="empty-state">No ${bizFilter} yet</div>`;
+   return;
+ }
+
+ const people=D.businessPeople.map(x=>typeof x==="string"?x:x.name);
+ const names=[...new Set([...people,...D.lendDen.filter(x=>x.mode==="business").map(x=>x.person)])];
+ renderPeopleList(names.filter(n=>n.toLowerCase().includes((val("businessSearch")||"").toLowerCase())),"business");
+}
+
+/* ---------- PAYMENT ---------- */
+function openPaymentEntry(){
+ if(!currentPerson)return toast("Pehle person select karo");
+ setVal("khataPerson",currentPerson);
+ if($("khataType"))$("khataType").value="receive";
+ if($("khataStatus"))$("khataStatus").value="settled";
+ show("khataEntry");
+}
+
+/* ---------- SHARE / PDF ---------- */
+function khataText(){
+ const a=khataEntries().filter(x=>x.person===currentPerson);
+ const t=khataTotals(D.mode);
+ return `HISAB - ${currentPerson}\n\n`+
+  `Total Give: ${money(t.give)}\n`+
+  `Total Receive: ${money(t.receive)}\n`+
+  `Balance: ${money(t.give-t.receive)}\n\n`+
+  a.map(x=>`${x.date} | ${x.type} | ${money(x.amount)} | ${x.method} | ${x.note||""}`).join("\n");
+}
+
+async function shareText(text){
+ try{
+  if(navigator.share)await navigator.share({title:"HISAB",text});
+  else{await navigator.clipboard.writeText(text);toast("Copied");}
+ }catch(e){}
+}
+
+function shareKhata(){shareText(khataText());}
+
+function printPDF(title,text){
+ const old=document.body.innerHTML;
+ document.body.innerHTML=`
+ <main style="padding:25px;font-family:Arial">
+ <h1>${esc(title)}</h1>
+ <pre style="white-space:pre-wrap;font:15px Arial;line-height:1.7">${esc(text)}</pre>
+ </main>`;
+ window.print();
+ document.body.innerHTML=old;
+ location.reload();
+}
+
+function exportKhataPDF(){
+ printPDF("HISAB - "+currentPerson,khataText());
+}
+
+function summaryText(){
+ const t=totals();
+ return `HISAB SUMMARY\n\nIncome: ${money(t.income)}
+Expense: ${money(t.expense)}
+Give: ${money(t.give)}
+Receive: ${money(t.receive)}
+Balance: ${money(t.balance)}`;
+}
+
+function exportSummaryPDF(){printPDF("HISAB Summary",summaryText());}
+function exportSummary(){shareText(summaryText());}
+
+/* ---------- HOME ---------- */
+function totals(){
+ const tx=modeData(D.transactions);
+ const k=khataTotals(D.mode);
+ const income=tx.filter(x=>x.type==="income").reduce((s,x)=>s+x.amount,0);
+ const expense=tx.filter(x=>x.type==="expense").reduce((s,x)=>s+x.amount,0);
+ return {income,expense,give:k.give,receive:k.receive,
+ balance:income-expense-k.give+k.receive};
+}
+
+function renderHome(){
+ const t=totals();
+
+ ["balance","homeBalance","totalBalance"].forEach(id=>setText(id,money(t.balance)));
+ ["income","homeIncome","totalIncome"].forEach(id=>setText(id,money(t.income)));
+ ["expense","homeExpense","totalExpense"].forEach(id=>setText(id,money(t.expense)));
+ ["given","homeGiven"].forEach(id=>setText(id,money(t.give)));
+ ["received","homeReceived"].forEach(id=>setText(id,money(t.receive)));
+
+ const recent=$("activityList");
+ if(recent){
+  const a=modeData(D.transactions).slice(-5).reverse();
+  recent.innerHTML=a.length?a.map(x=>`
+   <div class="activity-row">
+    <b>${esc(x.category||x.type)}</b>
+    <span>${x.type==="income"?"+":"-"}${money(x.amount)}</span>
+   </div>`).join(""):`<div class="empty-state">No activity yet</div>`;
+ }
+}
+
+/* ---------- PLANNING ---------- */
+function calcBudget(){
+ const income=num("budgetIncome");
+ const limit=num("budgetLimit");
+ if(income||limit){
+   D.budgets.push({id:uid(),income,limit,date:today(),mode:D.mode});
+   save();
+   toast(`Budget saved • ${money(limit)}`);
+ }else toast("Budget amount enter karo");
+}
+
+function calcGoal(){
+ const name=val("goalName")||prompt("Goal name");
+ const target=num("goalTarget")||Number(prompt("Target amount")||0);
+ const saved=num("goalSaved")||0;
+ if(!name||target<=0)return toast("Goal details enter karo");
+ D.goals.push({id:uid(),name,target,saved,date:today(),mode:D.mode});
+ save();renderGoals();toast("Goal saved");
+}
+
+function renderGoals(){
+ const box=$("goalList");if(!box)return;
+ const a=D.goals.filter(x=>(x.mode||"personal")===D.mode);
+ box.innerHTML=a.length?a.map(x=>{
+  const p=Math.min(100,(x.saved/x.target)*100);
+  return `<div class="goal-card">
+   <b>${esc(x.name)}</b>
+   <div>${money(x.saved)} / ${money(x.target)}</div>
+   <small>${p.toFixed(0)}%</small>
+  </div>`;
+ }).join(""):`<div class="empty-state">No goals yet</div>`;
+}
+
+function calcEMI(){
+ const p=num("loanAmount")||Number(prompt("Loan amount")||0);
+ const r=num("loanRate")||Number(prompt("Annual interest %","12")||0);
+ const n=num("loanTenure")||Number(prompt("Months","12")||0);
+ if(!p||!n)return toast("Loan details enter karo");
+ const m=r/1200;
+ const emi=m? p*m*Math.pow(1+m,n)/(Math.pow(1+m,n)-1):p/n;
+ toast(`EMI: ${money(emi)}`);
+ setText("emiResult",money(emi));
+}
+
+/* ---------- BILLS / REMINDERS ---------- */
+function addBill(){
+ const name=prompt("Bill name");if(!name)return;
+ const amount=Number(prompt("Amount")||0);
+ D.bills.push({id:uid(),name,amount,date:today(),mode:D.mode});
+ save();toast("Bill saved");
+}
+
+function addReminder(){
+ const name=prompt("Reminder");if(!name)return;
+ D.reminders.push({id:uid(),name,date:today(),mode:D.mode});
+ save();toast("Reminder saved");
+}
+
+/* ---------- SECURITY ---------- */
+function setPin(){
+ const p=prompt("4 digit PIN");
+ if(!/^\d{4}$/.test(p||""))return toast("4 digit PIN required");
+ D.pin=p;save();toast("PIN saved");
+}
+
+function lockApp(){
+ if(!D.pin)return toast("Pehle PIN set karo");
+ const x=document.createElement("div");
+ x.id="hisabLock";
+ x.style.cssText="position:fixed;inset:0;background:#082b45;z-index:999999;display:flex;align-items:center;justify-content:center;padding:25px";
+ x.innerHTML=`<div style="background:#fff;padding:25px;border-radius:20px;width:100%;max-width:340px;text-align:center">
+ <h2>HISAB Locked</h2>
+ <input id="unlockPin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN" style="padding:14px;width:100%;margin:15px 0">
+ <button id="unlockBtn" style="padding:13px 25px">Unlock</button></div>`;
+ document.body.appendChild(x);
+ $("unlockBtn").onclick=()=>{
+  if($("unlockPin").value===D.pin)x.remove();
+  else toast("Wrong PIN");
+ };
+}
+
+/* ---------- BACKUP ---------- */
+function exportBackup(){
+ const blob=new Blob([JSON.stringify(D,null,2)],{type:"application/json"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="HISAB-Backup.json";
+ a.click();
+ URL.revokeObjectURL(a.href);
+}
+
+function importBackup(e){
+ const f=e?.target?.files?.[0];if(!f)return;
+ const r=new FileReader();
+ r.onload=()=>{
+  try{
+   const x=JSON.parse(r.result);
+   D={...DEF,...x};
+   save();renderAll();toast("Backup restored");
+  }catch(err){toast("Invalid backup");}
+ };
+ r.readAsText(f);
+}
+
+/* ---------- OTHER TOOLS ---------- */
+function calcFD(){
+ const p=Number(prompt("Deposit amount")||0);
+ const rate=Number(prompt("Annual rate %")||0);
+ const months=Number(prompt("Months")||0);
+ if(!p||!months)return;
+ const maturity=p*(1+rate/100*months/12);
+ toast(`Maturity: ${money(maturity)}`);
+}
+
+function addInsurance(){simpleSave("Insurance");}
+function addSchool(){simpleSave("School");}
+function addVehicle(){simpleSave("Vehicle");}
+function addFamilyMember(){simpleSave("Family member");}
+function addShopping(){simpleSave("Shopping item");}
+function addUtility(){simpleSave("Utility");}
+function addDoc(){simpleSave("Document");}
+function addAnnual(){simpleSave("Annual item");}
+
+function simpleSave(type){
+ const name=prompt(type+" name");if(!name)return;
+ toast(type+" saved");
+}
+
+function renderComparison(){toast("Comparison ready");}
+
+function calcEmergency(){
+ const monthly=Number(prompt("Monthly expense")||0);
+ const months=Number(prompt("Months","6")||0);
+ toast(`Emergency fund: ${money(monthly*months)}`);
+}
+
+function saveLimit(){
+ const n=Number(prompt("Spending limit")||0);
+ D.settings.limit=n;save();toast("Limit saved");
+}
+
+/* ---------- SEARCH ---------- */
+function searchAllData(){
+ const q=(val("globalSearch")||val("searchInput")).toLowerCase();
+ if(!q)return renderAll();
+
+ const result=[
+  ...D.transactions.map(x=>({...x,label:x.category||x.note||"Transaction"})),
+  ...D.lendDen.map(x=>({...x,label:x.person})),
+  ...D.goals.map(x=>({...x,label:x.name}))
+ ].filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+
+ const box=$("searchResults");
+ if(box)box.innerHTML=result.length?
+  result.map(x=>`<div class="entry-card"><b>${esc(x.label)}</b><br>${x.amount?money(x.amount):""}</div>`).join(""):
+  `<div class="empty-state">No result</div>`;
+}
+
+function shareHisab(){shareText(summaryText());}
+
+/* ---------- QUICK ADD ---------- */
+function openQuickAdd(){
+ const choice=prompt(
+  "HISAB Quick Add\n\n1 = Income\n2 = Expense\n3 = Give\n4 = Receive"
+ );
+ if(choice==="1")return addTransaction("income");
+ if(choice==="2")return addTransaction("expense");
+ if(choice==="3"){openKhataForm(D.mode);setTimeout(()=>setVal("khataType","give"),0);return;}
+ if(choice==="4"){openKhataForm(D.mode);setTimeout(()=>setVal("khataType","receive"),0);return;}
+}
+
+/* ---------- RENDER ---------- */
+function renderPersonal(){
+ const t=khataTotals("personal");
+ setText("ledgerGiven",money(t.give));
+ setText("ledgerReceived",money(t.receive));
+ setText("ledgerNet",money(t.give-t.receive));
+ renderPeople(val("personalSearch").toLowerCase(),"personal");
+}
+
+function renderAll(){
+ renderHome();
+ renderPersonal();
+ renderBusiness();
+ renderTransactions();
+ renderGoals();
+
+ const mode=D.mode;
+ document.querySelectorAll("[data-mode]").forEach(x=>{
+  x.classList.toggle("active",x.dataset.mode===mode);
+ });
+}
+
+Object.assign(window,{
+ showGuestGate,enterGuestMode,show,
+ toggleLanguage,toggleCurrency,setMode,
+ openKhataForm,closeKhataForm,saveKhataEntry,
+ closeKhataDetail,detailFilter,openPaymentEntry,
+ shareKhata,exportKhataPDF,searchKhata,filterKhata,
+ businessFilter,openQuickAdd,
+ addTransaction,deleteTransaction,
+ calcBudget,calcGoal,calcEMI,addBill,addReminder,
+ setPin,lockApp,exportBackup,importBackup,
+ exportSummary,exportSummaryPDF,
+ calcFD,addInsurance,addSchool,addVehicle,
+ addFamilyMember,addShopping,addUtility,
+ renderComparison,calcEmergency,addDoc,addAnnual,
+ saveLimit,searchAllData,shareHisab,
+ editKhata,settleKhata,deleteKhata
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+ if($("appShell"))$("appShell").style.display="none";
+ if($("welcome"))$("welcome").style.display="none";
+ renderAll();
+});
 
 })();
