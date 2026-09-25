@@ -1,1539 +1,1699 @@
-/* HISAB GLOBAL V7 — FINAL CONTROLLER
-   Local-first • Personal/Business • Khata/Udhaar • Reports • Backup • PIN
-*/
-(function(){
-'use strict';
+/* =========================================================
+   HISAB GLOBAL V7
+   FINAL APP.JS
+   Local-first • Offline • Personal + Business
+   Khatabook Style Udhaar / Khata
+   ========================================================= */
 
-const KEY='hisab_global_v7';
-const LEGACY_KEYS=['hisab_money_manager_v4','hisab_v7_data'];
+"use strict";
 
-const DEFAULT={
-  mode:'Personal',
-  currency:'₹',
-  language:'English',
-  theme:'light',
-  pin:'',
-  locked:false,
-  personal:[],
-  business:[],
-  transactions:[],
-  lendings:[],
-  bills:[],
-  reminders:[],
-  loans:[],
-  goals:[],
-  budgets:[],
-  savings:[],
-  insurance:[],
-  school:[],
-  vehicles:[],
-  family:[],
-  shopping:[],
-  utilities:[],
-  docs:[],
-  annualPlans:[],
-  limits:[],
-  settings:{}
-};
+/* =========================
+   BASIC HELPERS
+========================= */
 
-let data=load();
-let ledgerFilter='all';
-let ledgerSearch='';
-let txFilter='all';
-let selectedPerson=null;
+const $ = id => document.getElementById(id);
+const KEY = "hisab_v7_final";
+const OLD_KEY = "hisabData";
 
-const $=id=>document.getElementById(id);
-
-function clone(o){
-  return JSON.parse(JSON.stringify(o));
-}
-
-function load(){
-  let x=null;
-
-  try{
-    x=JSON.parse(localStorage.getItem(KEY)||'null');
-  }catch(e){}
-
-  if(!x){
-    for(const k of LEGACY_KEYS){
-      try{
-        x=JSON.parse(localStorage.getItem(k)||'null');
-        if(x)break;
-      }catch(e){}
-    }
-  }
-
-  x=x&&typeof x==='object'?x:{};
-
-  const d={
-    ...clone(DEFAULT),
-    ...x
-  };
-
-  [
-    'personal','business','transactions','lendings','bills',
-    'reminders','loans','goals','budgets','savings','insurance',
-    'school','vehicles','family','shopping','utilities','docs',
-    'annualPlans','limits'
-  ].forEach(k=>{
-    if(!Array.isArray(d[k]))d[k]=[];
-  });
-
-  d.settings={
-    ...DEFAULT.settings,
-    ...(d.settings||{})
-  };
-
-  return d;
-}
-
-function save(){
-  try{
-    localStorage.setItem(KEY,JSON.stringify(data));
-    return true;
-  }catch(e){
-    alert('HISAB data save nahi ho saka. Device storage check karein.');
-    return false;
-  }
-}
+const METHODS = [
+  "Cash",
+  "UPI",
+  "Bank Transfer",
+  "Debit Card",
+  "Credit Card",
+  "Wallet",
+  "Cheque",
+  "Other"
+];
 
 function uid(){
-  return Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 }
 
 function today(){
   return new Date().toISOString().slice(0,10);
 }
 
-function time(){
-  return new Date().toLocaleTimeString([],{
-    hour:'2-digit',
-    minute:'2-digit'
-  });
+function num(v){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function money(v){
+  const n = Math.abs(num(v));
+  return (D.currency || "₹") + n.toLocaleString("en-IN");
 }
 
 function esc(v){
-  return String(v??'').replace(/[&<>"']/g,m=>({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  }[m]));
-}
-
-function num(id){
-  return Number($(id)?.value||0);
-}
-
-function money(n){
-  return `${data.currency||'₹'}${Number(n||0).toLocaleString('en-IN',{
-    maximumFractionDigits:2
-  })}`;
-}
-
-function mode(){
-  return data.mode||'Personal';
-}
-
-function modeTx(){
-  return data.transactions.filter(
-    x=>(x.mode||'Personal')===mode()
-  );
-}
-
-function modePeople(){
-  return mode()==='Business'
-    ?data.business
-    :data.personal;
-}
-
-function modeLending(){
-  return data.lendings.filter(
-    x=>(x.mode||'Personal')===mode()
-  );
-}
-
-function fmtDate(v){
-  if(!v)return '';
-
-  const s=String(v);
-
-  if(/^\d{4}-\d{2}-\d{2}$/.test(s)){
-    const [y,m,d]=s.split('-');
-    return `${d}/${m}/${y}`;
-  }
-
-  return s;
-}
-
-function parseDate(v){
-  if(!v)return null;
-
-  const s=String(v);
-
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
-    const [d,m,y]=s.split('/');
-    return new Date(`${y}-${m}-${d}T00:00:00`);
-  }
-
-  return new Date(s+'T00:00:00');
-}
-
-function dueState(date,remaining){
-  if(!remaining||remaining<=0)return 'paid';
-
-  const d=parseDate(date);
-
-  if(!d)return 'due';
-
-  const t=new Date();
-  t.setHours(0,0,0,0);
-
-  return d<t?'overdue':'due';
+  return String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
 
 function toast(msg){
-  let t=$('hisabToast');
+  let x = $("hisabToast");
 
-  if(!t){
-    t=document.createElement('div');
-    t.id='hisabToast';
-
-    Object.assign(t.style,{
-      position:'fixed',
-      left:'50%',
-      bottom:'78px',
-      transform:'translateX(-50%)',
-      padding:'11px 15px',
-      borderRadius:'12px',
-      background:'#14202a',
-      color:'#fff',
-      zIndex:99999,
-      fontSize:'12px',
-      boxShadow:'0 8px 25px rgba(0,0,0,.2)',
-      maxWidth:'90%',
-      textAlign:'center'
-    });
-
-    document.body.appendChild(t);
+  if(!x){
+    x = document.createElement("div");
+    x.id = "hisabToast";
+    x.style.cssText =
+      "position:fixed;left:50%;bottom:85px;transform:translateX(-50%);" +
+      "background:#10283d;color:#fff;padding:12px 18px;border-radius:14px;" +
+      "z-index:99999;font-size:14px;box-shadow:0 8px 30px #0005;" +
+      "max-width:90%;text-align:center;";
+    document.body.appendChild(x);
   }
 
-  t.textContent=msg;
-  t.style.display='block';
+  x.textContent = msg;
+  x.style.display = "block";
 
   clearTimeout(window.__hisabToast);
-
-  window.__hisabToast=setTimeout(()=>{
-    t.style.display='none';
-  },2200);
+  window.__hisabToast =
+    setTimeout(() => x.style.display = "none", 2200);
 }
 
-function hideScreens(){
-  document.querySelectorAll('.screen').forEach(
-    s=>s.classList.add('hidden')
-  );
-}
+/* =========================
+   DEFAULT DATA
+========================= */
 
-function show(id){
+const DEFAULT_DATA = {
+  version: 7,
+  mode: "personal",
+  currency: "₹",
+  lang: "hi",
+  pin: "",
+  personal: [],
+  business: [],
+  transactions: [],
+  bills: [],
+  reminders: [],
+  goals: [],
+  budgets: [],
+  insurance: [],
+  schools: [],
+  vehicles: [],
+  family: [],
+  shopping: [],
+  utilities: [],
+  docs: [],
+  annual: [],
+  limits: {}
+};
 
-  if(data.locked&&id!=='lockScreen'){
-    showLockOverlay();
-    return;
+let D = loadData();
+
+/* =========================
+   LOAD / SAVE
+========================= */
+
+function loadData(){
+
+  let raw = null;
+
+  try{
+    raw = JSON.parse(localStorage.getItem(KEY) || "null");
+  }catch(e){}
+
+  if(!raw){
+    try{
+      raw = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+    }catch(e){}
   }
 
-  hideScreens();
+  if(!raw) raw = {};
 
-  const el=$(id)||$('home');
+  const x = {...DEFAULT_DATA, ...raw};
 
-  if(el)el.classList.remove('hidden');
+  x.personal = Array.isArray(x.personal) ? x.personal : [];
+  x.business = Array.isArray(x.business) ? x.business : [];
+  x.transactions = Array.isArray(x.transactions) ? x.transactions : [];
+  x.bills = Array.isArray(x.bills) ? x.bills : [];
+  x.reminders = Array.isArray(x.reminders) ? x.reminders : [];
+  x.goals = Array.isArray(x.goals) ? x.goals : [];
+  x.budgets = Array.isArray(x.budgets) ? x.budgets : [];
+  x.insurance = Array.isArray(x.insurance) ? x.insurance : [];
+  x.schools = Array.isArray(x.schools) ? x.schools : [];
+  x.vehicles = Array.isArray(x.vehicles) ? x.vehicles : [];
+  x.family = Array.isArray(x.family) ? x.family : [];
+  x.shopping = Array.isArray(x.shopping) ? x.shopping : [];
+  x.utilities = Array.isArray(x.utilities) ? x.utilities : [];
+  x.docs = Array.isArray(x.docs) ? x.docs : [];
+  x.annual = Array.isArray(x.annual) ? x.annual : [];
+  x.limits = x.limits && typeof x.limits === "object" ? x.limits : {};
 
-  renderAll();
+  migrateOldData(x);
 
-  window.scrollTo(0,0);
+  return x;
 }
 
+function migrateOldData(x){
+
+  /* old transactions */
+  if(!x.transactions.length){
+    try{
+      const old = JSON.parse(
+        localStorage.getItem("hisabTransactions") || "[]"
+      );
+
+      if(Array.isArray(old)){
+        x.transactions = old;
+      }
+    }catch(e){}
+  }
+
+  /* old bills */
+  if(!x.bills.length){
+    try{
+      const old = JSON.parse(
+        localStorage.getItem("hisabBills") || "[]"
+      );
+
+      if(Array.isArray(old)){
+        x.bills = old.map(b => ({
+          id: b.id || uid(),
+          name: b.name || "Bill",
+          amount: num(b.amount),
+          due: b.due || today(),
+          kind: b.kind || "Bill",
+          status: b.paid ? "settled" : "pending"
+        }));
+      }
+    }catch(e){}
+  }
+
+  /* normalize people */
+  ["personal","business"].forEach(type => {
+
+    x[type] = x[type].map(p => {
+
+      const person = {
+        id: p.id || uid(),
+        name: p.name || "Unnamed",
+        phone: p.phone || "",
+        partyType:
+          p.partyType ||
+          (type === "business" ? "customer" : "person"),
+        created: p.created || today(),
+        transactions: Array.isArray(p.transactions)
+          ? p.transactions
+          : []
+      };
+
+      person.transactions =
+        person.transactions.map(t => ({
+          id: t.id || uid(),
+          kind:
+            t.kind === "received"
+              ? "receive"
+              : t.kind === "given"
+                ? "give"
+                : (t.kind || "give"),
+          amount: num(t.amount),
+          note: t.note || "",
+          date: t.date || today(),
+          method: t.method || "Cash",
+          status: t.status || "pending",
+          type: t.type || "udhaar",
+          created: t.created || Date.now()
+        }));
+
+      return person;
+    });
+  });
+}
+
+function save(){
+
+  localStorage.setItem(KEY, JSON.stringify(D));
+
+  /* compatibility */
+  localStorage.setItem(OLD_KEY, JSON.stringify({
+    business: D.business,
+    personal: D.personal
+  }));
+
+  localStorage.setItem(
+    "hisabTransactions",
+    JSON.stringify(D.transactions)
+  );
+
+  localStorage.setItem(
+    "hisabBills",
+    JSON.stringify(D.bills)
+  );
+
+  localStorage.setItem(
+    "hisabReminders",
+    JSON.stringify(D.reminders)
+  );
+
+  renderAll();
+}
+
+/* =========================
+   GUEST MODE
+========================= */
+
+const GUEST_KEY = "hisabGuestMode";
+
 function enterGuestMode(){
-  localStorage.setItem('hisab_guest_mode','true');
 
-  $('guestGate')?.classList.add('hidden');
+  localStorage.setItem(GUEST_KEY,"true");
 
-  show('home');
+  $("guestGate")?.classList.add("hidden");
+  $("appShell")?.classList.remove("hidden");
+
+  toast("HISAB ready");
+  renderAll();
 }
 
 function showGuestGate(){
 
-  if(localStorage.getItem('hisab_guest_mode')==='true'){
-    $('guestGate')?.classList.add('hidden');
-    show('home');
+  const gate = $("guestGate");
+  const shell = $("appShell");
+
+  if(localStorage.getItem(GUEST_KEY) === "true"){
+    gate?.classList.add("hidden");
+    shell?.classList.remove("hidden");
   }else{
-    $('guestGate')?.classList.remove('hidden');
+    gate?.classList.remove("hidden");
+    shell?.classList.add("hidden");
   }
-}
 
-function setMode(m){
-
-  data.mode=m==='Business'
-    ?'Business'
-    :'Personal';
-
-  save();
   renderAll();
-
-  toast(`${data.mode} mode`);
 }
 
-function toggleCurrency(){
+function resetGuestMode(){
 
-  const list=['₹','$','€','£','¥','AED '];
+  if(!confirm(
+    "Guest mode reset karne par device ki HISAB data delete hogi. Continue?"
+  )) return;
 
-  const i=list.indexOf(data.currency);
+  localStorage.clear();
+  location.reload();
+}
 
-  data.currency=list[(i+1)%list.length];
+/* =========================
+   NAVIGATION
+========================= */
 
-  save();
+function show(id){
+
+  document.querySelectorAll(".screen").forEach(s =>
+    s.classList.add("hidden")
+  );
+
+  const el = $(id);
+
+  if(el){
+    el.classList.remove("hidden");
+    D.mode = id === "business" ? "business" :
+             id === "personal" ? "personal" :
+             D.mode;
+  }
+
+  saveQuiet();
   renderAll();
-
-  toast('Currency: '+data.currency);
 }
 
-function toggleLanguage(){
-
-  data.language=
-    data.language==='English'
-      ?'Hindi'
-      :'English';
-
-  save();
-
-  toast('Language: '+data.language);
+function saveQuiet(){
+  localStorage.setItem(KEY, JSON.stringify(D));
 }
 
-/* ================= PIN LOCK ================= */
+/* =========================
+   MODE
+========================= */
 
-function setPin(){
+function setMode(mode){
 
-  const p=prompt('4-6 digit PIN set karein:');
+  D.mode = mode;
 
-  if(p===null)return;
-
-  if(!/^\d{4,6}$/.test(p)){
-    toast('PIN 4-6 digits ka hona chahiye');
-    return;
-  }
-
-  data.pin=p;
-  data.locked=false;
-
-  save();
-
-  toast('PIN saved');
-}
-
-function showLockOverlay(){
-
-  let o=$('hisabLockOverlay');
-
-  if(!o){
-
-    o=document.createElement('div');
-    o.id='hisabLockOverlay';
-
-    Object.assign(o.style,{
-      position:'fixed',
-      inset:'0',
-      background:'#0b1f33',
-      color:'#fff',
-      zIndex:100000,
-      display:'flex',
-      alignItems:'center',
-      justifyContent:'center',
-      padding:'25px',
-      textAlign:'center'
-    });
-
-    o.innerHTML=`
-      <div>
-        <div style="font-size:52px">🔐</div>
-        <h2>HISAB Locked</h2>
-        <p>Enter your PIN to continue.</p>
-
-        <input
-          id="unlockPin"
-          type="password"
-          inputmode="numeric"
-          maxlength="6"
-          style="padding:14px;border-radius:12px;border:0;text-align:center;font-size:20px;width:150px"
-        >
-
-        <br>
-
-        <button
-          id="unlockBtn"
-          style="margin-top:12px;padding:12px 22px;border:0;border-radius:12px"
-        >
-          Unlock
-        </button>
-      </div>
-    `;
-
-    document.body.appendChild(o);
-
-    $('unlockBtn').onclick=unlock;
-
-    setTimeout(()=>{
-      $('unlockPin')?.focus();
-    },50);
-  }
-
-  o.style.display='flex';
-}
-
-function unlock(){
-
-  const p=$('unlockPin')?.value||'';
-
-  if(p===data.pin){
-
-    data.locked=false;
-
-    save();
-
-    $('hisabLockOverlay').style.display='none';
-
-    toast('Unlocked');
-
+  if(mode === "personal"){
+    show("personal");
   }else{
-    toast('Wrong PIN');
+    show("business");
   }
 }
 
-function lockApp(){
+/* =========================
+   PARTY / KHATA
+========================= */
 
-  if(!data.pin){
-    toast('Pehle PIN set karein');
-    setPin();
-    return;
-  }
+function currentPeople(){
 
-  data.locked=true;
-
-  save();
-
-  showLockOverlay();
+  return D.mode === "business"
+    ? D.business
+    : D.personal;
 }
 
-/* ================= QUICK ACTIONS ================= */
+function partyList(type){
 
-function quickTransaction(type){
-
-  show('reports');
-
-  setTimeout(()=>{
-    if($('txType')){
-      $('txType').value=
-        type==='income'
-          ?'Income'
-          :'Expense';
-    }
-
-    $('txAmount')?.focus();
-
-  },50);
+  return type === "business"
+    ? D.business
+    : D.personal;
 }
 
-function quickLending(type){
+function findParty(type,id){
 
-  show('personal');
-
-  setTimeout(()=>{
-    openLendingForm(type);
-  },50);
+  return partyList(type).find(p => p.id === id);
 }
 
-function openLendingForm(type){
+function addPerson(type){
 
-  const name=prompt(
-    `${type==='given'
-      ?'Jise paisa diya'
-      :'Jisne paisa diya'} — naam:`
+  const business = type === "business";
+
+  const name = prompt(
+    business
+      ? "Customer ya Supplier ka naam:"
+      : "Person ka naam:"
   );
 
-  if(!name)return;
+  if(!name || !name.trim()) return;
 
-  const amount=Number(
-    prompt('Amount:')||0
-  );
+  let partyType = "person";
 
-  if(!amount)return;
-
-  const people=modePeople();
-
-  let p=people.find(
-    x=>x.name.toLowerCase()===name.toLowerCase()
-  );
-
-  if(!p){
-
-    p={
-      id:uid(),
-      name,
-      phone:'',
-      type:mode()==='Business'
-        ?'customer'
-        :'person',
-      opening:0
-    };
-
-    people.push(p);
-  }
-
-  const l={
-    id:uid(),
-    personId:p.id,
-    name:p.name,
-    type:type==='received'
-      ?'received'
-      :'given',
-    amount,
-    paid:0,
-    remaining:amount,
-    date:today(),
-    time:time(),
-    note:'',
-    mode:mode()
-  };
-
-  data.lendings.push(l);
-
-  save();
-  renderAll();
-
-  toast('Khata entry added');
-}
-
-function saveLendingForm(){
-  openLendingForm('given');
-}
-
-/* ================= PEOPLE / KHATA ================= */
-
-function addPerson(m){
-
-  const target=
-    m==='Business'
-      ?data.business
-      :data.personal;
-
-  const name=prompt(
-    `${m==='Business'
-      ?'Customer/Supplier'
-      :'Person'} name:`
-  );
-
-  if(!name)return;
-
-  const phone=prompt(
-    'Mobile (optional):'
-  )||'';
-
-  if(target.some(
-    p=>p.name.toLowerCase()===name.toLowerCase()
-  )){
-    toast('Name already exists');
-    return;
-  }
-
-  target.push({
-    id:uid(),
-    name,
-    phone,
-    type:m==='Business'
-      ?'customer'
-      :'person',
-    opening:0,
-    created:today()
-  });
-
-  save();
-  renderAll();
-
-  toast('Person added');
-}
-
-function personBalance(p){
-
-  const ls=data.lendings.filter(
-    x=>
-      x.personId===p.id &&
-      (x.mode||'Personal')===mode()
-  );
-
-  let given=Number(p.opening||0);
-  let received=0;
-
-  ls.forEach(x=>{
-
-    if(x.type==='given'){
-      given+=Math.max(
-        0,
-        Number(x.amount||0)-Number(x.paid||0)
-      );
-    }else{
-      received+=Math.max(
-        0,
-        Number(x.amount||0)-Number(x.paid||0)
-      );
-    }
-
-  });
-
-  return{
-    given,
-    received,
-    net:given-received
-  };
-}
-
-function addKhataTransaction(pid,type){
-
-  const p=modePeople().find(
-    x=>x.id===pid
-  );
-
-  if(!p)return;
-
-  const amount=Number(
-    prompt(
-      `${type==='given'
-        ?'Diya'
-        :'Liya'} amount:`
-    )||0
-  );
-
-  if(!amount)return;
-
-  const note=prompt(
-    'Note (optional):'
-  )||'';
-
-  data.lendings.push({
-    id:uid(),
-    personId:pid,
-    name:p.name,
-    type,
-    amount,
-    paid:0,
-    remaining:amount,
-    date:today(),
-    time:time(),
-    note,
-    mode:mode()
-  });
-
-  save();
-  renderAll();
-
-  toast('Entry saved');
-}
-
-function markLendingPaid(id){
-
-  const x=data.lendings.find(
-    a=>a.id===id
-  );
-
-  if(!x)return;
-
-  const rem=Math.max(
-    0,
-    Number(x.amount||0)-Number(x.paid||0)
-  );
-
-  const p=Number(
-    prompt(
-      `Remaining ${money(rem)}. Payment amount:`
-    )||0
-  );
-
-  if(!p||p>rem){
-    toast('Invalid payment');
-    return;
-  }
-
-  x.paid=
-    Number(x.paid||0)+p;
-
-  x.remaining=
-    Math.max(
-      0,
-      Number(x.amount||0)-x.paid
+  if(business){
+    const x = prompt(
+      "Type likhein:\n1 = Customer\n2 = Supplier",
+      "1"
     );
 
-  x.paymentHistory=
-    x.paymentHistory||[];
+    partyType =
+      String(x).trim() === "2"
+        ? "supplier"
+        : "customer";
+  }
 
-  x.paymentHistory.push({
-    amount:p,
-    date:today(),
-    time:time()
+  partyList(type).push({
+    id: uid(),
+    name: name.trim(),
+    phone: "",
+    partyType,
+    created: today(),
+    transactions: []
   });
 
-  x.status=
-    x.remaining
-      ?'partial'
-      :'paid';
-
   save();
-  renderAll();
 
   toast(
-    x.remaining
-      ?'Partial payment saved'
-      :'Paid'
+    business
+      ? `${partyType === "supplier" ? "Supplier" : "Customer"} added`
+      : "Person added"
   );
 }
 
-function deleteLending(id){
+/* =========================
+   PARTY TOTALS
+========================= */
 
-  if(!confirm('Delete this entry?'))return;
+function totals(p){
 
-  data.lendings=
-    data.lendings.filter(
-      x=>x.id!==id
-    );
+  let give = 0;
+  let receive = 0;
+  let pending = 0;
+  let settled = 0;
 
-  save();
-  renderAll();
+  (p.transactions || []).forEach(t => {
+
+    if(t.kind === "give"){
+      give += num(t.amount);
+    }else{
+      receive += num(t.amount);
+    }
+
+    if(t.status === "settled"){
+      settled += num(t.amount);
+    }else{
+      pending += num(t.amount);
+    }
+  });
+
+  return {
+    give,
+    receive,
+    balance: give - receive,
+    pending,
+    settled
+  };
 }
 
-function editLending(id){
-
-  const x=data.lendings.find(
-    a=>a.id===id
+function totalGiven(list){
+  return list.reduce(
+    (s,p) => s + totals(p).give, 0
   );
-
-  if(!x)return;
-
-  const a=Number(
-    prompt(
-      'New total amount:',
-      x.amount
-    )||0
-  );
-
-  if(!a)return;
-
-  x.amount=a;
-
-  x.remaining=
-    Math.max(
-      0,
-      a-Number(x.paid||0)
-    );
-
-  const note=prompt(
-    'Note:',
-    x.note||''
-  );
-
-  if(note!==null)x.note=note;
-
-  save();
-  renderAll();
 }
 
-function showPersonHistory(pid){
-
-  selectedPerson=pid;
-
-  const p=modePeople().find(
-    x=>x.id===pid
+function totalReceived(list){
+  return list.reduce(
+    (s,p) => s + totals(p).receive, 0
   );
+}
 
-  if(!p)return;
+/* =========================
+   KHATA MODAL
+========================= */
 
-  const ls=modeLending()
-    .filter(x=>x.personId===pid);
+function ensureModal(){
 
-  let html=`
-    <div class="person">
-      <b>${esc(p.name)}</b>
-      <p>${p.phone?esc(p.phone):''}</p>
+  if($("khataModal")) return;
 
-      <button onclick="exportPersonPDF('${pid}')">
-        📄 Statement / PDF
-      </button>
+  const div = document.createElement("div");
 
-      <button onclick="sharePerson('${pid}')">
-        📤 Share
-      </button>
+  div.id = "khataModal";
+
+  div.innerHTML = `
+    <div id="khataOverlay"
+      style="
+        position:fixed;
+        inset:0;
+        background:#0008;
+        z-index:99990;
+        display:flex;
+        align-items:flex-end;
+        justify-content:center;
+      ">
+
+      <div id="khataBox"
+        style="
+          background:#fff;
+          color:#111;
+          width:100%;
+          max-width:520px;
+          max-height:92vh;
+          overflow:auto;
+          border-radius:24px 24px 0 0;
+          padding:18px;
+          box-sizing:border-box;
+        ">
+
+        <div id="khataContent"></div>
+
+      </div>
     </div>
   `;
 
-  html+=ls.length
-    ?ls
-      .sort((a,b)=>
-        String(b.date)
-        .localeCompare(String(a.date))
-      )
-      .map(x=>`
-        <div class="person">
-
-          <b>
-            ${x.type==='given'
-              ?'📤 Given'
-              :'📥 Received'}
-            ${money(x.amount)}
-          </b>
-
-          <div>
-            ${fmtDate(x.date)}
-            ${esc(x.time||'')}
-          </div>
-
-          <div>
-            Paid: ${money(x.paid||0)}
-            •
-            Due: ${money(
-              Math.max(
-                0,
-                (x.amount||0)-(x.paid||0)
-              )
-            )}
-          </div>
-
-          <div>${esc(x.note||'')}</div>
-
-          <button onclick="markLendingPaid('${x.id}')">
-            Payment
-          </button>
-
-          <button onclick="editLending('${x.id}')">
-            Edit
-          </button>
-
-          <button onclick="deleteLending('${x.id}')">
-            Delete
-          </button>
-
-        </div>
-      `)
-      .join('')
-    :'<div class="person">No transactions yet.</div>';
-
-  const box=$('personalList');
-
-  if(box)box.innerHTML=html;
-}
-
-function sharePerson(pid){
-
-  const p=modePeople().find(
-    x=>x.id===pid
-  );
-
-  if(!p)return;
-
-  const b=personBalance(p);
-
-  const text=
-`HISAB — ${p.name}
-Given: ${money(b.given)}
-Received: ${money(b.received)}
-Net Due: ${money(b.net)}`;
-
-  shareText(text);
-}
-
-function renderPeople(){
-
-  const box=$('personalList');
-
-  if(!box)return;
-
-  let people=modePeople();
-
-  const q=ledgerSearch.toLowerCase();
-
-  people=people.filter(
-    p=>
-      !q ||
-      p.name.toLowerCase().includes(q) ||
-      (p.phone||'').includes(q)
-  );
-
-  if(!people.length){
-    box.innerHTML=
-      '<div class="person">No people added. Tap Add Person.</div>';
-    return;
-  }
-
-  box.innerHTML=
-    people
-      .map(p=>{
-
-        const b=personBalance(p);
-
-        let showEntry=
-          ledgerFilter==='all' ||
-          (
-            ledgerFilter==='given' &&
-            b.given>0
-          ) ||
-          (
-            ledgerFilter==='received' &&
-            b.received>0
-          ) ||
-          (
-            ledgerFilter==='pending' &&
-            (b.given>0||b.received>0)
-          );
-
-        if(!showEntry)return '';
-
-        return `
-          <div class="person">
-
-            <div style="display:flex;justify-content:space-between">
-              <b>${esc(p.name)}</b>
-              <b>${money(b.net)}</b>
-            </div>
-
-            <small>${esc(p.phone||'')}</small>
-
-            <div>
-              Given: ${money(b.given)}
-              •
-              Received: ${money(b.received)}
-            </div>
-
-            <button onclick="addKhataTransaction('${p.id}','given')">
-              + Given
-            </button>
-
-            <button onclick="addKhataTransaction('${p.id}','received')">
-              + Received
-            </button>
-
-            <button onclick="showPersonHistory('${p.id}')">
-              History
-            </button>
-
-            <button onclick="sharePerson('${p.id}')">
-              Share
-            </button>
-
-          </div>
-        `;
-      })
-      .join('')
-      ||
-      '<div class="person">No matching entries.</div>';
-}
-
-function filterLedger(f){
-  ledgerFilter=f;
-  renderPeople();
-}
-
-function searchLedger(v){
-  ledgerSearch=v||'';
-  renderPeople();
-}
-
-/* ================= TRANSACTIONS ================= */
-
-function addTransaction(){
-
-  const type=
-    (($('txType')?.value||'Income')
-      .toLowerCase()
-      .includes('expense'))
-      ?'expense'
-      :'income';
-
-  const amount=num('txAmount');
-
-  if(!amount){
-    toast('Amount enter karein');
-    return;
-  }
-
-  const cat=
-    $('txCat')?.value||'Other';
-
-  const note=
-    $('txNote')?.value||'';
-
-  data.transactions.push({
-    id:uid(),
-    type,
-    amount,
-    category:cat,
-    note,
-    date:today(),
-    time:time(),
-    mode:mode()
-  });
-
-  save();
-  renderAll();
-
-  toast('Transaction saved');
-}
-
-function deleteTransaction(id){
-
-  if(!confirm('Delete transaction?'))return;
-
-  data.transactions=
-    data.transactions.filter(
-      x=>x.id!==id
-    );
-
-  save();
-  renderAll();
-}
-
-function editTransaction(id){
-
-  const x=data.transactions.find(
-    a=>a.id===id
-  );
-
-  if(!x)return;
-
-  const a=Number(
-    prompt('Amount:',x.amount)||0
-  );
-
-  if(!a)return;
-
-  x.amount=a;
-
-  const note=prompt(
-    'Note:',
-    x.note||''
-  );
-
-  if(note!==null)x.note=note;
-
-  save();
-  renderAll();
-}
-
-function setTxType(t){
-
-  if($('txType')){
-    $('txType').value=t;
-  }
-
-  txFilter=t.toLowerCase();
-
-  renderTransactions();
-}
-
-function totals(){
-
-  const tx=modeTx();
-  const ld=modeLending();
-
-  const income=
-    tx
-      .filter(x=>x.type==='income')
-      .reduce(
-        (s,x)=>s+Number(x.amount||0),
-        0
-      );
-
-  const expense=
-    tx
-      .filter(x=>x.type==='expense')
-      .reduce(
-        (s,x)=>s+Number(x.amount||0),
-        0
-      );
-
-  const given=
-    ld
-      .filter(x=>x.type==='given')
-      .reduce(
-        (s,x)=>
-          s+
-          Math.max(
-            0,
-            Number(x.amount||0)-
-            Number(x.paid||0)
-          ),
-        0
-      );
-
-  const received=
-    ld
-      .filter(x=>x.type==='received')
-      .reduce(
-        (s,x)=>
-          s+
-          Math.max(
-            0,
-            Number(x.amount||0)-
-            Number(x.paid||0)
-          ),
-        0
-      );
-
-  return{
-    income,
-    expense,
-    balance:income-expense,
-    given,
-    received,
-    net:given-received
+  document.body.appendChild(div);
+
+  $("khataOverlay").onclick = e => {
+    if(e.target.id === "khataOverlay"){
+      closeKhata();
+    }
   };
 }
 
-function totalIncome(){
-  return totals().income;
+function closeKhata(){
+
+  const m = $("khataModal");
+
+  if(m) m.remove();
 }
 
-function totalExpense(){
-  return totals().expense;
+let activeParty = null;
+let activeType = null;
+
+function openKhata(type,id){
+
+  const p = findParty(type,id);
+
+  if(!p) return;
+
+  activeParty = id;
+  activeType = type;
+
+  ensureModal();
+
+  renderKhata();
+
+  $("khataModal").style.display = "block";
 }
 
-function moneyTransactions(){
-  return modeTx();
-}
+function renderKhata(){
 
-function renderTransactions(){
+  const p = findParty(activeType,activeParty);
 
-  const box=$('txList');
+  if(!p) return closeKhata();
 
-  if(!box)return;
+  const t = totals(p);
 
-  let tx=
-    modeTx()
-      .slice()
-      .reverse();
-
-  if(
-    txFilter==='income' ||
-    txFilter==='expense'
-  ){
-    tx=
-      tx.filter(
-        x=>x.type===txFilter
+  const history =
+    [...p.transactions]
+      .sort((a,b) =>
+        String(b.date).localeCompare(String(a.date))
       );
-  }
 
-  box.innerHTML=
-    tx.length
-      ?tx
-        .map(x=>`
-          <div class="person">
+  $("khataContent").innerHTML = `
 
-            <div>
-              <b>
-                ${x.type==='income'
-                  ?'📈'
-                  :'📉'}
-                ${esc(x.category)}
-              </b>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h2 style="margin:0">${esc(p.name)}</h2>
+        <small>
+          ${
+            activeType === "business"
+              ? (p.partyType === "supplier"
+                  ? "Supplier"
+                  : "Customer")
+              : "Personal Udhaar"
+          }
+        </small>
+      </div>
 
-              <strong>
-                ${x.type==='income'?'+':'-'}
-                ${money(x.amount)}
-              </strong>
-            </div>
+      <button onclick="closeKhata()"
+        style="border:0;background:#eee;border-radius:50%;width:38px;height:38px">
+        ✕
+      </button>
+    </div>
 
-            <small>
-              ${fmtDate(x.date)}
-              ${esc(x.time||'')}
-              •
-              ${esc(x.note||'')}
-            </small>
+    <div style="
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin:15px 0;
+    ">
 
-            <br>
+      <div style="padding:10px;background:#fff1f1;border-radius:12px">
+        <small>Give</small>
+        <b style="display:block;color:#d33">${money(t.give)}</b>
+      </div>
 
-            <button onclick="editTransaction('${x.id}')">
+      <div style="padding:10px;background:#effff4;border-radius:12px">
+        <small>Receive</small>
+        <b style="display:block;color:#159447">${money(t.receive)}</b>
+      </div>
+
+      <div style="padding:10px;background:#eef5ff;border-radius:12px">
+        <small>Balance</small>
+        <b style="display:block">
+          ${t.balance > 0
+            ? "You Get "+money(t.balance)
+            : t.balance < 0
+              ? "You Give "+money(t.balance)
+              : "Settled"}
+        </b>
+      </div>
+
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+
+      <button
+        onclick="newKhataEntry('give')"
+        style="padding:13px;border:0;border-radius:12px;background:#ffe8e8">
+        🔴 Give
+      </button>
+
+      <button
+        onclick="newKhataEntry('receive')"
+        style="padding:13px;border:0;border-radius:12px;background:#e8fff0">
+        🟢 Receive
+      </button>
+
+    </div>
+
+    <button
+      onclick="shareKhataPDF()"
+      style="width:100%;margin-top:10px;padding:12px;border:0;border-radius:12px">
+      📄 Share / Save Khata PDF
+    </button>
+
+    <h3 style="margin:20px 0 8px">Khata History</h3>
+
+    ${
+      history.length
+      ? history.map(t => `
+        <div style="
+          padding:12px 0;
+          border-bottom:1px solid #eee;
+        ">
+
+          <div style="display:flex;justify-content:space-between">
+
+            <b style="
+              color:${t.kind === "give" ? "#d33" : "#159447"}
+            ">
+              ${t.kind === "give" ? "Give" : "Receive"}
+              ${money(t.amount)}
+            </b>
+
+            <small>${esc(t.date)}</small>
+
+          </div>
+
+          <div style="font-size:13px;margin-top:4px">
+            ${esc(t.note || "No note")}
+          </div>
+
+          <div style="font-size:12px;color:#777;margin-top:3px">
+            ${esc(t.method || "Cash")}
+            ·
+            ${t.status === "settled" ? "Settled" : "Pending"}
+          </div>
+
+          <div style="margin-top:7px">
+
+            <button
+              onclick="editKhataEntry('${t.id}')"
+              style="padding:6px 10px">
               Edit
             </button>
 
-            <button onclick="deleteTransaction('${x.id}')">
+            <button
+              onclick="toggleKhataStatus('${t.id}')"
+              style="padding:6px 10px">
+              ${t.status === "settled"
+                ? "Mark Pending"
+                : "Mark Settled"}
+            </button>
+
+            <button
+              onclick="deleteKhataEntry('${t.id}')"
+              style="padding:6px 10px">
               Delete
             </button>
 
           </div>
-        `)
-        .join('')
-      :'<div class="person">No transactions.</div>';
 
-  const cats={};
+        </div>
+      `).join("")
+      : `<div style="padding:25px;text-align:center;color:#777">
+          No entries yet
+         </div>`
+    }
 
-  modeTx()
-    .filter(x=>x.type==='expense')
-    .forEach(x=>{
-      cats[x.category]=
-        (cats[x.category]||0)+
-        Number(x.amount||0);
-    });
-
-  if($('catSummary')){
-    $('catSummary').innerHTML=
-      Object.keys(cats).length
-        ?Object
-          .entries(cats)
-          .map(([k,v])=>
-            `<div>${esc(k)} — <b>${money(v)}</b></div>`
-          )
-          .join('')
-        :'No expense data';
-  }
+  `;
 }
 
-/* ================= BUDGET / GOALS ================= */
+/* =========================
+   ADD KHATA ENTRY
+========================= */
 
-function calcBudget(){
+function newKhataEntry(kind){
 
-  const inc=num('monthlyIncome');
-  const bud=num('monthlyBudget');
-  const sav=num('monthlySaving');
+  const p = findParty(activeType,activeParty);
 
-  const spend=totalExpense();
+  if(!p) return;
 
-  const remain=
-    bud-spend-sav;
+  const amount = prompt(
+    `${kind === "give" ? "Give" : "Receive"} amount:`
+  );
 
-  const out=
-`Budget: ${money(bud)}
-<br>Spent: ${money(spend)}
-<br>Saving target: ${money(sav)}
-<br><b>Remaining: ${money(remain)}</b>`;
-
-  if($('budgetResult')){
-    $('budgetResult').innerHTML=out;
+  if(!amount || num(amount) <= 0){
+    toast("Valid amount enter karein");
+    return;
   }
 
-  data.budgets.push({
-    id:uid(),
-    month:today().slice(0,7),
-    income:inc,
-    budget:bud,
-    saving:sav,
-    spent:spend,
-    mode:mode()
+  const note = prompt("Note:", "") || "";
+
+  const methodInput = prompt(
+    "Payment Method:\n" +
+    "1 Cash\n" +
+    "2 UPI\n" +
+    "3 Bank Transfer\n" +
+    "4 Debit Card\n" +
+    "5 Credit Card\n" +
+    "6 Wallet\n" +
+    "7 Cheque\n" +
+    "8 Other",
+    "1"
+  );
+
+  const map = {
+    "1":"Cash",
+    "2":"UPI",
+    "3":"Bank Transfer",
+    "4":"Debit Card",
+    "5":"Credit Card",
+    "6":"Wallet",
+    "7":"Cheque",
+    "8":"Other"
+  };
+
+  const method = map[String(methodInput).trim()] || "Cash";
+
+  const date = prompt(
+    "Date (YYYY-MM-DD):",
+    today()
+  ) || today();
+
+  const statusInput = prompt(
+    "Status:\n1 Pending\n2 Settled",
+    "1"
+  );
+
+  p.transactions.push({
+    id: uid(),
+    kind,
+    amount:num(amount),
+    note,
+    date,
+    method,
+    status:String(statusInput).trim() === "2"
+      ? "settled"
+      : "pending",
+    type:"udhaar",
+    created:Date.now()
   });
 
   save();
 
-  toast('Budget calculated');
+  renderKhata();
+
+  toast(
+    kind === "give"
+      ? "Give entry added"
+      : "Receive entry added"
+  );
 }
 
-function calcGoal(){
+/* =========================
+   EDIT / DELETE / SETTLE
+========================= */
 
-  const name=
-    $('goalName')?.value||'Goal';
+function editKhataEntry(id){
 
-  const target=num('goalTarget');
-  const current=num('goalCurrent');
-  const monthly=num('goalMonthly');
+  const p = findParty(activeType,activeParty);
 
-  if(!target){
-    toast('Target enter karein');
+  if(!p) return;
+
+  const t = p.transactions.find(x => x.id === id);
+
+  if(!t) return;
+
+  const amount = prompt(
+    "Amount:",
+    t.amount
+  );
+
+  if(!amount || num(amount) <= 0) return;
+
+  const note = prompt(
+    "Note:",
+    t.note || ""
+  );
+
+  const date = prompt(
+    "Date:",
+    t.date || today()
+  );
+
+  t.amount = num(amount);
+  t.note = note || "";
+  t.date = date || today();
+
+  save();
+  renderKhata();
+
+  toast("Entry updated");
+}
+
+function toggleKhataStatus(id){
+
+  const p = findParty(activeType,activeParty);
+
+  if(!p) return;
+
+  const t = p.transactions.find(x => x.id === id);
+
+  if(!t) return;
+
+  t.status =
+    t.status === "settled"
+      ? "pending"
+      : "settled";
+
+  save();
+  renderKhata();
+}
+
+function deleteKhataEntry(id){
+
+  if(!confirm("Entry delete karein?")) return;
+
+  const p = findParty(activeType,activeParty);
+
+  if(!p) return;
+
+  p.transactions =
+    p.transactions.filter(t => t.id !== id);
+
+  save();
+  renderKhata();
+
+  toast("Entry deleted");
+}
+
+function deleteParty(type,id){
+
+  if(!confirm("Pura khata delete karein?")) return;
+
+  const list = partyList(type);
+
+  const i = list.findIndex(p => p.id === id);
+
+  if(i >= 0){
+    list.splice(i,1);
+    save();
+  }
+}
+
+/* =========================
+   PARTY LIST
+========================= */
+
+let partyFilter = "all";
+
+function renderList(type,id){
+
+  const el = $(id);
+
+  if(!el) return;
+
+  const list = partyList(type);
+
+  const search =
+    type === "business"
+      ? ($("businessSearch")?.value || "")
+      : ($("personalSearch")?.value || "");
+
+  const q = search.toLowerCase().trim();
+
+  const filtered = list.filter(p => {
+
+    if(q){
+      const text =
+        p.name + " " +
+        p.phone + " " +
+        (p.partyType || "") + " " +
+        p.transactions.map(t =>
+          `${t.note} ${t.amount}`
+        ).join(" ");
+
+      if(!text.toLowerCase().includes(q))
+        return false;
+    }
+
+    if(partyFilter === "given"){
+      return totals(p).give > 0;
+    }
+
+    if(partyFilter === "received"){
+      return totals(p).receive > 0;
+    }
+
+    if(partyFilter === "pending"){
+      return p.transactions.some(
+        t => t.status !== "settled"
+      );
+    }
+
+    return true;
+  });
+
+  if(!filtered.length){
+
+    el.innerHTML = `
+      <div class="person" style="text-align:center;padding:25px">
+        No Khata found
+      </div>
+    `;
+
     return;
   }
 
-  const left=
-    Math.max(0,target-current);
+  el.innerHTML = filtered.map(p => {
 
-  const months=
-    monthly
-      ?Math.ceil(left/monthly)
-      :0;
+    const t = totals(p);
 
-  if($('goalResult')){
-    $('goalResult').innerHTML=`
+    const balance =
+      t.balance > 0
+        ? `<span style="color:#d33">You Get ${money(t.balance)}</span>`
+        : t.balance < 0
+          ? `<span style="color:#159447">You Give ${money(t.balance)}</span>`
+          : `<span>Settled</span>`;
+
+    const last =
+      p.transactions
+        .slice()
+        .sort((a,b) =>
+          String(b.date).localeCompare(String(a.date))
+        )[0];
+
+    return `
+
+      <div class="person"
+        style="
+          padding:15px;
+          margin-bottom:10px;
+          border-radius:16px;
+        ">
+
+        <div
+          onclick="openKhata('${type}','${p.id}')"
+          style="cursor:pointer">
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          ">
+
+            <div>
+
+              <h3 style="margin:0">
+                ${esc(p.name)}
+              </h3>
+
+              <small>
+                ${
+                  type === "business"
+                    ? (
+                      p.partyType === "supplier"
+                        ? "Supplier"
+                        : "Customer"
+                    )
+                    : "Personal"
+                }
+              </small>
+
+            </div>
+
+            <b>${balance}</b>
+
+          </div>
+
+          <div style="
+            display:flex;
+            gap:14px;
+            margin-top:10px;
+            font-size:13px;
+          ">
+
+            <span style="color:#d33">
+              Give ${money(t.give)}
+            </span>
+
+            <span style="color:#159447">
+              Receive ${money(t.receive)}
+            </span>
+
+          </div>
+
+          ${
+            last
+              ? `<small style="display:block;margin-top:8px;color:#777">
+                   Last: ${esc(last.date)} ·
+                   ${last.kind === "give" ? "Give" : "Receive"}
+                   ${money(last.amount)}
+                 </small>`
+              : ""
+          }
+
+        </div>
+
+        <div style="margin-top:10px">
+
+          <button
+            onclick="newEntryDirect('${type}','${p.id}','give')">
+            🔴 Give
+          </button>
+
+          <button
+            onclick="newEntryDirect('${type}','${p.id}','receive')">
+            🟢 Receive
+          </button>
+
+          <button
+            onclick="deleteParty('${type}','${p.id}')">
+            Delete
+          </button>
+
+        </div>
+
+      </div>
+    `;
+
+  }).join("");
+}
+
+function newEntryDirect(type,id,kind){
+
+  activeType = type;
+  activeParty = id;
+
+  newKhataEntry(kind);
+}
+
+/* =========================
+   PERSONAL / BUSINESS
+========================= */
+
+function enhancePersonal(){
+
+  const s = $("personal");
+
+  if(!s) return;
+
+  const old = s.querySelector(".search-box");
+
+  if(old && !$("personalSearch")){
+
+    const input = old.querySelector("input");
+
+    if(input){
+      input.id = "personalSearch";
+      input.oninput = () =>
+        renderList("personal","personalList");
+    }
+  }
+
+  const filters = s.querySelector(".filter-row");
+
+  if(filters){
+
+    [...filters.children].forEach((b,i) => {
+
+      b.onclick = () => {
+
+        partyFilter =
+          ["all","given","received","pending"][i] || "all";
+
+        [...filters.children].forEach(x =>
+          x.classList.remove("active")
+        );
+
+        b.classList.add("active");
+
+        renderList("personal","personalList");
+      };
+
+    });
+
+  }
+}
+
+function enhanceBusiness(){
+
+  const s = $("business");
+
+  if(!s) return;
+
+  if(!$("businessSearch")){
+
+    const add = s.querySelector(".primary.full");
+
+    if(add){
+
+      const tools = document.createElement("div");
+
+      tools.style.margin = "10px 0";
+
+      tools.innerHTML = `
+        <input
+          id="businessSearch"
+          placeholder="🔎 Search customer / supplier"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:12px;
+            border-radius:12px;
+            border:1px solid #ddd;
+          ">
+
+        <div style="
+          display:flex;
+          gap:7px;
+          margin-top:8px;
+        ">
+
+          <button onclick="setBusinessFilter('all')">
+            All
+          </button>
+
+          <button onclick="setBusinessFilter('customer')">
+            Customers
+          </button>
+
+          <button onclick="setBusinessFilter('supplier')">
+            Suppliers
+          </button>
+
+        </div>
+      `;
+
+      add.parentNode.insertBefore(
+        tools,
+        add.nextSibling
+      );
+
+      $("businessSearch").oninput = () =>
+        renderBusiness();
+    }
+  }
+}
+
+let businessPartyFilter = "all";
+
+function setBusinessFilter(v){
+
+  businessPartyFilter = v;
+
+  renderBusiness();
+}
+
+function renderBusiness(){
+
+  const el = $("businessList");
+
+  if(!el) return;
+
+  let list = D.business;
+
+  if(businessPartyFilter !== "all"){
+
+    list = list.filter(
+      p => (p.partyType || "customer") ===
+           businessPartyFilter
+    );
+  }
+
+  const original = D.business;
+
+  D.business = list;
+
+  renderList("business","businessList");
+
+  D.business = original;
+}
+
+/* =========================
+   HOME
+========================= */
+
+function renderHome(){
+
+  const list = currentPeople();
+
+  const given = totalGiven(list);
+  const received = totalReceived(list);
+
+  if($("receivable"))
+    $("receivable").textContent = money(given);
+
+  if($("payable"))
+    $("payable").textContent = money(received);
+}
+
+/* =========================
+   TRANSACTIONS
+========================= */
+
+function addTransaction(){
+
+  const type = $("txType")?.value || "expense";
+  const amount = num($("txAmount")?.value);
+
+  if(amount <= 0){
+    toast("Amount enter karein");
+    return;
+  }
+
+  D.transactions.push({
+    id:uid(),
+    type,
+    amount,
+    category:$("txCat")?.value || "General",
+    note:$("txNote")?.value || "",
+    date:today()
+  });
+
+  save();
+  toast("Transaction added");
+}
+
+function renderReports(){
+
+  const income =
+    D.transactions
+      .filter(t => t.type === "income")
+      .reduce((s,t) => s + num(t.amount),0);
+
+  const expense =
+    D.transactions
+      .filter(t => t.type === "expense")
+      .reduce((s,t) => s + num(t.amount),0);
+
+  if($("rIncome"))
+    $("rIncome").textContent = money(income);
+
+  if($("rExpense"))
+    $("rExpense").textContent = money(expense);
+
+  if($("rSaving"))
+    $("rSaving").textContent =
+      money(income-expense);
+
+  if($("rCount"))
+    $("rCount").textContent =
+      D.transactions.length;
+
+  const cats = {};
+
+  D.transactions
+    .filter(t => t.type === "expense")
+    .forEach(t => {
+      cats[t.category] =
+        (cats[t.category] || 0) + num(t.amount);
+    });
+
+  if($("catSummary")){
+
+    $("catSummary").innerHTML =
+      Object.entries(cats)
+        .sort((a,b) => b[1]-a[1])
+        .map(([k,v]) => `
+          <div class="person">
+            <b>${esc(k)}</b><br>
+            ${money(v)}
+          </div>
+        `).join("") ||
+      `<div class="person">No expenses</div>`;
+  }
+
+  if($("txList")){
+
+    $("txList").innerHTML =
+      D.transactions
+        .slice()
+        .reverse()
+        .slice(0,50)
+        .map(t => `
+          <div class="person">
+            <b>
+              ${t.type === "income"
+                ? "➕ Income"
+                : "➖ Expense"}
+            </b>
+            · ${esc(t.category)}
+            <br>
+            ${money(t.amount)}
+            · ${esc(t.date)}
+            <br>
+            ${esc(t.note || "")}
+          </div>
+        `).join("");
+  }
+}
+
+/* =========================
+   BUDGET
+========================= */
+
+function calcBudget(){
+
+  const income = num($("mIncome")?.value);
+  const budget = num($("mBudget")?.value);
+  const target = num($("mSaving")?.value);
+
+  const after = income - budget;
+  const ok = after >= target;
+
+  if($("budgetResult")){
+
+    $("budgetResult").innerHTML = `
+      <b>Monthly Result</b><br>
+      Income: ${money(income)}<br>
+      Budget: ${money(budget)}<br>
+      Available: ${money(after)}<br>
+      Saving Target: ${money(target)}<br><br>
+      <strong>
+        ${ok
+          ? "✅ Saving target possible"
+          : "⚠️ Budget / income adjust karein"}
+      </strong>
+    `;
+  }
+}
+
+/* =========================
+   GOALS
+========================= */
+
+function calcGoal(){
+
+  const name = $("gName")?.value || "Goal";
+  const target = num($("gTarget")?.value);
+  const current = num($("gCurrent")?.value);
+  const monthly = num($("gMonthly")?.value);
+
+  const remain = Math.max(0,target-current);
+
+  const months =
+    monthly > 0
+      ? Math.ceil(remain/monthly)
+      : 0;
+
+  const pct =
+    target > 0
+      ? Math.min(100,current/target*100)
+      : 0;
+
+  if($("goalResult")){
+
+    $("goalResult").innerHTML = `
       <b>${esc(name)}</b><br>
       Target: ${money(target)}<br>
-      Current: ${money(current)}<br>
-      Remaining: ${money(left)}<br>
-      ${
-        months
-          ?'At this saving rate: '+months+' months'
-          :'Set monthly saving to estimate.'
-      }
+      Saved: ${money(current)}<br>
+      Remaining: ${money(remain)}<br>
+      Monthly Saving: ${money(monthly)}<br>
+      Progress: ${pct.toFixed(0)}%<br>
+      <strong>
+        ${
+          monthly
+            ? `Approx ${months} months`
+            : "Monthly saving enter karein"
+        }
+      </strong>
     `;
   }
 
-  const old=
-    data.goals.find(
-      g=>
-        g.name===name &&
-        g.mode===mode()
-    );
+  const existing =
+    D.goals.find(g => g.name === name);
 
-  if(old){
-    old.target=target;
-    old.current=current;
-    old.monthly=monthly;
+  if(existing){
+
+    existing.target = target;
+    existing.current = current;
+    existing.monthly = monthly;
+
   }else{
-    data.goals.push({
+
+    D.goals.push({
       id:uid(),
       name,
       target,
       current,
-      monthly,
-      mode:mode()
+      monthly
     });
   }
 
   save();
 }
 
-/* ================= EMI ================= */
+/* =========================
+   EMI
+========================= */
 
 function calcEMI(){
 
-  const p=num('loanAmount');
-  const r=num('loanRate')/1200;
-  const n=num('loanTenure');
+  const P = num($("loan")?.value);
+  const annual = num($("rate")?.value);
+  const n = num($("tenure")?.value);
 
-  if(!p||!n){
-    toast('Loan amount & tenure enter karein');
+  if(P <= 0 || n <= 0){
+    toast("Loan amount aur tenure enter karein");
     return;
   }
 
-  const emi=
+  const r = annual / 12 / 100;
+
+  const emi =
     r
-      ?p*r*Math.pow(1+r,n)/
-       (Math.pow(1+r,n)-1)
-      :p/n;
+      ? P*r*Math.pow(1+r,n) /
+        (Math.pow(1+r,n)-1)
+      : P/n;
 
-  const interest=
-    emi*n-p;
+  const total = emi*n;
+  const interest = Math.max(0,total-P);
 
-  if($('emiResult')){
-    $('emiResult').innerHTML=`
-      <b>Monthly EMI: ${money(emi)}</b>
-      <br>
-      Total payment: ${money(emi*n)}
-      <br>
-      Total interest: ${money(interest)}
+  if($("emiResult")){
+
+    $("emiResult").innerHTML = `
+      <b>Estimated EMI: ${money(emi)}</b><br>
+      Total Payment: ${money(total)}<br>
+      Total Interest: ${money(interest)}<br>
+      Tenure: ${n} months
     `;
   }
-
-  return emi;
 }
 
-/* ================= BILLS / REMINDERS ================= */
+/* =========================
+   BILLS
+========================= */
 
 function addBill(kind){
 
-  const name=prompt(
-    `${kind||'Bill'} name:`
-  );
+  const isCard = kind === "Credit Card";
 
-  if(!name)return;
+  const name =
+    isCard
+      ? "Credit Card"
+      : ($("billName")?.value || "Bill");
 
-  const amount=Number(
-    prompt('Amount:')||0
-  );
+  const amount =
+    isCard
+      ? num($("cardBill")?.value)
+      : num($("billAmount")?.value);
 
-  if(!amount)return;
+  const due =
+    isCard
+      ? ($("cardDue")?.value || today())
+      : ($("billDue")?.value || today());
 
-  const due=
-    prompt(
-      'Due date (YYYY-MM-DD):',
-      today()
-    )||today();
+  if(amount <= 0){
+    toast("Bill amount enter karein");
+    return;
+  }
 
-  data.bills.push({
+  D.bills.push({
     id:uid(),
     name,
     amount,
     due,
-    kind:kind||'Bill',
-    paid:false,
-    mode:mode()
+    kind:isCard ? "Credit Card" : "Bill",
+    status:"pending"
   });
 
   save();
-  renderAll();
-
-  toast('Bill added');
+  toast("Bill added");
 }
 
-function toggleBill(id){
+function toggleBill(i){
 
-  const x=data.bills.find(
-    a=>a.id===id
-  );
+  const b = D.bills[i];
 
-  if(x){
-    x.paid=!x.paid;
-    save();
-    renderAll();
-  }
+  if(!b) return;
+
+  b.status =
+    b.status === "settled"
+      ? "pending"
+      : "settled";
+
+  save();
 }
+
+function renderBills(){
+
+  const el = $("billList");
+
+  if(!el) return;
+
+  el.innerHTML =
+    D.bills
+      .slice()
+      .sort((a,b) =>
+        String(a.due).localeCompare(String(b.due))
+      )
+      .map((b,i) => `
+        <div class="person">
+
+          <b>
+            ${b.status === "settled"
+              ? "✅"
+              : "⏳"}
+            ${esc(b.name)}
+          </b>
+
+          <br>
+
+          ${money(b.amount)}
+          · Due ${esc(b.due)}
+
+          <br>
+
+          <button onclick="toggleBill(${i})">
+            ${
+              b.status === "settled"
+                ? "Mark Pending"
+                : "Mark Paid"
+            }
+          </button>
+
+        </div>
+      `).join("");
+}
+
+/* =========================
+   REMINDERS
+========================= */
 
 function addReminder(){
 
-  const name=
-    $('remName')?.value||'Reminder';
+  const name = $("remName")?.value || "Reminder";
+  const type = $("remType")?.value || "General";
+  const date = $("remDate")?.value;
 
-  const type=
-    $('remType')?.value||'Bill';
+  if(!date){
+    toast("Date enter karein");
+    return;
+  }
 
-  const date=
-    $('remDate')?.value||today();
-
-  const amount=
-    num('remAmount');
-
-  const note=
-    $('remNote')?.value||'';
-
-  data.reminders.push({
+  D.reminders.push({
     id:uid(),
     name,
     type,
     date,
-    amount,
-    note,
-    done:false,
-    mode:mode()
+    amount:num($("remAmount")?.value),
+    note:$("remNote")?.value || "",
+    done:false
   });
 
   save();
-  renderAll();
-
-  toast('Reminder saved');
+  toast("Reminder added");
 }
 
-function markBillPaid(id){
-  toggleBill(id);
+function toggleReminder(i){
+
+  if(!D.reminders[i]) return;
+
+  D.reminders[i].done =
+    !D.reminders[i].done;
+
+  save();
 }
 
-function deleteBill(id){
+function deleteReminder(i){
 
-  if(confirm('Delete bill?')){
+  D.reminders.splice(i,1);
+  save();
+}
 
-    data.bills=
-      data.bills.filter(
-        x=>x.id!==id
-      );
+function renderReminders(){
 
-    save();
-    renderAll();
+  const pending =
+    D.reminders.filter(x => !x.done);
+
+  const todayDate = today();
+
+  const due =
+    pending.filter(x => x.date <= todayDate);
+
+  if($("remSummary")){
+
+    $("remSummary").innerHTML = `
+      <b>Pending: ${pending.length}</b><br>
+      Due / Overdue: ${due.length}
+    `;
+  }
+
+  if($("remList")){
+
+    $("remList").innerHTML =
+      D.reminders
+        .slice()
+        .sort((a,b) =>
+          String(a.date).localeCompare(String(b.date))
+        )
+        .map((r,i) => `
+          <div class="person">
+
+            <b>
+              ${r.done ? "✅" : "🔔"}
+              ${esc(r.name)}
+            </b>
+
+            <br>
+
+            ${esc(r.type)}
+            · Due ${esc(r.date)}
+
+            ${
+              r.amount
+                ? `<br>${money(r.amount)}`
+                : ""
+            }
+
+            ${
+              r.note
+                ? `<br>${esc(r.note)}`
+                : ""
+            }
+
+            <br>
+
+            <button onclick="toggleReminder(${i})">
+              ${r.done
+                ? "Mark Pending"
+                : "Mark Done"}
+            </button>
+
+            <button onclick="deleteReminder(${i})">
+              Delete
+            </button>
+
+          </div>
+        `).join("");
   }
 }
 
-function saveReminderForm(){
-  addReminder();
-}
-
-/* ================= BUSINESS ================= */
-
-function saveBusiness(){
-  addPerson('Business');
-}
-
-/* ================= FAMILY / TOOLS ================= */
-
-function addFamilyMember(){
-
-  const n=prompt(
-    'Family member name:'
-  );
-
-  if(n){
-
-    data.family.push({
-      id:uid(),
-      name:n
-    });
-
-    save();
-    renderAll();
-  }
-}
-
-function addShopping(){
-
-  const n=prompt('Item:');
-
-  if(n){
-
-    data.shopping.push({
-      id:uid(),
-      name:n,
-      done:false
-    });
-
-    save();
-    renderAll();
-  }
-}
-
-function addUtility(){
-
-  const n=prompt(
-    'Utility name:'
-  );
-
-  if(n){
-
-    data.utilities.push({
-      id:uid(),
-      name:n,
-      amount:Number(
-        prompt('Amount:')||0
-      )
-    });
-
-    save();
-    renderAll();
-  }
-}
+/* =========================
+   FD
+========================= */
 
 function calcFD(){
 
-  const p=num('fdP');
-  const r=num('fdR')/100;
-  const n=num('fdN');
+  const p = num($("fdP")?.value);
+  const r = num($("fdR")?.value);
+  const months = num($("fdN")?.value);
 
-  const maturity=
-    p*Math.pow(
-      1+r/4,
-      4*n/12
-    );
+  if(p <= 0 || months <= 0){
+    toast("Principal aur months enter karein");
+    return;
+  }
 
-  if($('fdResult')){
-    $('fdResult').innerHTML=`
-      Maturity:
-      <b>${money(maturity)}</b>
-      <br>
-      Interest:
-      ${money(maturity-p)}
+  const years = months / 12;
+
+  const maturity =
+    p * Math.pow(1+r/400,4*years);
+
+  if($("fdResult")){
+
+    $("fdResult").innerHTML = `
+      <b>Estimated Maturity: ${money(maturity)}</b><br>
+      Principal: ${money(p)}<br>
+      Estimated Interest: ${money(maturity-p)}<br>
+      Period: ${months} months
     `;
   }
 }
 
+/* =========================
+   INSURANCE / SCHOOL / VEHICLE
+========================= */
+
 function addInsurance(){
 
-  const name=
-    $('insName')?.value||
-    'Insurance';
+  const name = $("insName")?.value || "Insurance";
+  const premium = num($("insPremium")?.value);
+  const date = $("insDate")?.value;
 
-  const premium=
-    num('insPremium');
+  if(premium <= 0 || !date){
+    toast("Premium aur date enter karein");
+    return;
+  }
 
-  const date=
-    $('insDate')?.value||
-    today();
-
-  data.insurance.push({
+  D.insurance.push({
     id:uid(),
     name,
     premium,
@@ -1541,26 +1701,21 @@ function addInsurance(){
   });
 
   save();
-  renderAll();
 }
 
 function addSchool(){
 
-  const child=
-    $('child')?.value||
-    'Child';
+  const child = $("child")?.value || "Child";
+  const fee = num($("schoolFee")?.value);
+  const due = $("schoolDue")?.value;
+  const books = num($("schoolBooks")?.value);
 
-  const fee=
-    num('schoolFee');
+  if(fee <= 0 || !due){
+    toast("Fee aur due date enter karein");
+    return;
+  }
 
-  const due=
-    $('schoolDue')?.value||
-    today();
-
-  const books=
-    num('schoolBooks');
-
-  data.school.push({
+  D.schools.push({
     id:uid(),
     child,
     fee,
@@ -1569,1074 +1724,1184 @@ function addSchool(){
   });
 
   save();
-  renderAll();
 }
 
 function addVehicle(){
 
-  const n=
-    $('vehicle')?.value||
-    prompt('Vehicle:')||
-    '';
+  const vehicle = $("vehicle")?.value || "Vehicle";
+  const fuel = num($("fuel")?.value);
 
-  if(n){
+  const service = $("service")?.value || "";
+  const vehicleIns = $("vehicleIns")?.value || "";
+  const puc = $("puc")?.value || "";
 
-    data.vehicles.push({
-      id:uid(),
-      name:n
-    });
+  D.vehicles.push({
+    id:uid(),
+    vehicle,
+    fuel,
+    service,
+    vehicleIns,
+    puc
+  });
 
-    save();
-    renderAll();
+  save();
+}
+
+function renderFamily(){
+
+  if($("insList")){
+
+    $("insList").innerHTML =
+      D.insurance.map(x => `
+        <div class="person">
+          <b>${esc(x.name)}</b><br>
+          Premium: ${money(x.premium)}<br>
+          Renewal: ${esc(x.date)}
+        </div>
+      `).join("");
+  }
+
+  if($("schoolList")){
+
+    $("schoolList").innerHTML =
+      D.schools.map(x => `
+        <div class="person">
+          <b>${esc(x.child)}</b><br>
+          Fee: ${money(x.fee)}<br>
+          Due: ${esc(x.due)}<br>
+          Books: ${money(x.books)}
+        </div>
+      `).join("");
+  }
+
+  if($("vehicleList")){
+
+    $("vehicleList").innerHTML =
+      D.vehicles.map(x => `
+        <div class="person">
+          <b>${esc(x.vehicle)}</b><br>
+          Fuel Budget: ${money(x.fuel)}/month<br>
+          Service: ${esc(x.service || "-")}<br>
+          Insurance: ${esc(x.vehicleIns || "-")}<br>
+          PUC: ${esc(x.puc || "-")}
+        </div>
+      `).join("");
   }
 }
 
+/* =========================
+   FAMILY TOOLS
+========================= */
+
+function addFamilyMember(){
+
+  const name = $("fmName")?.value?.trim();
+
+  if(!name) return;
+
+  D.family.push({
+    id:uid(),
+    name
+  });
+
+  save();
+}
+
+function addShopping(){
+
+  const item = $("shopItem")?.value?.trim();
+  const budget = num($("shopBudget")?.value);
+
+  if(!item || budget <= 0) return;
+
+  D.shopping.push({
+    id:uid(),
+    item,
+    budget,
+    bought:false
+  });
+
+  save();
+}
+
+function toggleShopping(i){
+
+  if(!D.shopping[i]) return;
+
+  D.shopping[i].bought =
+    !D.shopping[i].bought;
+
+  save();
+}
+
+function addUtility(){
+
+  const name = $("utilityName")?.value || "Utility";
+  const amount = num($("utilityAmount")?.value);
+  const month = $("utilityMonth")?.value;
+
+  if(amount <= 0 || !month) return;
+
+  D.utilities.push({
+    id:uid(),
+    name,
+    amount,
+    month
+  });
+
+  save();
+}
+
+function renderFamilyTools(){
+
+  if($("fmList")){
+
+    $("fmList").innerHTML =
+      D.family.map(x =>
+        `<span class="person"
+          style="display:inline-block">
+          ${esc(x.name)}
+        </span>`
+      ).join("");
+  }
+
+  if($("shopList")){
+
+    $("shopList").innerHTML =
+      D.shopping.map((x,i) => `
+        <div class="person">
+          ${x.bought ? "✅" : "🛒"}
+          <b>${esc(x.item)}</b>
+          · ${money(x.budget)}
+          <br>
+          <button onclick="toggleShopping(${i})">
+            ${x.bought
+              ? "Mark Pending"
+              : "Mark Bought"}
+          </button>
+        </div>
+      `).join("");
+  }
+
+  if($("utilityList")){
+
+    $("utilityList").innerHTML =
+      D.utilities
+        .slice()
+        .reverse()
+        .map(x => `
+          <div class="person">
+            <b>${esc(x.name)}</b>
+            · ${esc(x.month)}
+            <br>
+            ${money(x.amount)}
+          </div>
+        `).join("");
+  }
+}
+
+/* =========================
+   COMPARISON
+========================= */
+
+function renderComparison(){
+
+  const now = new Date();
+
+  const cm = now.getMonth();
+  const cy = now.getFullYear();
+
+  let curI = 0;
+  let curE = 0;
+  let prevI = 0;
+  let prevE = 0;
+
+  D.transactions.forEach(t => {
+
+    const d = new Date(t.date);
+
+    if(Number.isNaN(d.getTime())) return;
+
+    const m = d.getMonth();
+    const y = d.getFullYear();
+
+    if(m === cm && y === cy){
+
+      if(t.type === "income")
+        curI += num(t.amount);
+      else
+        curE += num(t.amount);
+
+    }else{
+
+      const prevMonth =
+        cm === 0 ? 11 : cm-1;
+
+      const prevYear =
+        cm === 0 ? cy-1 : cy;
+
+      if(m === prevMonth && y === prevYear){
+
+        if(t.type === "income")
+          prevI += num(t.amount);
+        else
+          prevE += num(t.amount);
+      }
+    }
+  });
+
+  if($("compareResult")){
+
+    $("compareResult").innerHTML = `
+      <b>Current Month</b><br>
+      Income: ${money(curI)}<br>
+      Expense: ${money(curE)}<br><br>
+
+      <b>Previous Month</b><br>
+      Income: ${money(prevI)}<br>
+      Expense: ${money(prevE)}<br><br>
+
+      Expense Difference:
+      ${money(curE-prevE)}
+    `;
+  }
+}
+
+/* =========================
+   EMERGENCY
+========================= */
+
+function calcEmergency(){
+
+  const expense = num($("emExpense")?.value);
+  const months = num($("emMonths")?.value);
+  const current = num($("emCurrent")?.value);
+
+  const target = expense * months;
+  const remain = Math.max(0,target-current);
+
+  const pct =
+    target > 0
+      ? Math.min(100,current/target*100)
+      : 0;
+
+  if($("emResult")){
+
+    $("emResult").innerHTML = `
+      <div class="person">
+        <b>Emergency Fund Target: ${money(target)}</b><br>
+        Current: ${money(current)}<br>
+        Remaining: ${money(remain)}<br>
+        Progress: ${pct.toFixed(0)}%
+      </div>
+    `;
+  }
+}
+
+/* =========================
+   TOOLS 13
+========================= */
+
 function addDoc(){
 
-  const n=
-    $('docName')?.value||
-    prompt('Document name:')||
-    '';
+  const name = $("docName")?.value?.trim();
+  const date = $("docDate")?.value || "";
 
-  if(n){
+  if(!name) return;
 
-    data.docs.push({
-      id:uid(),
-      name:n,
-      date:today()
-    });
+  D.docs.push({
+    id:uid(),
+    name,
+    date
+  });
 
-    save();
-    renderAll();
-  }
+  save();
 }
 
 function addAnnual(){
 
-  const n=
-    $('annualName')?.value||
-    prompt('Plan name:')||
-    '';
+  const name = $("annualName")?.value?.trim();
+  const amount = num($("annualAmount")?.value);
+  const month = $("annualMonth")?.value;
 
-  if(n){
+  if(!name || amount <= 0 || !month) return;
 
-    data.annualPlans.push({
-      id:uid(),
-      name:n
-    });
+  D.annual.push({
+    id:uid(),
+    name,
+    amount,
+    month
+  });
 
-    save();
-    renderAll();
-  }
+  save();
 }
 
 function saveLimit(){
 
-  const n=
-    $('limitName')?.value||
-    prompt('Limit category:')||
-    'Other';
+  const cat = $("limitCat")?.value || "General";
+  const amount = num($("limitAmount")?.value);
 
-  const v=
-    num('limitAmount')||
-    Number(
-      prompt('Limit amount:')||0
-    );
+  if(amount <= 0) return;
 
-  data.limits.push({
-    id:uid(),
-    name:n,
-    amount:v,
-    mode:mode()
-  });
+  D.limits[cat] = amount;
 
   save();
-  renderAll();
 }
 
-function calcEmergency(){
+function renderTools13(){
 
-  const monthly=
-    Number(
-      prompt(
-        'Monthly essential expense:'
-      )||0
-    );
+  if($("docList")){
 
-  const months=
-    Number(
-      prompt(
-        'Target months:',
-        6
-      )||6
-    );
+    $("docList").innerHTML =
+      D.docs.map(x => `
+        <div class="person">
+          <b>📄 ${esc(x.name)}</b><br>
+          ${x.date
+            ? "Expiry: "+esc(x.date)
+            : "No expiry date"}
+        </div>
+      `).join("");
+  }
 
-  const target=
-    monthly*months;
+  if($("annualList")){
 
-  const el=$('emergencyResult');
+    $("annualList").innerHTML =
+      D.annual
+        .slice()
+        .sort((a,b) =>
+          String(a.month).localeCompare(String(b.month))
+        )
+        .map(x => `
+          <div class="person">
+            <b>${esc(x.name)}</b><br>
+            ${money(x.amount)} · ${esc(x.month)}
+          </div>
+        `).join("");
+  }
 
-  if(el){
-    el.innerHTML=
-      `Emergency Fund Target:
-       <b>${money(target)}</b>`;
-  }else{
-    toast(
-      `Emergency Fund: ${money(target)}`
-    );
+  if($("limitList")){
+
+    $("limitList").innerHTML =
+      Object.entries(D.limits)
+        .map(([k,v]) => `
+          <div class="person">
+            <b>${esc(k)}</b><br>
+            Monthly Limit: ${money(v)}
+          </div>
+        `).join("");
   }
 }
 
-function renderComparison(){
+/* =========================
+   SMART SEARCH
+========================= */
 
-  const el=
-    $('comparisonResult')||
-    $('comparison');
+function searchAllData(value){
 
-  if(!el)return;
+  if(value === undefined){
+    value = $("searchAll")?.value || "";
+  }
 
-  const t=modeTx();
+  const q = String(value)
+    .toLowerCase()
+    .trim();
 
-  const inc=
-    t
-      .filter(x=>x.type==='income')
-      .reduce(
-        (s,x)=>s+Number(x.amount||0),
-        0
-      );
+  const el = $("searchResults");
 
-  const exp=
-    t
-      .filter(x=>x.type==='expense')
-      .reduce(
-        (s,x)=>s+Number(x.amount||0),
-        0
-      );
+  if(!el) return;
 
-  el.innerHTML=`
-    <div class="person">
-      Income: ${money(inc)}
-      <br>
-      Expense: ${money(exp)}
-      <br>
-      Balance: ${money(inc-exp)}
-    </div>
-  `;
-}
+  if(!q){
+    el.innerHTML = "";
+    return;
+  }
 
-function searchAllData(){
+  const out = [];
 
-  const q=
-    (prompt('Search HISAB:')||'')
-      .toLowerCase();
+  ["personal","business"].forEach(type => {
 
-  if(!q)return;
+    D[type].forEach(p => {
 
-  const out=[
-    ...modeTx().map(
-      x=>`${x.category} ${x.note} ${x.amount}`
-    ),
-    ...modePeople().map(
-      x=>`${x.name} ${x.phone}`
-    ),
-    ...modeLending().map(
-      x=>`${x.name} ${x.note} ${x.amount}`
-    )
-  ].filter(
-    x=>x.toLowerCase().includes(q)
-  );
+      const text =
+        p.name + " " +
+        p.phone + " " +
+        p.partyType + " " +
+        p.transactions
+          .map(t =>
+            `${t.note} ${t.amount} ${t.method}`
+          ).join(" ");
 
-  alert(
+      if(text.toLowerCase().includes(q)){
+
+        const t = totals(p);
+
+        out.push(`
+          <div class="person"
+            onclick="openKhata('${type}','${p.id}')">
+
+            <b>
+              ${type === "business"
+                ? "🏢"
+                : "🤝"}
+              ${esc(p.name)}
+            </b>
+
+            <br>
+
+            Give ${money(t.give)}
+            · Receive ${money(t.receive)}
+
+          </div>
+        `);
+      }
+    });
+  });
+
+  D.transactions.forEach(t => {
+
+    const text =
+      `${t.category} ${t.note} ${t.amount}`;
+
+    if(text.toLowerCase().includes(q)){
+
+      out.push(`
+        <div class="person">
+          💰 ${esc(t.category)}
+          · ${money(t.amount)}
+        </div>
+      `);
+    }
+  });
+
+  D.bills.forEach(b => {
+
+    if(
+      `${b.name} ${b.amount}`
+        .toLowerCase()
+        .includes(q)
+    ){
+
+      out.push(`
+        <div class="person">
+          🧾 ${esc(b.name)}
+          · ${money(b.amount)}
+        </div>
+      `);
+    }
+  });
+
+  D.reminders.forEach(r => {
+
+    if(
+      `${r.name} ${r.type}`
+        .toLowerCase()
+        .includes(q)
+    ){
+
+      out.push(`
+        <div class="person">
+          🔔 ${esc(r.name)}
+        </div>
+      `);
+    }
+  });
+
+  el.innerHTML =
     out.length
-      ?out.join('\n')
-      :'No result'
-  );
+      ? out.join("")
+      : `<div class="person">No result</div>`;
 }
 
-/* ================= SHARE ================= */
+/* =========================
+   PDF GENERATOR
+   Simple dependency-free PDF
+========================= */
 
-function summaryText(){
+function pdfEscape(s){
 
-  const t=totals();
-
-  return `HISAB — ${mode()}
-Income: ${money(t.income)}
-Expense: ${money(t.expense)}
-Balance: ${money(t.balance)}
-Money Given: ${money(t.given)}
-Money Received: ${money(t.received)}
-Net Khata: ${money(t.net)}`;
+  return String(s)
+    .replace(/\\/g,"\\\\")
+    .replace(/\(/g,"\\(")
+    .replace(/\)/g,"\\)");
 }
 
-function shareText(text){
+function makePDF(lines){
 
-  if(navigator.share){
-
-    navigator.share({
-      title:'HISAB',
-      text
-    }).catch(()=>{});
-
-  }else{
-
-    navigator.clipboard?.writeText(text);
-
-    toast('Summary copied');
-  }
-}
-
-function shareHisab(){
-  shareText(summaryText());
-}
-
-/* ================= EXPORT ================= */
-
-function download(
-  name,
-  content,
-  type
-){
-
-  const a=
-    document.createElement('a');
-
-  a.href=
-    URL.createObjectURL(
-      new Blob(
-        [content],
-        {type}
+  const safe =
+    lines
+      .map(x =>
+        String(x)
+          .replace(/₹/g,"Rs.")
+          .replace(/[^\x20-\x7E]/g,"")
       )
-    );
+      .slice(0,55);
 
-  a.download=name;
+  let content = "BT\n/F1 10 Tf\n";
 
-  document.body.appendChild(a);
+  let y = 800;
 
+  safe.forEach(line => {
+
+    content +=
+      `40 ${y} Td (${pdfEscape(line)}) Tj\n`;
+
+    y -= 14;
+
+    if(y < 40){
+      y = 800;
+    }
+  });
+
+  content += "ET";
+
+  const objects = [];
+
+  objects[1] =
+    "<< /Type /Catalog /Pages 2 0 R >>";
+
+  objects[2] =
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
+
+  objects[3] =
+    "<< /Type /Page /Parent 2 0 R " +
+    "/MediaBox [0 0 595 842] " +
+    "/Resources << /Font << /F1 4 0 R >> >> " +
+    "/Contents 5 0 R >>";
+
+  objects[4] =
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+
+  objects[5] =
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  for(let i=1;i<=5;i++){
+
+    offsets[i] = pdf.length;
+
+    pdf += `${i} 0 obj\n`;
+    pdf += objects[i];
+    pdf += "\nendobj\n";
+  }
+
+  const xref = pdf.length;
+
+  pdf += "xref\n0 6\n";
+  pdf += "0000000000 65535 f \n";
+
+  for(let i=1;i<=5;i++){
+
+    pdf += String(offsets[i])
+      .padStart(10,"0") +
+      " 00000 n \n";
+  }
+
+  pdf +=
+    "trailer\n" +
+    "<< /Size 6 /Root 1 0 R >>\n" +
+    "startxref\n" +
+    xref +
+    "\n%%EOF";
+
+  return new Blob([pdf],{
+    type:"application/pdf"
+  });
+}
+
+async function shareKhataPDF(){
+
+  const p = findParty(activeType,activeParty);
+
+  if(!p) return;
+
+  const t = totals(p);
+
+  const lines = [
+    "HISAB - KHATA",
+    "",
+    "Name: " + p.name,
+    "Type: " +
+      (p.partyType === "supplier"
+        ? "Supplier"
+        : p.partyType === "customer"
+          ? "Customer"
+          : "Personal"),
+    "",
+    "Total Give: " + money(t.give),
+    "Total Receive: " + money(t.receive),
+    "Balance: " +
+      (t.balance >= 0
+        ? "You Get "
+        : "You Give ") +
+      money(t.balance),
+    "",
+    "HISTORY",
+    ""
+  ];
+
+  p.transactions
+    .slice()
+    .sort((a,b) =>
+      String(a.date).localeCompare(String(b.date))
+    )
+    .forEach(x => {
+
+      lines.push(
+        `${x.date} | ` +
+        `${x.kind === "give" ? "Give" : "Receive"} | ` +
+        `${money(x.amount)} | ` +
+        `${x.method} | ` +
+        `${x.status}`
+      );
+
+      if(x.note)
+        lines.push("Note: " + x.note);
+    });
+
+  const blob = makePDF(lines);
+
+  const file = new File(
+    [blob],
+    `${p.name.replace(/[^a-z0-9]/gi,"_")}_Khata.pdf`,
+    {type:"application/pdf"}
+  );
+
+  try{
+
+    if(
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({files:[file]})
+    ){
+
+      await navigator.share({
+        title:`${p.name} Khata`,
+        text:"HISAB Khata",
+        files:[file]
+      });
+
+      return;
+    }
+
+  }catch(e){
+
+    if(e && e.name === "AbortError")
+      return;
+  }
+
+  const a = document.createElement("a");
+
+  a.href = URL.createObjectURL(blob);
+  a.download = file.name;
   a.click();
 
-  a.remove();
+  setTimeout(() =>
+    URL.revokeObjectURL(a.href),1000
+  );
 
-  setTimeout(
-    ()=>URL.revokeObjectURL(a.href),
-    500
+  toast("PDF saved");
+}
+
+/* =========================
+   SUMMARY PDF / SHARE
+========================= */
+
+async function shareHisab(){
+
+  const income =
+    D.transactions
+      .filter(t => t.type === "income")
+      .reduce((s,t) => s + num(t.amount),0);
+
+  const expense =
+    D.transactions
+      .filter(t => t.type === "expense")
+      .reduce((s,t) => s + num(t.amount),0);
+
+  const lines = [
+    "HISAB SUMMARY",
+    "",
+    "Income: " + money(income),
+    "Expense: " + money(expense),
+    "Saving: " + money(income-expense),
+    "",
+    "Personal Khata: " + D.personal.length,
+    "Business Khata: " + D.business.length,
+    "Transactions: " + D.transactions.length,
+    "Bills: " + D.bills.length,
+    "Reminders: " + D.reminders.length
+  ];
+
+  const blob = makePDF(lines);
+
+  const file =
+    new File(
+      [blob],
+      "HISAB-Summary.pdf",
+      {type:"application/pdf"}
+    );
+
+  try{
+
+    if(
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({files:[file]})
+    ){
+
+      await navigator.share({
+        title:"HISAB Summary",
+        files:[file]
+      });
+
+      return;
+    }
+
+  }catch(e){
+
+    if(e?.name === "AbortError")
+      return;
+  }
+
+  const a = document.createElement("a");
+
+  a.href = URL.createObjectURL(blob);
+  a.download = file.name;
+  a.click();
+
+  setTimeout(() =>
+    URL.revokeObjectURL(a.href),1000
+  );
+}
+
+function exportSummary(){
+
+  shareHisab();
+}
+
+/* =========================
+   BACKUP / RESTORE
+========================= */
+
+function allHisabData(){
+
+  return {
+    app:"HISAB",
+    version:7,
+    exportedAt:new Date().toISOString(),
+    data:D
+  };
+}
+
+function downloadFile(name,text,type){
+
+  const blob =
+    new Blob([text],{type});
+
+  const a =
+    document.createElement("a");
+
+  a.href =
+    URL.createObjectURL(blob);
+
+  a.download = name;
+  a.click();
+
+  setTimeout(() =>
+    URL.revokeObjectURL(a.href),1000
   );
 }
 
 function exportBackup(){
 
-  download(
-    `HISAB-Backup-${today()}.json`,
-    JSON.stringify(
-      data,
-      null,
-      2
-    ),
-    'application/json'
+  downloadFile(
+    "HISAB-backup.json",
+    JSON.stringify(allHisabData(),null,2),
+    "application/json"
   );
 
-  toast('Backup exported');
+  toast("Backup exported");
 }
 
 function importBackup(event){
 
-  const file=
+  const file =
     event?.target?.files?.[0];
 
-  if(!file)return;
+  if(!file) return;
 
-  const r=
-    new FileReader();
+  const reader = new FileReader();
 
-  r.onload=e=>{
+  reader.onload = () => {
 
     try{
 
-      const x=
-        JSON.parse(
-          e.target.result
-        );
+      const x =
+        JSON.parse(reader.result);
 
-      if(
-        !x ||
-        !Array.isArray(x.transactions) ||
-        !Array.isArray(x.lendings)
-      ){
-        throw Error();
+      if(x.data){
+        D = {
+          ...DEFAULT_DATA,
+          ...x.data
+        };
+      }else if(x.personal || x.business){
+        D = {
+          ...DEFAULT_DATA,
+          ...x
+        };
+      }else{
+        throw new Error("Invalid");
       }
 
-      data={
-        ...clone(DEFAULT),
-        ...x
-      };
-
-      data.settings={
-        ...DEFAULT.settings,
-        ...(x.settings||{})
-      };
-
+      migrateOldData(D);
       save();
-      renderAll();
 
-      toast('Backup restored');
+      toast("Backup restored");
 
-    }catch(err){
+    }catch(e){
 
-      toast(
-        'Invalid HISAB backup'
-      );
+      alert("Invalid HISAB backup file");
     }
   };
 
-  r.readAsText(file);
+  reader.readAsText(file);
 }
 
-function exportSummary(){
+/* =========================
+   SECURITY PIN
+========================= */
 
-  download(
-    `HISAB-Summary-${today()}.txt`,
-    summaryText(),
-    'text/plain'
-  );
+function setPin(){
 
-  toast('Summary exported');
-}
+  const p =
+    prompt("4-6 digit PIN set karein:");
 
-function csvEscape(v){
+  if(!/^\d{4,6}$/.test(p || "")){
 
-  return `"${String(v??'')
-    .replaceAll('"','""')}"`;
-}
-
-function exportCSV(){
-
-  const rows=[
-    [
-      'Date',
-      'Time',
-      'Mode',
-      'Type',
-      'Category',
-      'Amount',
-      'Note'
-    ],
-    ...modeTx().map(x=>[
-      x.date,
-      x.time,
-      x.mode,
-      x.type,
-      x.category,
-      x.amount,
-      x.note
-    ])
-  ];
-
-  download(
-    `HISAB-${mode()}-${today()}.csv`,
-    rows
-      .map(r=>
-        r.map(csvEscape).join(',')
-      )
-      .join('\n'),
-    'text/csv'
-  );
-
-  toast('CSV exported');
-}
-
-/* ================= PDF / PRINT ================= */
-
-function printHTML(
-  title,
-  body
-){
-
-  const w=
-    window.open(
-      '',
-      '_blank'
-    );
-
-  if(!w){
-    toast('Popup blocked');
+    alert("PIN 4-6 digits ka hona chahiye");
     return;
   }
 
-  w.document.write(`
-    <!doctype html>
-    <html>
-    <head>
-      <title>${esc(title)}</title>
+  D.pin = p;
 
-      <meta
-        name="viewport"
-        content="width=device-width"
-      >
+  localStorage.setItem(
+    "hisabPin",
+    p
+  );
 
-      <style>
-        body{
-          font-family:Arial;
-          padding:20px;
-          color:#111
-        }
+  saveQuiet();
 
-        table{
-          width:100%;
-          border-collapse:collapse
-        }
-
-        td,th{
-          border:1px solid #ccc;
-          padding:7px;
-          text-align:left
-        }
-
-        h1{
-          color:#0b1f33
-        }
-      </style>
-    </head>
-
-    <body>
-      ${body}
-
-      <script>
-        window.onload=()=>window.print()
-      <\/script>
-
-    </body>
-    </html>
-  `);
-
-  w.document.close();
+  toast("PIN saved");
 }
 
-function exportPDF(){
+function lockApp(){
 
-  const t=totals();
+  const pin =
+    D.pin ||
+    localStorage.getItem("hisabPin");
 
-  const body=`
-    <h1>HISAB — ${mode()}</h1>
+  if(!pin){
 
-    <p>
-      Generated ${fmtDate(today())}
-    </p>
+    alert("Pehle PIN set karein");
+    return;
+  }
 
-    <table>
+  const overlay =
+    document.createElement("div");
 
-      <tr>
-        <th>Item</th>
-        <th>Amount</th>
-      </tr>
+  overlay.id = "pinLock";
 
-      <tr>
-        <td>Income</td>
-        <td>${money(t.income)}</td>
-      </tr>
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:#0b1f33;" +
+    "z-index:100000;color:#fff;display:flex;" +
+    "align-items:center;justify-content:center;" +
+    "padding:25px;box-sizing:border-box;";
 
-      <tr>
-        <td>Expense</td>
-        <td>${money(t.expense)}</td>
-      </tr>
+  overlay.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:360px;
+      text-align:center;
+    ">
 
-      <tr>
-        <td>Balance</td>
-        <td>${money(t.balance)}</td>
-      </tr>
+      <div style="font-size:45px">🔒</div>
 
-      <tr>
-        <td>Money Given</td>
-        <td>${money(t.given)}</td>
-      </tr>
+      <h2>HISAB Locked</h2>
 
-      <tr>
-        <td>Money Received</td>
-        <td>${money(t.received)}</td>
-      </tr>
+      <input
+        id="unlock"
+        type="password"
+        inputmode="numeric"
+        maxlength="6"
+        placeholder="Enter PIN"
+        style="
+          width:100%;
+          box-sizing:border-box;
+          padding:14px;
+          border-radius:12px;
+          border:0;
+        ">
 
-    </table>
+      <button
+        onclick="unlockApp()"
+        style="
+          width:100%;
+          margin-top:10px;
+          padding:14px;
+          border:0;
+          border-radius:12px;
+        ">
+        Unlock
+      </button>
+
+    </div>
   `;
 
-  printHTML(
-    'HISAB Report',
-    body
+  document.body.appendChild(overlay);
+
+  setTimeout(() =>
+    $("unlock")?.focus(),100
   );
 }
 
-function exportPersonPDF(pid){
+function unlockApp(){
 
-  const p=
-    modePeople().find(
-      x=>x.id===pid
-    );
+  const pin =
+    D.pin ||
+    localStorage.getItem("hisabPin");
 
-  if(!p)return;
+  if($("unlock")?.value === pin){
 
-  const b=
-    personBalance(p);
+    $("pinLock")?.remove();
+    toast("Unlocked");
 
-  const rows=
-    modeLending()
-      .filter(
-        x=>x.personId===pid
-      )
-      .map(x=>`
-        <tr>
-          <td>${fmtDate(x.date)}</td>
-          <td>${x.type}</td>
-          <td>${money(x.amount)}</td>
-          <td>${money(x.paid||0)}</td>
-          <td>${money(
-            Math.max(
-              0,
-              x.amount-(x.paid||0)
-            )
-          )}</td>
-          <td>${esc(x.note||'')}</td>
-        </tr>
-      `)
-      .join('');
+  }else{
 
-  printHTML(
-    `HISAB - ${p.name}`,
-    `
-      <h1>HISAB Statement</h1>
-
-      <h2>${esc(p.name)}</h2>
-
-      <p>
-        Given: ${money(b.given)}
-        |
-        Received: ${money(b.received)}
-        |
-        Net: ${money(b.net)}
-      </p>
-
-      <table>
-
-        <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Amount</th>
-          <th>Paid</th>
-          <th>Due</th>
-          <th>Note</th>
-        </tr>
-
-        ${rows}
-
-      </table>
-    `
-  );
-}
-
-/* ================= DASHBOARD ================= */
-
-function calcNetWorth(){
-
-  const t=totals();
-
-  return t.balance+
-    t.received-
-    t.given;
-}
-
-function renderDashboard(){
-
-  const t=totals();
-
-  const map={
-    totalIncome:t.income,
-    totalExpense:t.expense,
-    ledgerGiven:t.given,
-    ledgerReceived:t.received,
-    ledgerNet:t.net,
-    rIncome:t.income,
-    rExpense:t.expense,
-    rCount:modeTx().length,
-    rSaving:Math.max(0,t.balance)
-  };
-
-  Object.entries(map)
-    .forEach(([id,v])=>{
-
-      const e=$(id);
-
-      if(!e)return;
-
-      e.textContent=
-        id.startsWith('r') &&
-        id!=='rCount'
-          ?money(v)
-          :id==='rCount'
-            ?v
-            :money(v);
-    });
-
-  const b=$('todaySummary');
-
-  if(b){
-
-    b.innerHTML=`
-      <b>
-        ${mode()} • ${data.currency}
-      </b>
-
-      <br>
-
-      Balance:
-      <b>${money(t.balance)}</b>
-
-      <br>
-
-      Net Khata:
-      ${money(t.net)}
-    `;
-  }
-
-  const m=$('businessList');
-
-  if(
-    m &&
-    mode()==='Business'
-  ){
-
-    m.innerHTML=
-      data.business
-        .map(p=>`
-          <div class="person">
-
-            <b>${esc(p.name)}</b>
-
-            <br>
-
-            ${esc(p.phone||'')}
-
-            <br>
-
-            <button
-              onclick="showPersonHistory('${p.id}')"
-            >
-              Open Khata
-            </button>
-
-          </div>
-        `)
-        .join('')
-      ||
-      '<div class="person">No customers/suppliers.</div>';
+    toast("Wrong PIN");
   }
 }
 
-/* ================= BILLS RENDER ================= */
+/* =========================
+   LANGUAGE / CURRENCY
+========================= */
 
-function renderBills(){
+function changeLanguage(){
 
-  const box=$('remList');
+  D.lang =
+    D.lang === "hi"
+      ? "en"
+      : "hi";
 
-  if(box){
-
-    const bs=
-      data.bills.filter(
-        x=>
-          (x.mode||'Personal')===mode()
-      );
-
-    box.innerHTML=
-      bs
-        .map(x=>`
-          <div class="person">
-
-            <b>${esc(x.name)}</b>
-            —
-            ${money(x.amount)}
-
-            <br>
-
-            ${esc(x.kind)}
-            •
-            Due ${fmtDate(x.due)}
-            •
-            ${dueState(
-              x.due,
-              x.paid
-                ?0
-                :x.amount
-            )}
-
-            <br>
-
-            <button
-              onclick="toggleBill('${x.id}')"
-            >
-              ${
-                x.paid
-                  ?'Mark Pending'
-                  :'Mark Paid'
-              }
-            </button>
-
-            <button
-              onclick="deleteBill('${x.id}')"
-            >
-              Delete
-            </button>
-
-          </div>
-        `)
-        .join('')
-      ||
-      '';
-  }
-
-  const rs=$('remSummary');
-
-  if(rs){
-
-    const rr=
-      data.reminders.filter(
-        x=>
-          (x.mode||'Personal')===mode()
-      );
-
-    rs.innerHTML=`
-      <b>${rr.length}</b>
-      reminders
-      •
-      ${rr.filter(x=>!x.done).length}
-      active
-    `;
-  }
-}
-
-/* ================= FAMILY RENDER ================= */
-
-function renderFamily(){
-
-  const maps={
-    insList:data.insurance,
-    schoolList:data.school,
-    vehicleList:data.vehicles,
-    familyList:data.family,
-    shoppingList:data.shopping,
-    utilityList:data.utilities,
-    docsList:data.docs,
-    annualList:data.annualPlans,
-    limitsList:data.limits
-  };
-
-  for(
-    const [id,arr]
-    of Object.entries(maps)
-  ){
-
-    const e=$(id);
-
-    if(!e)continue;
-
-    e.innerHTML=
-      arr
-        .map(x=>`
-          <div class="person">
-
-            ${esc(
-              x.name||
-              x.child||
-              x.item||
-              'Entry'
-            )}
-
-            ${
-              x.amount
-                ?`— ${money(x.amount)}`
-                :''
-            }
-
-          </div>
-        `)
-        .join('')
-      ||
-      '';
-  }
-}
-
-/* ================= THEME ================= */
-
-function applyTheme(){
-  document.body.dataset.theme=
-    data.theme||'light';
-}
-
-function toggleTheme(){
-
-  data.theme=
-    data.theme==='dark'
-      ?'light'
-      :'dark';
-
-  save();
-  applyTheme();
+  saveQuiet();
 
   toast(
-    data.theme+' mode'
+    D.lang === "hi"
+      ? "Hindi selected"
+      : "English selected"
   );
 }
 
-/* ================= RESET ================= */
+function changeCurrency(){
 
-function resetData(){
+  const x =
+    prompt(
+      "Currency symbol enter karein:",
+      D.currency || "₹"
+    );
 
-  if(
-    !confirm(
-      'HISAB ka sara local data delete karna hai?'
+  if(!x) return;
+
+  D.currency = x.trim();
+
+  save();
+  toast("Currency updated");
+}
+
+/* =========================
+   TOP BUTTONS
+========================= */
+
+function wireTopButtons(){
+
+  const buttons =
+    document.querySelectorAll(
+      ".top-actions .icon-btn"
+    );
+
+  if(buttons[0])
+    buttons[0].onclick = changeLanguage;
+
+  if(buttons[1])
+    buttons[1].onclick = changeCurrency;
+}
+
+/* =========================
+   BOTTOM NAV
+========================= */
+
+function wireBottomNav(){
+
+  const nav =
+    document.querySelectorAll(
+      ".bottom-nav button, nav button"
+    );
+
+  nav.forEach(b => {
+
+    const text =
+      (b.textContent || "").toLowerCase();
+
+    if(text.includes("home"))
+      b.onclick = () => show("home");
+
+    else if(
+      text.includes("khata") ||
+      text.includes("udhaar")
     )
-  )return;
+      b.onclick = () => show("personal");
 
-  data=clone(DEFAULT);
+    else if(text.includes("add"))
+      b.onclick = () => show("reports");
 
-  save();
-  renderAll();
+    else if(text.includes("report"))
+      b.onclick = () => show("reports");
 
-  toast('All data cleared');
+    else if(text.includes("more"))
+      b.onclick = () => show("tools13");
+  });
 }
 
-/* ================= COMPATIBILITY HANDLERS ================= */
+/* =========================
+   SEARCH / FILTER WIRING
+========================= */
 
-function saveBudgetForm(){
-  calcBudget();
+function wireSearch(){
+
+  if($("searchAll"))
+    $("searchAll").oninput =
+      e => searchAllData(e.target.value);
+
+  enhancePersonal();
+  enhanceBusiness();
 }
 
-function saveGoalForm(){
-  calcGoal();
-}
-
-function addGoalSaving(){
-  calcGoal();
-}
-
-function withdrawGoalSaving(){
-  toast(
-    'Goal withdrawal: add an expense transaction for accurate balance'
-  );
-}
-
-function deleteGoal(id){
-
-  data.goals=
-    data.goals.filter(
-      x=>x.id!==id
-    );
-
-  save();
-  renderAll();
-}
-
-function deleteLoan(id){
-
-  data.loans=
-    data.loans.filter(
-      x=>x.id!==id
-    );
-
-  save();
-  renderAll();
-}
-
-function payEMI(id){
-
-  toast(
-    'EMI payment ko Expenses/transaction me record karein'
-  );
-}
-
-function calculateEMIForm(){
-  calcEMI();
-}
-
-function saveLoanForm(){
-
-  const amount=
-    Number(
-      prompt('Loan amount:')||0
-    );
-
-  const rate=
-    Number(
-      prompt('Annual rate %:')||0
-    );
-
-  const tenure=
-    Number(
-      prompt('Tenure months:')||0
-    );
-
-  if(
-    amount &&
-    tenure
-  ){
-
-    data.loans.push({
-      id:uid(),
-      amount,
-      rate,
-      tenure,
-      mode:mode()
-    });
-
-    save();
-    renderAll();
-
-    toast('Loan saved');
-  }
-}
-
-function searchHisab(){
-  searchAllData();
-}
-
-/* ================= RENDER ALL ================= */
+/* =========================
+   RENDER ALL
+========================= */
 
 function renderAll(){
 
-  applyTheme();
+  renderHome();
 
-  renderDashboard();
-  renderPeople();
-  renderTransactions();
+  enhancePersonal();
+  enhanceBusiness();
+
+  renderList(
+    "personal",
+    "personalList"
+  );
+
+  renderBusiness();
+
+  renderReports();
   renderBills();
+  renderReminders();
   renderFamily();
-  renderComparison();
+  renderFamilyTools();
+  renderTools13();
+
+  if($("searchAll")?.value)
+    searchAllData(
+      $("searchAll").value
+    );
 }
 
-/* ================= START ================= */
+/* =========================
+   INITIALIZATION
+========================= */
 
-function restore(){
+function init(){
 
-  try{
+  wireTopButtons();
+  wireBottomNav();
+  wireSearch();
 
-    const s=
-      localStorage.getItem(KEY);
+  renderAll();
 
-    if(!s)save();
-
-  }catch(e){}
+  /* guest gate is also called
+     by index.html */
 }
 
-/* ================= GLOBAL FUNCTIONS ================= */
+/* =========================
+   GLOBAL HANDLERS
+   Needed by current HTML
+========================= */
 
 Object.assign(window,{
 
-  show,
   enterGuestMode,
   showGuestGate,
+  resetGuestMode,
 
+  show,
   setMode,
-  toggleCurrency,
-  toggleLanguage,
-
-  setPin,
-  lockApp,
-
-  quickTransaction,
-  quickLending,
-
-  openLendingForm,
-  saveLendingForm,
 
   addPerson,
-  addKhataTransaction,
-  showPersonHistory,
-  sharePerson,
-
-  filterLedger,
-  searchLedger,
-
-  markLendingPaid,
-  deleteLending,
-  editLending,
-
   addTransaction,
-  deleteTransaction,
-  editTransaction,
-  setTxType,
-
-  totalIncome,
-  totalExpense,
-  moneyTransactions,
 
   calcBudget,
   calcGoal,
   calcEMI,
-
   addBill,
-  toggleBill,
 
   addReminder,
-  markBillPaid,
-  deleteBill,
+  toggleReminder,
+  deleteReminder,
 
-  saveReminderForm,
-  saveBusiness,
+  setPin,
+  lockApp,
+  unlockApp,
 
-  addFamilyMember,
-  addShopping,
-  addUtility,
+  exportBackup,
+  exportSummary,
+  importBackup,
 
   calcFD,
   addInsurance,
   addSchool,
   addVehicle,
 
+  addFamilyMember,
+  addShopping,
+  toggleShopping,
+  addUtility,
+
+  renderComparison,
+  calcEmergency,
+
   addDoc,
   addAnnual,
   saveLimit,
 
-  calcEmergency,
-  renderComparison,
   searchAllData,
-
-  summaryText,
   shareHisab,
 
-  exportBackup,
-  importBackup,
-  exportSummary,
-  exportCSV,
+  openKhata,
+  closeKhata,
+  newKhataEntry,
+  editKhataEntry,
+  deleteKhataEntry,
+  toggleKhataStatus,
+  deleteParty,
 
-  exportPDF,
-  exportPersonPDF,
+  newEntryDirect,
+  shareKhataPDF,
 
-  toggleTheme,
-  resetData,
+  setBusinessFilter,
 
-  saveBudgetForm,
-  saveGoalForm,
-  addGoalSaving,
-  withdrawGoalSaving,
-
-  deleteGoal,
-  deleteLoan,
-  payEMI,
-  calculateEMIForm,
-  saveLoanForm,
-
-  searchHisab
+  changeLanguage,
+  changeCurrency
 });
 
-document.addEventListener(
-  'DOMContentLoaded',
-  ()=>{
-    restore();
-    showGuestGate();
-
-    if(
-      data.locked &&
-      data.pin
-    ){
-      showLockOverlay();
-    }
-
-    renderAll();
-  }
-);
-
-})();
+init();
