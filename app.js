@@ -1,2583 +1,2642 @@
-(() => {
-  "use strict";
+/* HISAB GLOBAL V7 — FINAL CONTROLLER
+   Local-first • Personal/Business • Khata/Udhaar • Reports • Backup • PIN
+*/
+(function(){
+'use strict';
 
-  /* =========================================================
-     HISAB GLOBAL V7
-     Money Manager
-     Personal + Business
-     Local-first / No Login
-     ========================================================= */
+const KEY='hisab_global_v7';
+const LEGACY_KEYS=['hisab_money_manager_v4','hisab_v7_data'];
 
-  const STORAGE_KEY = "hisab_global_v7_data";
+const DEFAULT={
+  mode:'Personal',
+  currency:'₹',
+  language:'English',
+  theme:'light',
+  pin:'',
+  locked:false,
+  personal:[],
+  business:[],
+  transactions:[],
+  lendings:[],
+  bills:[],
+  reminders:[],
+  loans:[],
+  goals:[],
+  budgets:[],
+  savings:[],
+  insurance:[],
+  school:[],
+  vehicles:[],
+  family:[],
+  shopping:[],
+  utilities:[],
+  docs:[],
+  annualPlans:[],
+  limits:[],
+  settings:{}
+};
 
-  const DEFAULT_DATA = {
-    version: 7,
-    mode: "personal",
+let data=load();
+let ledgerFilter='all';
+let ledgerSearch='';
+let txFilter='all';
+let selectedPerson=null;
 
-    personal: {
-      income: [],
-      expense: [],
-      lendden: []
-    },
+const $=id=>document.getElementById(id);
 
-    business: {
-      income: [],
-      expense: [],
-      lendden: []
-    },
+function clone(o){
+  return JSON.parse(JSON.stringify(o));
+}
 
-    savings: [],
-    budgets: [],
-    bills: [],
-    loans: [],
-    goals: [],
+function load(){
+  let x=null;
 
-    settings: {
-      currency: "₹",
-      language: "English",
-      theme: "system"
+  try{
+    x=JSON.parse(localStorage.getItem(KEY)||'null');
+  }catch(e){}
+
+  if(!x){
+    for(const k of LEGACY_KEYS){
+      try{
+        x=JSON.parse(localStorage.getItem(k)||'null');
+        if(x)break;
+      }catch(e){}
     }
+  }
+
+  x=x&&typeof x==='object'?x:{};
+
+  const d={
+    ...clone(DEFAULT),
+    ...x
   };
 
-  /* =========================================================
-     BASIC HELPERS
-     ========================================================= */
+  [
+    'personal','business','transactions','lendings','bills',
+    'reminders','loans','goals','budgets','savings','insurance',
+    'school','vehicles','family','shopping','utilities','docs',
+    'annualPlans','limits'
+  ].forEach(k=>{
+    if(!Array.isArray(d[k]))d[k]=[];
+  });
 
-  const $ = (id) => document.getElementById(id);
+  d.settings={
+    ...DEFAULT.settings,
+    ...(d.settings||{})
+  };
 
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
+  return d;
+}
+
+function save(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(data));
+    return true;
+  }catch(e){
+    alert('HISAB data save nahi ho saka. Device storage check karein.');
+    return false;
+  }
+}
+
+function uid(){
+  return Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+}
+
+function today(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function time(){
+  return new Date().toLocaleTimeString([],{
+    hour:'2-digit',
+    minute:'2-digit'
+  });
+}
+
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,m=>({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[m]));
+}
+
+function num(id){
+  return Number($(id)?.value||0);
+}
+
+function money(n){
+  return `${data.currency||'₹'}${Number(n||0).toLocaleString('en-IN',{
+    maximumFractionDigits:2
+  })}`;
+}
+
+function mode(){
+  return data.mode||'Personal';
+}
+
+function modeTx(){
+  return data.transactions.filter(
+    x=>(x.mode||'Personal')===mode()
+  );
+}
+
+function modePeople(){
+  return mode()==='Business'
+    ?data.business
+    :data.personal;
+}
+
+function modeLending(){
+  return data.lendings.filter(
+    x=>(x.mode||'Personal')===mode()
+  );
+}
+
+function fmtDate(v){
+  if(!v)return '';
+
+  const s=String(v);
+
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)){
+    const [y,m,d]=s.split('-');
+    return `${d}/${m}/${y}`;
   }
 
-  function uid(prefix = "id") {
-    return (
-      prefix +
-      "_" +
-      Date.now().toString(36) +
-      "_" +
-      Math.random().toString(36).slice(2, 8)
-    );
+  return s;
+}
+
+function parseDate(v){
+  if(!v)return null;
+
+  const s=String(v);
+
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
+    const [d,m,y]=s.split('/');
+    return new Date(`${y}-${m}-${d}T00:00:00`);
   }
 
-  function today() {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  }
+  return new Date(s+'T00:00:00');
+}
 
-  function nowTime() {
-    return new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
+function dueState(date,remaining){
+  if(!remaining||remaining<=0)return 'paid';
+
+  const d=parseDate(date);
+
+  if(!d)return 'due';
+
+  const t=new Date();
+  t.setHours(0,0,0,0);
+
+  return d<t?'overdue':'due';
+}
+
+function toast(msg){
+  let t=$('hisabToast');
+
+  if(!t){
+    t=document.createElement('div');
+    t.id='hisabToast';
+
+    Object.assign(t.style,{
+      position:'fixed',
+      left:'50%',
+      bottom:'78px',
+      transform:'translateX(-50%)',
+      padding:'11px 15px',
+      borderRadius:'12px',
+      background:'#14202a',
+      color:'#fff',
+      zIndex:99999,
+      fontSize:'12px',
+      boxShadow:'0 8px 25px rgba(0,0,0,.2)',
+      maxWidth:'90%',
+      textAlign:'center'
     });
+
+    document.body.appendChild(t);
   }
 
-  function money(value) {
-    const n = Number(value) || 0;
-    const currency = appData.settings.currency || "₹";
+  t.textContent=msg;
+  t.style.display='block';
 
-    return (
-      currency +
-      n.toLocaleString("en-IN", {
-        maximumFractionDigits: 2
-      })
-    );
+  clearTimeout(window.__hisabToast);
+
+  window.__hisabToast=setTimeout(()=>{
+    t.style.display='none';
+  },2200);
+}
+
+function hideScreens(){
+  document.querySelectorAll('.screen').forEach(
+    s=>s.classList.add('hidden')
+  );
+}
+
+function show(id){
+
+  if(data.locked&&id!=='lockScreen'){
+    showLockOverlay();
+    return;
   }
 
-  function escapeHTML(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  hideScreens();
+
+  const el=$(id)||$('home');
+
+  if(el)el.classList.remove('hidden');
+
+  renderAll();
+
+  window.scrollTo(0,0);
+}
+
+function enterGuestMode(){
+  localStorage.setItem('hisab_guest_mode','true');
+
+  $('guestGate')?.classList.add('hidden');
+
+  show('home');
+}
+
+function showGuestGate(){
+
+  if(localStorage.getItem('hisab_guest_mode')==='true'){
+    $('guestGate')?.classList.add('hidden');
+    show('home');
+  }else{
+    $('guestGate')?.classList.remove('hidden');
+  }
+}
+
+function setMode(m){
+
+  data.mode=m==='Business'
+    ?'Business'
+    :'Personal';
+
+  save();
+  renderAll();
+
+  toast(`${data.mode} mode`);
+}
+
+function toggleCurrency(){
+
+  const list=['₹','$','€','£','¥','AED '];
+
+  const i=list.indexOf(data.currency);
+
+  data.currency=list[(i+1)%list.length];
+
+  save();
+  renderAll();
+
+  toast('Currency: '+data.currency);
+}
+
+function toggleLanguage(){
+
+  data.language=
+    data.language==='English'
+      ?'Hindi'
+      :'English';
+
+  save();
+
+  toast('Language: '+data.language);
+}
+
+/* ================= PIN LOCK ================= */
+
+function setPin(){
+
+  const p=prompt('4-6 digit PIN set karein:');
+
+  if(p===null)return;
+
+  if(!/^\d{4,6}$/.test(p)){
+    toast('PIN 4-6 digits ka hona chahiye');
+    return;
   }
 
-  function notify(message) {
-    alert(message);
-  }
+  data.pin=p;
+  data.locked=false;
 
-  /* =========================================================
-     DATA
-     ========================================================= */
+  save();
 
-  function normalizeData(data) {
-    const d = clone(DEFAULT_DATA);
+  toast('PIN saved');
+}
 
-    if (!data || typeof data !== "object") return d;
+function showLockOverlay(){
 
-    d.version = 7;
-    d.mode = data.mode === "business" ? "business" : "personal";
+  let o=$('hisabLockOverlay');
 
-    ["personal", "business"].forEach((mode) => {
-      if (data[mode]) {
-        d[mode].income = Array.isArray(data[mode].income)
-          ? data[mode].income
-          : [];
+  if(!o){
 
-        d[mode].expense = Array.isArray(data[mode].expense)
-          ? data[mode].expense
-          : [];
+    o=document.createElement('div');
+    o.id='hisabLockOverlay';
 
-        d[mode].lendden = Array.isArray(data[mode].lendden)
-          ? data[mode].lendden
-          : [];
-      }
+    Object.assign(o.style,{
+      position:'fixed',
+      inset:'0',
+      background:'#0b1f33',
+      color:'#fff',
+      zIndex:100000,
+      display:'flex',
+      alignItems:'center',
+      justifyContent:'center',
+      padding:'25px',
+      textAlign:'center'
     });
 
-    ["savings", "budgets", "bills", "loans", "goals"].forEach((key) => {
-      d[key] = Array.isArray(data[key]) ? data[key] : [];
-    });
-
-    d.settings = {
-      ...d.settings,
-      ...(data.settings || {})
-    };
-
-    return d;
-  }
-
-  function loadData() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (!raw) return clone(DEFAULT_DATA);
-
-      return normalizeData(JSON.parse(raw));
-    } catch (error) {
-      console.error("HISAB load error:", error);
-      return clone(DEFAULT_DATA);
-    }
-  }
-
-  let appData = loadData();
-
-  function saveData() {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(appData)
-      );
-      return true;
-    } catch (error) {
-      console.error("HISAB save error:", error);
-      notify("Data save nahi ho paya.");
-      return false;
-    }
-  }
-
-  function account() {
-    return appData[appData.mode];
-  }
-
-  /* =========================================================
-     MODAL SYSTEM
-     index.html ko change kiye bina modal banega
-     ========================================================= */
-
-  let modalHost = null;
-
-  function createModalHost() {
-    if (modalHost) return;
-
-    modalHost = document.createElement("div");
-    modalHost.id = "hisabModalHost";
-
-    modalHost.innerHTML = `
-      <div id="hisabModalOverlay"
-           style="
-             position:fixed;
-             inset:0;
-             background:rgba(0,0,0,.55);
-             z-index:9999;
-             display:none;
-             overflow:auto;
-             padding:16px;
-             box-sizing:border-box;
-           ">
-        <div id="hisabModal"
-             style="
-               max-width:520px;
-               margin:20px auto;
-               background:#fff;
-               border-radius:20px;
-               overflow:hidden;
-               box-shadow:0 20px 60px rgba(0,0,0,.25);
-             ">
-          <div id="hisabModalHeader"
-               style="
-                 display:flex;
-                 align-items:center;
-                 justify-content:space-between;
-                 padding:16px 18px;
-                 border-bottom:1px solid #eee;
-                 position:sticky;
-                 top:0;
-                 background:#fff;
-                 z-index:2;
-               ">
-            <strong id="hisabModalTitle"
-                    style="font-size:19px;">
-            </strong>
-
-            <button id="hisabModalClose"
-                    type="button"
-                    style="
-                      border:0;
-                      background:#f1f3f5;
-                      width:38px;
-                      height:38px;
-                      border-radius:50%;
-                      font-size:20px;
-                    ">
-              ×
-            </button>
-          </div>
-
-          <div id="hisabModalBody"
-               style="padding:18px;">
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modalHost);
-
-    $("hisabModalClose").addEventListener(
-      "click",
-      closeModal
-    );
-
-    $("hisabModalOverlay").addEventListener(
-      "click",
-      (event) => {
-        if (event.target.id === "hisabModalOverlay") {
-          closeModal();
-        }
-      }
-    );
-  }
-
-  function openModal(title, html) {
-    createModalHost();
-
-    $("hisabModalTitle").textContent = title;
-    $("hisabModalBody").innerHTML = html;
-    $("hisabModalOverlay").style.display = "block";
-
-    document.body.style.overflow = "hidden";
-  }
-
-  function closeModal() {
-    if (!$("hisabModalOverlay")) return;
-
-    $("hisabModalOverlay").style.display = "none";
-    $("hisabModalBody").innerHTML = "";
-
-    document.body.style.overflow = "";
-  }
-
-  /* =========================================================
-     FORM HELPERS
-     ========================================================= */
-
-  function input(
-    id,
-    label,
-    type = "text",
-    value = "",
-    extra = ""
-  ) {
-    return `
-      <label style="display:block;margin-bottom:13px;">
-        <span style="
-          display:block;
-          margin-bottom:6px;
-          font-weight:600;
-        ">${escapeHTML(label)}</span>
+    o.innerHTML=`
+      <div>
+        <div style="font-size:52px">🔐</div>
+        <h2>HISAB Locked</h2>
+        <p>Enter your PIN to continue.</p>
 
         <input
-          id="${id}"
-          type="${type}"
-          value="${escapeHTML(value)}"
-          ${extra}
-          style="
-            width:100%;
-            box-sizing:border-box;
-            padding:12px;
-            border:1px solid #d9dde3;
-            border-radius:10px;
-            font-size:15px;
-          "
+          id="unlockPin"
+          type="password"
+          inputmode="numeric"
+          maxlength="6"
+          style="padding:14px;border-radius:12px;border:0;text-align:center;font-size:20px;width:150px"
         >
-      </label>
-    `;
-  }
 
-  function selectField(
-    id,
-    label,
-    options,
-    selected = ""
-  ) {
-    return `
-      <label style="display:block;margin-bottom:13px;">
-        <span style="
-          display:block;
-          margin-bottom:6px;
-          font-weight:600;
-        ">${escapeHTML(label)}</span>
-
-        <select
-          id="${id}"
-          style="
-            width:100%;
-            box-sizing:border-box;
-            padding:12px;
-            border:1px solid #d9dde3;
-            border-radius:10px;
-            font-size:15px;
-            background:#fff;
-          "
-        >
-          ${options.map((o) => `
-            <option
-              value="${escapeHTML(o.value)}"
-              ${o.value === selected ? "selected" : ""}
-            >
-              ${escapeHTML(o.label)}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  function textareaField(id, label, value = "") {
-    return `
-      <label style="display:block;margin-bottom:13px;">
-        <span style="
-          display:block;
-          margin-bottom:6px;
-          font-weight:600;
-        ">${escapeHTML(label)}</span>
-
-        <textarea
-          id="${id}"
-          rows="3"
-          style="
-            width:100%;
-            box-sizing:border-box;
-            padding:12px;
-            border:1px solid #d9dde3;
-            border-radius:10px;
-            font-size:15px;
-            resize:vertical;
-          "
-        >${escapeHTML(value)}</textarea>
-      </label>
-    `;
-  }
-
-  function colorField(id, value = "#0b1f33") {
-    return `
-      <label style="
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        padding:10px 0;
-      ">
-        <span style="font-weight:600;">
-          Entry Color
-        </span>
-
-        <input
-          id="${id}"
-          type="color"
-          value="${escapeHTML(value)}"
-          style="
-            width:55px;
-            height:38px;
-            border:0;
-            background:none;
-          "
-        >
-      </label>
-    `;
-  }
-
-  function formButtons(saveText = "Save") {
-    return `
-      <div style="
-        display:flex;
-        gap:10px;
-        margin-top:18px;
-      ">
-        <button
-          type="button"
-          id="hisabSaveBtn"
-          style="
-            flex:1;
-            border:0;
-            padding:13px;
-            border-radius:11px;
-            background:#0b1f33;
-            color:#fff;
-            font-weight:700;
-            font-size:15px;
-          "
-        >
-          ${escapeHTML(saveText)}
-        </button>
+        <br>
 
         <button
-          type="button"
-          id="hisabCancelBtn"
-          style="
-            flex:1;
-            border:1px solid #ddd;
-            padding:13px;
-            border-radius:11px;
-            background:#fff;
-            font-weight:600;
-            font-size:15px;
-          "
+          id="unlockBtn"
+          style="margin-top:12px;padding:12px 22px;border:0;border-radius:12px"
         >
-          Cancel
+          Unlock
         </button>
       </div>
     `;
+
+    document.body.appendChild(o);
+
+    $('unlockBtn').onclick=unlock;
+
+    setTimeout(()=>{
+      $('unlockPin')?.focus();
+    },50);
   }
 
-  function bindForm(saveFunction) {
-    $("hisabSaveBtn").addEventListener(
-      "click",
-      saveFunction
-    );
+  o.style.display='flex';
+}
 
-    $("hisabCancelBtn").addEventListener(
-      "click",
-      closeModal
-    );
+function unlock(){
+
+  const p=$('unlockPin')?.value||'';
+
+  if(p===data.pin){
+
+    data.locked=false;
+
+    save();
+
+    $('hisabLockOverlay').style.display='none';
+
+    toast('Unlocked');
+
+  }else{
+    toast('Wrong PIN');
+  }
+}
+
+function lockApp(){
+
+  if(!data.pin){
+    toast('Pehle PIN set karein');
+    setPin();
+    return;
   }
 
-  /* =========================================================
-     HOME
-     ========================================================= */
+  data.locked=true;
 
-  function showScreen(id) {
-    document.querySelectorAll(".screen").forEach((screen) => {
-      screen.classList.remove("active");
-    });
+  save();
 
-    const target = $(id);
+  showLockOverlay();
+}
 
-    if (target) {
-      target.classList.add("active");
+/* ================= QUICK ACTIONS ================= */
+
+function quickTransaction(type){
+
+  show('reports');
+
+  setTimeout(()=>{
+    if($('txType')){
+      $('txType').value=
+        type==='income'
+          ?'Income'
+          :'Expense';
     }
-  }
 
-  function updateModeButtons() {
-    const personal = $("personalBtn");
-    const business = $("businessBtn");
+    $('txAmount')?.focus();
 
-    if (personal) {
-      personal.classList.toggle(
-        "active",
-        appData.mode === "personal"
-      );
-    }
+  },50);
+}
 
-    if (business) {
-      business.classList.toggle(
-        "active",
-        appData.mode === "business"
-      );
-    }
-  }
+function quickLending(type){
 
-  function getTotals() {
-    const acc = account();
+  show('personal');
 
-    const income = acc.income.reduce(
-      (sum, item) => sum + Number(item.amount || 0),
-      0
-    );
+  setTimeout(()=>{
+    openLendingForm(type);
+  },50);
+}
 
-    const expense = acc.expense.reduce(
-      (sum, item) => sum + Number(item.amount || 0),
-      0
-    );
+function openLendingForm(type){
 
-    const given = acc.lendden
-      .filter((x) => x.type === "given")
-      .reduce(
-        (sum, item) => sum + Number(item.amount || 0),
-        0
-      );
+  const name=prompt(
+    `${type==='given'
+      ?'Jise paisa diya'
+      :'Jisne paisa diya'} — naam:`
+  );
 
-    const received = acc.lendden
-      .filter((x) => x.type === "received")
-      .reduce(
-        (sum, item) => sum + Number(item.amount || 0),
-        0
-      );
+  if(!name)return;
 
-    return {
-      income,
-      expense,
-      given,
-      received,
-      balance: income - expense - given + received
+  const amount=Number(
+    prompt('Amount:')||0
+  );
+
+  if(!amount)return;
+
+  const people=modePeople();
+
+  let p=people.find(
+    x=>x.name.toLowerCase()===name.toLowerCase()
+  );
+
+  if(!p){
+
+    p={
+      id:uid(),
+      name,
+      phone:'',
+      type:mode()==='Business'
+        ?'customer'
+        :'person',
+      opening:0
     };
+
+    people.push(p);
   }
 
-  function updateHome() {
-    const totals = getTotals();
+  const l={
+    id:uid(),
+    personId:p.id,
+    name:p.name,
+    type:type==='received'
+      ?'received'
+      :'given',
+    amount,
+    paid:0,
+    remaining:amount,
+    date:today(),
+    time:time(),
+    note:'',
+    mode:mode()
+  };
 
-    if ($("currencyLabel")) {
-      $("currencyLabel").textContent =
-        appData.settings.currency;
-    }
+  data.lendings.push(l);
 
-    if ($("totalBalance")) {
-      $("totalBalance").textContent =
-        money(totals.balance);
-    }
+  save();
+  renderAll();
 
-    if ($("totalIncome")) {
-      $("totalIncome").textContent =
-        money(totals.income);
-    }
+  toast('Khata entry added');
+}
 
-    if ($("totalExpense")) {
-      $("totalExpense").textContent =
-        money(totals.expense);
-    }
+function saveLendingForm(){
+  openLendingForm('given');
+}
 
-    updateModeButtons();
-    renderRecentActivity();
+/* ================= PEOPLE / KHATA ================= */
+
+function addPerson(m){
+
+  const target=
+    m==='Business'
+      ?data.business
+      :data.personal;
+
+  const name=prompt(
+    `${m==='Business'
+      ?'Customer/Supplier'
+      :'Person'} name:`
+  );
+
+  if(!name)return;
+
+  const phone=prompt(
+    'Mobile (optional):'
+  )||'';
+
+  if(target.some(
+    p=>p.name.toLowerCase()===name.toLowerCase()
+  )){
+    toast('Name already exists');
+    return;
   }
 
-  function renderRecentActivity() {
-    const box = $("recentActivity");
+  target.push({
+    id:uid(),
+    name,
+    phone,
+    type:m==='Business'
+      ?'customer'
+      :'person',
+    opening:0,
+    created:today()
+  });
 
-    if (!box) return;
+  save();
+  renderAll();
 
-    const acc = account();
+  toast('Person added');
+}
 
-    const all = [
-      ...acc.income.map((x) => ({
-        ...x,
-        categoryType: "income"
-      })),
+function personBalance(p){
 
-      ...acc.expense.map((x) => ({
-        ...x,
-        categoryType: "expense"
-      })),
+  const ls=data.lendings.filter(
+    x=>
+      x.personId===p.id &&
+      (x.mode||'Personal')===mode()
+  );
 
-      ...acc.lendden.map((x) => ({
-        ...x,
-        categoryType: x.type
-      }))
-    ]
-      .sort((a, b) => {
-        return String(b.createdAt || "").localeCompare(
-          String(a.createdAt || "")
-        );
-      })
-      .slice(0, 5);
+  let given=Number(p.opening||0);
+  let received=0;
 
-    if (!all.length) {
-      box.innerHTML = `
-        <div class="empty-state">
-          <div>💰</div>
-          <strong>No transactions yet</strong>
-          <p>Add your first income or expense.</p>
+  ls.forEach(x=>{
+
+    if(x.type==='given'){
+      given+=Math.max(
+        0,
+        Number(x.amount||0)-Number(x.paid||0)
+      );
+    }else{
+      received+=Math.max(
+        0,
+        Number(x.amount||0)-Number(x.paid||0)
+      );
+    }
+
+  });
+
+  return{
+    given,
+    received,
+    net:given-received
+  };
+}
+
+function addKhataTransaction(pid,type){
+
+  const p=modePeople().find(
+    x=>x.id===pid
+  );
+
+  if(!p)return;
+
+  const amount=Number(
+    prompt(
+      `${type==='given'
+        ?'Diya'
+        :'Liya'} amount:`
+    )||0
+  );
+
+  if(!amount)return;
+
+  const note=prompt(
+    'Note (optional):'
+  )||'';
+
+  data.lendings.push({
+    id:uid(),
+    personId:pid,
+    name:p.name,
+    type,
+    amount,
+    paid:0,
+    remaining:amount,
+    date:today(),
+    time:time(),
+    note,
+    mode:mode()
+  });
+
+  save();
+  renderAll();
+
+  toast('Entry saved');
+}
+
+function markLendingPaid(id){
+
+  const x=data.lendings.find(
+    a=>a.id===id
+  );
+
+  if(!x)return;
+
+  const rem=Math.max(
+    0,
+    Number(x.amount||0)-Number(x.paid||0)
+  );
+
+  const p=Number(
+    prompt(
+      `Remaining ${money(rem)}. Payment amount:`
+    )||0
+  );
+
+  if(!p||p>rem){
+    toast('Invalid payment');
+    return;
+  }
+
+  x.paid=
+    Number(x.paid||0)+p;
+
+  x.remaining=
+    Math.max(
+      0,
+      Number(x.amount||0)-x.paid
+    );
+
+  x.paymentHistory=
+    x.paymentHistory||[];
+
+  x.paymentHistory.push({
+    amount:p,
+    date:today(),
+    time:time()
+  });
+
+  x.status=
+    x.remaining
+      ?'partial'
+      :'paid';
+
+  save();
+  renderAll();
+
+  toast(
+    x.remaining
+      ?'Partial payment saved'
+      :'Paid'
+  );
+}
+
+function deleteLending(id){
+
+  if(!confirm('Delete this entry?'))return;
+
+  data.lendings=
+    data.lendings.filter(
+      x=>x.id!==id
+    );
+
+  save();
+  renderAll();
+}
+
+function editLending(id){
+
+  const x=data.lendings.find(
+    a=>a.id===id
+  );
+
+  if(!x)return;
+
+  const a=Number(
+    prompt(
+      'New total amount:',
+      x.amount
+    )||0
+  );
+
+  if(!a)return;
+
+  x.amount=a;
+
+  x.remaining=
+    Math.max(
+      0,
+      a-Number(x.paid||0)
+    );
+
+  const note=prompt(
+    'Note:',
+    x.note||''
+  );
+
+  if(note!==null)x.note=note;
+
+  save();
+  renderAll();
+}
+
+function showPersonHistory(pid){
+
+  selectedPerson=pid;
+
+  const p=modePeople().find(
+    x=>x.id===pid
+  );
+
+  if(!p)return;
+
+  const ls=modeLending()
+    .filter(x=>x.personId===pid);
+
+  let html=`
+    <div class="person">
+      <b>${esc(p.name)}</b>
+      <p>${p.phone?esc(p.phone):''}</p>
+
+      <button onclick="exportPersonPDF('${pid}')">
+        📄 Statement / PDF
+      </button>
+
+      <button onclick="sharePerson('${pid}')">
+        📤 Share
+      </button>
+    </div>
+  `;
+
+  html+=ls.length
+    ?ls
+      .sort((a,b)=>
+        String(b.date)
+        .localeCompare(String(a.date))
+      )
+      .map(x=>`
+        <div class="person">
+
+          <b>
+            ${x.type==='given'
+              ?'📤 Given'
+              :'📥 Received'}
+            ${money(x.amount)}
+          </b>
+
+          <div>
+            ${fmtDate(x.date)}
+            ${esc(x.time||'')}
+          </div>
+
+          <div>
+            Paid: ${money(x.paid||0)}
+            •
+            Due: ${money(
+              Math.max(
+                0,
+                (x.amount||0)-(x.paid||0)
+              )
+            )}
+          </div>
+
+          <div>${esc(x.note||'')}</div>
+
+          <button onclick="markLendingPaid('${x.id}')">
+            Payment
+          </button>
+
+          <button onclick="editLending('${x.id}')">
+            Edit
+          </button>
+
+          <button onclick="deleteLending('${x.id}')">
+            Delete
+          </button>
+
         </div>
-      `;
+      `)
+      .join('')
+    :'<div class="person">No transactions yet.</div>';
 
-      return;
-    }
+  const box=$('personalList');
 
-    box.innerHTML = all
-      .map((item) => {
-        let sign = "+";
-        let icon = "💰";
+  if(box)box.innerHTML=html;
+}
 
-        if (item.categoryType === "expense") {
-          sign = "-";
-          icon = "💸";
-        }
+function sharePerson(pid){
 
-        if (item.categoryType === "given") {
-          sign = "-";
-          icon = "🤝";
-        }
+  const p=modePeople().find(
+    x=>x.id===pid
+  );
 
-        if (item.categoryType === "received") {
-          sign = "+";
-          icon = "🤝";
-        }
+  if(!p)return;
+
+  const b=personBalance(p);
+
+  const text=
+`HISAB — ${p.name}
+Given: ${money(b.given)}
+Received: ${money(b.received)}
+Net Due: ${money(b.net)}`;
+
+  shareText(text);
+}
+
+function renderPeople(){
+
+  const box=$('personalList');
+
+  if(!box)return;
+
+  let people=modePeople();
+
+  const q=ledgerSearch.toLowerCase();
+
+  people=people.filter(
+    p=>
+      !q ||
+      p.name.toLowerCase().includes(q) ||
+      (p.phone||'').includes(q)
+  );
+
+  if(!people.length){
+    box.innerHTML=
+      '<div class="person">No people added. Tap Add Person.</div>';
+    return;
+  }
+
+  box.innerHTML=
+    people
+      .map(p=>{
+
+        const b=personBalance(p);
+
+        let showEntry=
+          ledgerFilter==='all' ||
+          (
+            ledgerFilter==='given' &&
+            b.given>0
+          ) ||
+          (
+            ledgerFilter==='received' &&
+            b.received>0
+          ) ||
+          (
+            ledgerFilter==='pending' &&
+            (b.given>0||b.received>0)
+          );
+
+        if(!showEntry)return '';
 
         return `
-          <div style="
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            padding:12px 4px;
-            border-bottom:1px solid #eee;
-          ">
-            <div>
-              <strong>
-                ${icon}
-                ${escapeHTML(item.title || item.person || "Entry")}
-              </strong>
-              <small style="display:block;color:#777;">
-                ${escapeHTML(item.date || "")}
-                ${item.time ? " • " + escapeHTML(item.time) : ""}
-              </small>
+          <div class="person">
+
+            <div style="display:flex;justify-content:space-between">
+              <b>${esc(p.name)}</b>
+              <b>${money(b.net)}</b>
             </div>
 
-            <strong>
-              ${sign}${money(item.amount)}
-            </strong>
+            <small>${esc(p.phone||'')}</small>
+
+            <div>
+              Given: ${money(b.given)}
+              •
+              Received: ${money(b.received)}
+            </div>
+
+            <button onclick="addKhataTransaction('${p.id}','given')">
+              + Given
+            </button>
+
+            <button onclick="addKhataTransaction('${p.id}','received')">
+              + Received
+            </button>
+
+            <button onclick="showPersonHistory('${p.id}')">
+              History
+            </button>
+
+            <button onclick="sharePerson('${p.id}')">
+              Share
+            </button>
+
           </div>
         `;
       })
-      .join("");
+      .join('')
+      ||
+      '<div class="person">No matching entries.</div>';
+}
+
+function filterLedger(f){
+  ledgerFilter=f;
+  renderPeople();
+}
+
+function searchLedger(v){
+  ledgerSearch=v||'';
+  renderPeople();
+}
+
+/* ================= TRANSACTIONS ================= */
+
+function addTransaction(){
+
+  const type=
+    (($('txType')?.value||'Income')
+      .toLowerCase()
+      .includes('expense'))
+      ?'expense'
+      :'income';
+
+  const amount=num('txAmount');
+
+  if(!amount){
+    toast('Amount enter karein');
+    return;
   }
 
-  /* =========================================================
-     INCOME
-     ========================================================= */
+  const cat=
+    $('txCat')?.value||'Other';
 
-  function showIncome() {
-    openModal(
-      "Add Income",
-      `
-        ${input("incomeTitle", "Income Source / Title", "text", "")}
+  const note=
+    $('txNote')?.value||'';
 
-        ${input(
-          "incomeAmount",
-          "Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+  data.transactions.push({
+    id:uid(),
+    type,
+    amount,
+    category:cat,
+    note,
+    date:today(),
+    time:time(),
+    mode:mode()
+  });
 
-        ${selectField(
-          "incomeMethod",
-          "Payment Method",
-          [
-            { value: "cash", label: "Cash" },
-            { value: "upi", label: "UPI" },
-            { value: "bank", label: "Bank Transfer" },
-            { value: "card", label: "Card" },
-            { value: "other", label: "Other" }
-          ],
-          "cash"
-        )}
+  save();
+  renderAll();
 
-        ${input(
-          "incomeDate",
-          "Date",
-          "date",
-          today()
-        )}
+  toast('Transaction saved');
+}
 
-        ${textareaField(
-          "incomeNote",
-          "Note"
-        )}
+function deleteTransaction(id){
 
-        ${colorField(
-          "incomeColor",
-          "#16a34a"
-        )}
+  if(!confirm('Delete transaction?'))return;
 
-        ${formButtons("Save Income")}
-      `
+  data.transactions=
+    data.transactions.filter(
+      x=>x.id!==id
     );
 
-    bindForm(() => {
-      const title = $("incomeTitle").value.trim();
-      const amount = Number($("incomeAmount").value);
+  save();
+  renderAll();
+}
 
-      if (!title) {
-        notify("Income source enter karo.");
-        return;
-      }
+function editTransaction(id){
 
-      if (!(amount > 0)) {
-        notify("Valid amount enter karo.");
-        return;
-      }
+  const x=data.transactions.find(
+    a=>a.id===id
+  );
 
-      account().income.push({
-        id: uid("income"),
-        title,
-        amount,
-        method: $("incomeMethod").value,
-        date: $("incomeDate").value || today(),
-        time: nowTime(),
-        note: $("incomeNote").value.trim(),
-        color: $("incomeColor").value,
-        createdAt: new Date().toISOString()
-      });
+  if(!x)return;
 
-      saveData();
-      closeModal();
-      updateHome();
-    });
+  const a=Number(
+    prompt('Amount:',x.amount)||0
+  );
+
+  if(!a)return;
+
+  x.amount=a;
+
+  const note=prompt(
+    'Note:',
+    x.note||''
+  );
+
+  if(note!==null)x.note=note;
+
+  save();
+  renderAll();
+}
+
+function setTxType(t){
+
+  if($('txType')){
+    $('txType').value=t;
   }
 
-  /* =========================================================
-     EXPENSE
-     ========================================================= */
+  txFilter=t.toLowerCase();
 
-  function showExpense() {
-    openModal(
-      "Add Expense",
-      `
-        ${input("expenseTitle", "Expense / Category", "text", "")}
+  renderTransactions();
+}
 
-        ${input(
-          "expenseAmount",
-          "Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+function totals(){
 
-        ${selectField(
-          "expenseMethod",
-          "Payment Method",
-          [
-            { value: "cash", label: "Cash" },
-            { value: "upi", label: "UPI" },
-            { value: "bank", label: "Bank Transfer" },
-            { value: "card", label: "Card" },
-            { value: "other", label: "Other" }
-          ],
-          "cash"
-        )}
+  const tx=modeTx();
+  const ld=modeLending();
 
-        ${input(
-          "expenseDate",
-          "Date",
-          "date",
-          today()
-        )}
-
-        ${textareaField(
-          "expenseNote",
-          "Note"
-        )}
-
-        ${colorField(
-          "expenseColor",
-          "#dc2626"
-        )}
-
-        ${formButtons("Save Expense")}
-      `
-    );
-
-    bindForm(() => {
-      const title = $("expenseTitle").value.trim();
-      const amount = Number($("expenseAmount").value);
-
-      if (!title) {
-        notify("Expense title enter karo.");
-        return;
-      }
-
-      if (!(amount > 0)) {
-        notify("Valid amount enter karo.");
-        return;
-      }
-
-      account().expense.push({
-        id: uid("expense"),
-        title,
-        amount,
-        method: $("expenseMethod").value,
-        date: $("expenseDate").value || today(),
-        time: nowTime(),
-        note: $("expenseNote").value.trim(),
-        color: $("expenseColor").value,
-        createdAt: new Date().toISOString()
-      });
-
-      saveData();
-      closeModal();
-      updateHome();
-    });
-  }
-
-  /* =========================================================
-     PAISA LEN-DEN
-     ========================================================= */
-
-  function showLendDen() {
-    const acc = account();
-
-    const given = acc.lendden
-      .filter((x) => x.type === "given")
+  const income=
+    tx
+      .filter(x=>x.type==='income')
       .reduce(
-        (sum, x) => sum + Number(x.amount || 0),
+        (s,x)=>s+Number(x.amount||0),
         0
       );
 
-    const received = acc.lendden
-      .filter((x) => x.type === "received")
+  const expense=
+    tx
+      .filter(x=>x.type==='expense')
       .reduce(
-        (sum, x) => sum + Number(x.amount || 0),
+        (s,x)=>s+Number(x.amount||0),
         0
       );
 
-    openModal(
-      "Paisa Len-Den",
-      `
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-          margin-bottom:16px;
-        ">
-          <div style="
-            padding:13px;
-            border-radius:12px;
-            background:#fff4f4;
-          ">
-            <small>Total Diya</small>
-            <strong style="display:block;">
-              ${money(given)}
-            </strong>
+  const given=
+    ld
+      .filter(x=>x.type==='given')
+      .reduce(
+        (s,x)=>
+          s+
+          Math.max(
+            0,
+            Number(x.amount||0)-
+            Number(x.paid||0)
+          ),
+        0
+      );
+
+  const received=
+    ld
+      .filter(x=>x.type==='received')
+      .reduce(
+        (s,x)=>
+          s+
+          Math.max(
+            0,
+            Number(x.amount||0)-
+            Number(x.paid||0)
+          ),
+        0
+      );
+
+  return{
+    income,
+    expense,
+    balance:income-expense,
+    given,
+    received,
+    net:given-received
+  };
+}
+
+function totalIncome(){
+  return totals().income;
+}
+
+function totalExpense(){
+  return totals().expense;
+}
+
+function moneyTransactions(){
+  return modeTx();
+}
+
+function renderTransactions(){
+
+  const box=$('txList');
+
+  if(!box)return;
+
+  let tx=
+    modeTx()
+      .slice()
+      .reverse();
+
+  if(
+    txFilter==='income' ||
+    txFilter==='expense'
+  ){
+    tx=
+      tx.filter(
+        x=>x.type===txFilter
+      );
+  }
+
+  box.innerHTML=
+    tx.length
+      ?tx
+        .map(x=>`
+          <div class="person">
+
+            <div>
+              <b>
+                ${x.type==='income'
+                  ?'📈'
+                  :'📉'}
+                ${esc(x.category)}
+              </b>
+
+              <strong>
+                ${x.type==='income'?'+':'-'}
+                ${money(x.amount)}
+              </strong>
+            </div>
+
+            <small>
+              ${fmtDate(x.date)}
+              ${esc(x.time||'')}
+              •
+              ${esc(x.note||'')}
+            </small>
+
+            <br>
+
+            <button onclick="editTransaction('${x.id}')">
+              Edit
+            </button>
+
+            <button onclick="deleteTransaction('${x.id}')">
+              Delete
+            </button>
+
           </div>
+        `)
+        .join('')
+      :'<div class="person">No transactions.</div>';
 
-          <div style="
-            padding:13px;
-            border-radius:12px;
-            background:#f1fff5;
-          ">
-            <small>Total Liya</small>
-            <strong style="display:block;">
-              ${money(received)}
-            </strong>
-          </div>
-        </div>
+  const cats={};
 
-        ${selectField(
-          "lendType",
-          "Transaction Type",
-          [
-            { value: "given", label: "💸 Paisa Diya" },
-            { value: "received", label: "💰 Paisa Liya" }
-          ],
-          "given"
-        )}
+  modeTx()
+    .filter(x=>x.type==='expense')
+    .forEach(x=>{
+      cats[x.category]=
+        (cats[x.category]||0)+
+        Number(x.amount||0);
+    });
 
-        ${input(
-          "lendPerson",
-          "Person Name",
-          "text"
-        )}
+  if($('catSummary')){
+    $('catSummary').innerHTML=
+      Object.keys(cats).length
+        ?Object
+          .entries(cats)
+          .map(([k,v])=>
+            `<div>${esc(k)} — <b>${money(v)}</b></div>`
+          )
+          .join('')
+        :'No expense data';
+  }
+}
 
-        ${input(
-          "lendAmount",
-          "Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+/* ================= BUDGET / GOALS ================= */
 
-        ${input(
-          "lendDate",
-          "Date",
-          "date",
-          today()
-        )}
+function calcBudget(){
 
-        ${textareaField(
-          "lendNote",
-          "Note"
-        )}
+  const inc=num('monthlyIncome');
+  const bud=num('monthlyBudget');
+  const sav=num('monthlySaving');
 
-        ${selectField(
-          "lendMethod",
-          "Payment Method",
-          [
-            { value: "cash", label: "Cash" },
-            { value: "upi", label: "UPI" },
-            { value: "bank", label: "Bank Transfer" },
-            { value: "card", label: "Card" },
-            { value: "other", label: "Other" }
-          ],
-          "cash"
-        )}
+  const spend=totalExpense();
 
-        ${colorField(
-          "lendColor",
-          "#7c3aed"
-        )}
+  const remain=
+    bud-spend-sav;
 
-        ${formButtons("Save Len-Den")}
+  const out=
+`Budget: ${money(bud)}
+<br>Spent: ${money(spend)}
+<br>Saving target: ${money(sav)}
+<br><b>Remaining: ${money(remain)}</b>`;
 
-        <hr style="margin:22px 0;">
+  if($('budgetResult')){
+    $('budgetResult').innerHTML=out;
+  }
 
-        <div style="font-weight:700;margin-bottom:8px;">
-          Recent Len-Den
-        </div>
+  data.budgets.push({
+    id:uid(),
+    month:today().slice(0,7),
+    income:inc,
+    budget:bud,
+    saving:sav,
+    spent:spend,
+    mode:mode()
+  });
 
-        <div>
-          ${
-            acc.lendden.length
-              ? acc.lendden
-                  .slice()
-                  .reverse()
-                  .slice(0, 10)
-                  .map(
-                    (x) => `
-                      <div style="
-                        padding:10px 0;
-                        border-bottom:1px solid #eee;
-                      ">
-                        <strong>
-                          ${
-                            x.type === "given"
-                              ? "💸 Diya"
-                              : "💰 Liya"
-                          }
-                          — ${escapeHTML(x.person)}
-                        </strong>
+  save();
 
-                        <div>
-                          ${money(x.amount)}
-                        </div>
+  toast('Budget calculated');
+}
 
-                        <small style="color:#777;">
-                          ${escapeHTML(x.date || "")}
-                          ${
-                            x.note
-                              ? " • " +
-                                escapeHTML(x.note)
-                              : ""
-                          }
-                        </small>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : `<small>No Len-Den entries.</small>`
-          }
-        </div>
-      `
+function calcGoal(){
+
+  const name=
+    $('goalName')?.value||'Goal';
+
+  const target=num('goalTarget');
+  const current=num('goalCurrent');
+  const monthly=num('goalMonthly');
+
+  if(!target){
+    toast('Target enter karein');
+    return;
+  }
+
+  const left=
+    Math.max(0,target-current);
+
+  const months=
+    monthly
+      ?Math.ceil(left/monthly)
+      :0;
+
+  if($('goalResult')){
+    $('goalResult').innerHTML=`
+      <b>${esc(name)}</b><br>
+      Target: ${money(target)}<br>
+      Current: ${money(current)}<br>
+      Remaining: ${money(left)}<br>
+      ${
+        months
+          ?'At this saving rate: '+months+' months'
+          :'Set monthly saving to estimate.'
+      }
+    `;
+  }
+
+  const old=
+    data.goals.find(
+      g=>
+        g.name===name &&
+        g.mode===mode()
     );
 
-    bindForm(() => {
-      const person = $("lendPerson").value.trim();
-      const amount = Number($("lendAmount").value);
-
-      if (!person) {
-        notify("Person name enter karo.");
-        return;
-      }
-
-      if (!(amount > 0)) {
-        notify("Valid amount enter karo.");
-        return;
-      }
-
-      acc.lendden.push({
-        id: uid("lend"),
-        type: $("lendType").value,
-        person,
-        amount,
-        date: $("lendDate").value || today(),
-        time: nowTime(),
-        note: $("lendNote").value.trim(),
-        method: $("lendMethod").value,
-        color: $("lendColor").value,
-        createdAt: new Date().toISOString()
-      });
-
-      saveData();
-      closeModal();
-      updateHome();
+  if(old){
+    old.target=target;
+    old.current=current;
+    old.monthly=monthly;
+  }else{
+    data.goals.push({
+      id:uid(),
+      name,
+      target,
+      current,
+      monthly,
+      mode:mode()
     });
   }
 
-  /* =========================================================
-     SAVINGS
-     ========================================================= */
+  save();
+}
 
-  function showSavings() {
-    openModal(
-      "Savings",
-      `
-        ${input(
-          "savingTitle",
-          "Savings Name",
-          "text"
-        )}
+/* ================= EMI ================= */
 
-        ${input(
-          "savingAmount",
-          "Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+function calcEMI(){
 
-        ${selectField(
-          "savingMethod",
-          "Payment Method",
-          [
-            { value: "cash", label: "Cash" },
-            { value: "bank", label: "Bank" },
-            { value: "upi", label: "UPI" },
-            { value: "other", label: "Other" }
-          ],
-          "bank"
-        )}
+  const p=num('loanAmount');
+  const r=num('loanRate')/1200;
+  const n=num('loanTenure');
 
-        ${input(
-          "savingDate",
-          "Date",
-          "date",
-          today()
-        )}
-
-        ${textareaField(
-          "savingNote",
-          "Note"
-        )}
-
-        ${colorField(
-          "savingColor",
-          "#0891b2"
-        )}
-
-        ${formButtons("Save Savings")}
-      `
-    );
-
-    bindForm(() => {
-      const title = $("savingTitle").value.trim();
-      const amount = Number($("savingAmount").value);
-
-      if (!title || !(amount > 0)) {
-        notify("Savings name aur valid amount enter karo.");
-        return;
-      }
-
-      appData.savings.push({
-        id: uid("saving"),
-        mode: appData.mode,
-        title,
-        amount,
-        method: $("savingMethod").value,
-        date: $("savingDate").value || today(),
-        note: $("savingNote").value.trim(),
-        color: $("savingColor").value,
-        createdAt: new Date().toISOString()
-      });
-
-      saveData();
-      closeModal();
-      updateHome();
-    });
+  if(!p||!n){
+    toast('Loan amount & tenure enter karein');
+    return;
   }
 
-  /* =========================================================
-     BUDGET
-     ========================================================= */
+  const emi=
+    r
+      ?p*r*Math.pow(1+r,n)/
+       (Math.pow(1+r,n)-1)
+      :p/n;
 
-  function showBudget() {
-    const currentMonth =
-      new Date().toISOString().slice(0, 7);
+  const interest=
+    emi*n-p;
 
-    const budgets = appData.budgets.filter(
-      (x) =>
-        x.mode === appData.mode ||
-        !x.mode
-    );
-
-    openModal(
-      "Budget",
-      `
-        ${input(
-          "budgetName",
-          "Budget Name",
-          "text",
-          "Monthly Budget"
-        )}
-
-        ${input(
-          "budgetAmount",
-          "Budget Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
-
-        ${input(
-          "budgetMonth",
-          "Month",
-          "month",
-          currentMonth
-        )}
-
-        ${selectField(
-          "budgetMethod",
-          "Payment Tracking",
-          [
-            { value: "all", label: "All Payment Methods" },
-            { value: "cash", label: "Cash" },
-            { value: "upi", label: "UPI" },
-            { value: "bank", label: "Bank" },
-            { value: "card", label: "Card" }
-          ],
-          "all"
-        )}
-
-        ${formButtons("Save Budget")}
-
-        <hr style="margin:22px 0;">
-
-        <strong>Saved Budgets</strong>
-
-        <div style="margin-top:10px;">
-          ${
-            budgets.length
-              ? budgets
-                  .slice()
-                  .reverse()
-                  .map(
-                    (b) => `
-                      <div style="
-                        padding:10px 0;
-                        border-bottom:1px solid #eee;
-                      ">
-                        <strong>
-                          ${escapeHTML(b.name)}
-                        </strong>
-
-                        <div>
-                          ${money(b.amount)}
-                          • ${escapeHTML(b.month)}
-                        </div>
-
-                        <small>
-                          Payment:
-                          ${escapeHTML(b.method)}
-                        </small>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : "<small>No budget yet.</small>"
-          }
-        </div>
-      `
-    );
-
-    bindForm(() => {
-      const name = $("budgetName").value.trim();
-      const amount = Number($("budgetAmount").value);
-
-      if (!name || !(amount > 0)) {
-        notify("Budget name aur amount enter karo.");
-        return;
-      }
-
-      appData.budgets.push({
-        id: uid("budget"),
-        mode: appData.mode,
-        name,
-        amount,
-        month: $("budgetMonth").value || currentMonth,
-        method: $("budgetMethod").value,
-        createdAt: new Date().toISOString()
-      });
-
-      saveData();
-      closeModal();
-      updateHome();
-    });
+  if($('emiResult')){
+    $('emiResult').innerHTML=`
+      <b>Monthly EMI: ${money(emi)}</b>
+      <br>
+      Total payment: ${money(emi*n)}
+      <br>
+      Total interest: ${money(interest)}
+    `;
   }
 
-  /* =========================================================
-     BILLS
-     ========================================================= */
+  return emi;
+}
 
-  function showBills() {
-    openModal(
-      "Bills & Payments",
-      `
-        ${input(
-          "billName",
-          "Bill Name",
-          "text"
-        )}
+/* ================= BILLS / REMINDERS ================= */
 
-        ${input(
-          "billAmount",
-          "Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+function addBill(kind){
 
-        ${input(
-          "billDue",
-          "Due Date",
-          "date",
-          today()
-        )}
+  const name=prompt(
+    `${kind||'Bill'} name:`
+  );
 
-        ${selectField(
-          "billStatus",
-          "Status",
-          [
-            { value: "pending", label: "Pending" },
-            { value: "paid", label: "Paid" }
-          ],
-          "pending"
-        )}
+  if(!name)return;
 
-        ${selectField(
-          "billMethod",
-          "Payment Method",
-          [
-            { value: "cash", label: "Cash" },
-            { value: "upi", label: "UPI" },
-            { value: "bank", label: "Bank" },
-            { value: "card", label: "Card" },
-            { value: "other", label: "Other" }
-          ],
-          "upi"
-        )}
+  const amount=Number(
+    prompt('Amount:')||0
+  );
 
-        ${textareaField(
-          "billNote",
-          "Note"
-        )}
+  if(!amount)return;
 
-        ${formButtons("Save Bill")}
+  const due=
+    prompt(
+      'Due date (YYYY-MM-DD):',
+      today()
+    )||today();
 
-        <hr style="margin:22px 0;">
+  data.bills.push({
+    id:uid(),
+    name,
+    amount,
+    due,
+    kind:kind||'Bill',
+    paid:false,
+    mode:mode()
+  });
 
-        <strong>Saved Bills</strong>
+  save();
+  renderAll();
 
-        <div style="margin-top:10px;">
-          ${
-            appData.bills.length
-              ? appData.bills
-                  .slice()
-                  .reverse()
-                  .map(
-                    (b) => `
-                      <div style="
-                        padding:11px 0;
-                        border-bottom:1px solid #eee;
-                      ">
-                        <strong>
-                          ${escapeHTML(b.name)}
-                        </strong>
+  toast('Bill added');
+}
 
-                        <div>
-                          ${money(b.amount)}
-                          • Due ${escapeHTML(b.dueDate)}
-                        </div>
+function toggleBill(id){
 
-                        <small>
-                          ${b.status === "paid"
-                            ? "✅ Paid"
-                            : "⏳ Pending"}
-                        </small>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : "<small>No bills added.</small>"
-          }
-        </div>
-      `
+  const x=data.bills.find(
+    a=>a.id===id
+  );
+
+  if(x){
+    x.paid=!x.paid;
+    save();
+    renderAll();
+  }
+}
+
+function addReminder(){
+
+  const name=
+    $('remName')?.value||'Reminder';
+
+  const type=
+    $('remType')?.value||'Bill';
+
+  const date=
+    $('remDate')?.value||today();
+
+  const amount=
+    num('remAmount');
+
+  const note=
+    $('remNote')?.value||'';
+
+  data.reminders.push({
+    id:uid(),
+    name,
+    type,
+    date,
+    amount,
+    note,
+    done:false,
+    mode:mode()
+  });
+
+  save();
+  renderAll();
+
+  toast('Reminder saved');
+}
+
+function markBillPaid(id){
+  toggleBill(id);
+}
+
+function deleteBill(id){
+
+  if(confirm('Delete bill?')){
+
+    data.bills=
+      data.bills.filter(
+        x=>x.id!==id
+      );
+
+    save();
+    renderAll();
+  }
+}
+
+function saveReminderForm(){
+  addReminder();
+}
+
+/* ================= BUSINESS ================= */
+
+function saveBusiness(){
+  addPerson('Business');
+}
+
+/* ================= FAMILY / TOOLS ================= */
+
+function addFamilyMember(){
+
+  const n=prompt(
+    'Family member name:'
+  );
+
+  if(n){
+
+    data.family.push({
+      id:uid(),
+      name:n
+    });
+
+    save();
+    renderAll();
+  }
+}
+
+function addShopping(){
+
+  const n=prompt('Item:');
+
+  if(n){
+
+    data.shopping.push({
+      id:uid(),
+      name:n,
+      done:false
+    });
+
+    save();
+    renderAll();
+  }
+}
+
+function addUtility(){
+
+  const n=prompt(
+    'Utility name:'
+  );
+
+  if(n){
+
+    data.utilities.push({
+      id:uid(),
+      name:n,
+      amount:Number(
+        prompt('Amount:')||0
+      )
+    });
+
+    save();
+    renderAll();
+  }
+}
+
+function calcFD(){
+
+  const p=num('fdP');
+  const r=num('fdR')/100;
+  const n=num('fdN');
+
+  const maturity=
+    p*Math.pow(
+      1+r/4,
+      4*n/12
     );
 
-    bindForm(() => {
-      const name = $("billName").value.trim();
-      const amount = Number($("billAmount").value);
-
-      if (!name || !(amount > 0)) {
-        notify("Bill name aur valid amount enter karo.");
-        return;
-      }
-
-      appData.bills.push({
-        id: uid("bill"),
-        mode: appData.mode,
-        name,
-        amount,
-        dueDate: $("billDue").value || today(),
-        status: $("billStatus").value,
-        method: $("billMethod").value,
-        note: $("billNote").value.trim(),
-        createdAt: new Date().toISOString()
-      });
-
-      saveData();
-      closeModal();
-      updateHome();
-    });
+  if($('fdResult')){
+    $('fdResult').innerHTML=`
+      Maturity:
+      <b>${money(maturity)}</b>
+      <br>
+      Interest:
+      ${money(maturity-p)}
+    `;
   }
+}
 
-  /* =========================================================
-     LOANS & EMI
-     ========================================================= */
+function addInsurance(){
 
-  function showLoans() {
-    openModal(
-      "Loans & EMI",
-      `
-        ${input(
-          "loanName",
-          "Loan / Finance Name",
-          "text"
-        )}
+  const name=
+    $('insName')?.value||
+    'Insurance';
 
-        ${input(
-          "loanPrincipal",
-          "Loan Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+  const premium=
+    num('insPremium');
 
-        ${input(
-          "loanEMI",
-          "Monthly EMI",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
+  const date=
+    $('insDate')?.value||
+    today();
 
-        ${input(
-          "loanDue",
-          "Next EMI Due Date",
-          "date",
-          today()
-        )}
+  data.insurance.push({
+    id:uid(),
+    name,
+    premium,
+    date
+  });
 
-        ${input(
-          "loanTenure",
-          "Tenure (Months)",
-          "number",
-          "",
-          'min="1" step="1"'
-        )}
+  save();
+  renderAll();
+}
 
-        ${selectField(
-          "loanStatus",
-          "Status",
-          [
-            { value: "active", label: "Active" },
-            { value: "paid", label: "Paid" }
-          ],
-          "active"
-        )}
+function addSchool(){
 
-        ${selectField(
-          "loanMethod",
-          "Payment Method",
-          [
-            { value: "auto", label: "Auto Debit" },
-            { value: "bank", label: "Bank" },
-            { value: "upi", label: "UPI" },
-            { value: "cash", label: "Cash" },
-            { value: "other", label: "Other" }
-          ],
-          "auto"
-        )}
+  const child=
+    $('child')?.value||
+    'Child';
 
-        ${textareaField(
-          "loanNote",
-          "Note"
-        )}
+  const fee=
+    num('schoolFee');
 
-        ${formButtons("Save Loan / EMI")}
+  const due=
+    $('schoolDue')?.value||
+    today();
 
-        <hr style="margin:22px 0;">
+  const books=
+    num('schoolBooks');
 
-        <strong>Loans</strong>
+  data.school.push({
+    id:uid(),
+    child,
+    fee,
+    due,
+    books
+  });
 
-        <div style="margin-top:10px;">
-          ${
-            appData.loans.length
-              ? appData.loans
-                  .slice()
-                  .reverse()
-                  .map(
-                    (l) => `
-                      <div style="
-                        padding:11px 0;
-                        border-bottom:1px solid #eee;
-                      ">
-                        <strong>
-                          ${escapeHTML(l.name)}
-                        </strong>
+  save();
+  renderAll();
+}
 
-                        <div>
-                          EMI ${money(l.emi)}
-                          • Due ${escapeHTML(l.dueDate)}
-                        </div>
+function addVehicle(){
 
-                        <small>
-                          ${escapeHTML(l.status)}
-                          • ${escapeHTML(l.tenure)} months
-                        </small>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : "<small>No loans added.</small>"
-          }
-        </div>
-      `
+  const n=
+    $('vehicle')?.value||
+    prompt('Vehicle:')||
+    '';
+
+  if(n){
+
+    data.vehicles.push({
+      id:uid(),
+      name:n
+    });
+
+    save();
+    renderAll();
+  }
+}
+
+function addDoc(){
+
+  const n=
+    $('docName')?.value||
+    prompt('Document name:')||
+    '';
+
+  if(n){
+
+    data.docs.push({
+      id:uid(),
+      name:n,
+      date:today()
+    });
+
+    save();
+    renderAll();
+  }
+}
+
+function addAnnual(){
+
+  const n=
+    $('annualName')?.value||
+    prompt('Plan name:')||
+    '';
+
+  if(n){
+
+    data.annualPlans.push({
+      id:uid(),
+      name:n
+    });
+
+    save();
+    renderAll();
+  }
+}
+
+function saveLimit(){
+
+  const n=
+    $('limitName')?.value||
+    prompt('Limit category:')||
+    'Other';
+
+  const v=
+    num('limitAmount')||
+    Number(
+      prompt('Limit amount:')||0
     );
 
-    bindForm(() => {
-      const name = $("loanName").value.trim();
-      const principal =
-        Number($("loanPrincipal").value);
+  data.limits.push({
+    id:uid(),
+    name:n,
+    amount:v,
+    mode:mode()
+  });
 
-      const emi = Number($("loanEMI").value);
+  save();
+  renderAll();
+}
 
-      if (
-        !name ||
-        !(principal > 0) ||
-        !(emi > 0)
-      ) {
-        notify("Loan details complete karo.");
-        return;
-      }
+function calcEmergency(){
 
-      appData.loans.push({
-        id: uid("loan"),
-        mode: appData.mode,
-        name,
-        principal,
-        emi,
-        dueDate:
-          $("loanDue").value || today(),
-        tenure:
-          Number($("loanTenure").value) || 0,
-        status: $("loanStatus").value,
-        method: $("loanMethod").value,
-        note: $("loanNote").value.trim(),
-        createdAt: new Date().toISOString()
-      });
-
-      saveData();
-      closeModal();
-      updateHome();
-    });
-  }
-
-  /* =========================================================
-     GOALS
-     ========================================================= */
-
-  function showGoals() {
-    openModal(
-      "Goals & Savings",
-      `
-        ${input(
-          "goalName",
-          "Goal Name",
-          "text"
-        )}
-
-        ${selectField(
-          "goalPurpose",
-          "Goal Purpose",
-          [
-            {
-              value: "emergency",
-              label: "Emergency Fund"
-            },
-            {
-              value: "home",
-              label: "Home"
-            },
-            {
-              value: "car",
-              label: "Car / Vehicle"
-            },
-            {
-              value: "education",
-              label: "Education"
-            },
-            {
-              value: "travel",
-              label: "Travel"
-            },
-            {
-              value: "wedding",
-              label: "Wedding"
-            },
-            {
-              value: "business",
-              label: "Business"
-            },
-            {
-              value: "investment",
-              label: "Investment"
-            },
-            {
-              value: "other",
-              label: "Other"
-            }
-          ],
-          "emergency"
-        )}
-
-        ${input(
-          "goalTarget",
-          "Target Amount",
-          "number",
-          "",
-          'min="0" step="0.01"'
-        )}
-
-        ${input(
-          "goalSaved",
-          "Already Saved",
-          "number",
-          "0",
-          'min="0" step="0.01"'
-        )}
-
-        ${input(
-          "goalDate",
-          "Target Date",
-          "date",
-          today()
-        )}
-
-        ${textareaField(
-          "goalNote",
-          "Note"
-        )}
-
-        ${colorField(
-          "goalColor",
-          "#f59e0b"
-        )}
-
-        ${formButtons("Save Goal")}
-
-        <hr style="margin:22px 0;">
-
-        <strong>Your Goals</strong>
-
-        <div style="margin-top:10px;">
-          ${
-            appData.goals.length
-              ? appData.goals
-                  .slice()
-                  .reverse()
-                  .map((g) => {
-                    const target =
-                      Number(g.target) || 0;
-
-                    const saved =
-                      Number(g.saved) || 0;
-
-                    const percent =
-                      target > 0
-                        ? Math.min(
-                            100,
-                            Math.round(
-                              (saved / target) *
-                                100
-                            )
-                          )
-                        : 0;
-
-                    return `
-                      <div style="
-                        padding:12px 0;
-                        border-bottom:1px solid #eee;
-                      ">
-                        <strong>
-                          🎯 ${escapeHTML(g.name)}
-                        </strong>
-
-                        <div>
-                          ${money(saved)}
-                          / ${money(target)}
-                        </div>
-
-                        <div style="
-                          height:7px;
-                          background:#eee;
-                          border-radius:20px;
-                          overflow:hidden;
-                          margin:8px 0;
-                        ">
-                          <div style="
-                            width:${percent}%;
-                            height:100%;
-                            background:${escapeHTML(g.color || "#f59e0b")};
-                          "></div>
-                        </div>
-
-                        <small>
-                          ${escapeHTML(g.purpose)}
-                          • ${percent}% complete
-                        </small>
-                      </div>
-                    `;
-                  })
-                  .join("")
-              : "<small>No goals added.</small>"
-          }
-        </div>
-      `
+  const monthly=
+    Number(
+      prompt(
+        'Monthly essential expense:'
+      )||0
     );
 
-    bindForm(() => {
-      const name = $("goalName").value.trim();
-      const target = Number($("goalTarget").value);
+  const months=
+    Number(
+      prompt(
+        'Target months:',
+        6
+      )||6
+    );
 
-      if (!name || !(target > 0)) {
-        notify("Goal name aur target amount enter karo.");
-        return;
-      }
+  const target=
+    monthly*months;
 
-      appData.goals.push({
-        id: uid("goal"),
-        mode: appData.mode,
-        name,
-        purpose: $("goalPurpose").value,
-        target,
-        saved:
-          Number($("goalSaved").value) || 0,
-        targetDate:
-          $("goalDate").value || today(),
-        note: $("goalNote").value.trim(),
-        color: $("goalColor").value,
-        createdAt: new Date().toISOString()
-      });
+  const el=$('emergencyResult');
 
-      saveData();
-      closeModal();
-      updateHome();
-    });
+  if(el){
+    el.innerHTML=
+      `Emergency Fund Target:
+       <b>${money(target)}</b>`;
+  }else{
+    toast(
+      `Emergency Fund: ${money(target)}`
+    );
   }
+}
 
-  /* =========================================================
-     TRANSACTIONS
-     ========================================================= */
+function renderComparison(){
 
-  function showTransactions() {
-    const acc = account();
+  const el=
+    $('comparisonResult')||
+    $('comparison');
 
-    const transactions = [
-      ...acc.income.map((x) => ({
-        ...x,
-        kind: "Income",
-        sign: "+"
-      })),
+  if(!el)return;
 
-      ...acc.expense.map((x) => ({
-        ...x,
-        kind: "Expense",
-        sign: "-"
-      })),
+  const t=modeTx();
 
-      ...acc.lendden.map((x) => ({
-        ...x,
-        kind:
-          x.type === "given"
-            ? "Given"
-            : "Received",
-        title: x.person,
-        sign:
-          x.type === "given"
-            ? "-"
-            : "+"
-      }))
-    ].sort((a, b) =>
-      String(b.createdAt || "").localeCompare(
-        String(a.createdAt || "")
+  const inc=
+    t
+      .filter(x=>x.type==='income')
+      .reduce(
+        (s,x)=>s+Number(x.amount||0),
+        0
+      );
+
+  const exp=
+    t
+      .filter(x=>x.type==='expense')
+      .reduce(
+        (s,x)=>s+Number(x.amount||0),
+        0
+      );
+
+  el.innerHTML=`
+    <div class="person">
+      Income: ${money(inc)}
+      <br>
+      Expense: ${money(exp)}
+      <br>
+      Balance: ${money(inc-exp)}
+    </div>
+  `;
+}
+
+function searchAllData(){
+
+  const q=
+    (prompt('Search HISAB:')||'')
+      .toLowerCase();
+
+  if(!q)return;
+
+  const out=[
+    ...modeTx().map(
+      x=>`${x.category} ${x.note} ${x.amount}`
+    ),
+    ...modePeople().map(
+      x=>`${x.name} ${x.phone}`
+    ),
+    ...modeLending().map(
+      x=>`${x.name} ${x.note} ${x.amount}`
+    )
+  ].filter(
+    x=>x.toLowerCase().includes(q)
+  );
+
+  alert(
+    out.length
+      ?out.join('\n')
+      :'No result'
+  );
+}
+
+/* ================= SHARE ================= */
+
+function summaryText(){
+
+  const t=totals();
+
+  return `HISAB — ${mode()}
+Income: ${money(t.income)}
+Expense: ${money(t.expense)}
+Balance: ${money(t.balance)}
+Money Given: ${money(t.given)}
+Money Received: ${money(t.received)}
+Net Khata: ${money(t.net)}`;
+}
+
+function shareText(text){
+
+  if(navigator.share){
+
+    navigator.share({
+      title:'HISAB',
+      text
+    }).catch(()=>{});
+
+  }else{
+
+    navigator.clipboard?.writeText(text);
+
+    toast('Summary copied');
+  }
+}
+
+function shareHisab(){
+  shareText(summaryText());
+}
+
+/* ================= EXPORT ================= */
+
+function download(
+  name,
+  content,
+  type
+){
+
+  const a=
+    document.createElement('a');
+
+  a.href=
+    URL.createObjectURL(
+      new Blob(
+        [content],
+        {type}
       )
     );
 
-    openModal(
-      "Transactions",
-      `
-        ${
-          transactions.length
-            ? transactions
-                .map(
-                  (x) => `
-                    <div style="
-                      padding:12px 0;
-                      border-bottom:1px solid #eee;
-                    ">
-                      <div style="
-                        display:flex;
-                        justify-content:space-between;
-                        gap:10px;
-                      ">
-                        <strong>
-                          ${escapeHTML(
-                            x.title ||
-                              x.person ||
-                              "Transaction"
-                          )}
-                        </strong>
+  a.download=name;
 
-                        <strong>
-                          ${x.sign}${money(x.amount)}
-                        </strong>
-                      </div>
+  document.body.appendChild(a);
 
-                      <small style="color:#777;">
-                        ${escapeHTML(x.kind)}
-                        • ${escapeHTML(x.date || "")}
-                        ${
-                          x.method
-                            ? " • " +
-                              escapeHTML(x.method)
-                            : ""
-                        }
-                      </small>
+  a.click();
 
-                      ${
-                        x.note
-                          ? `<div style="margin-top:4px;">
-                               ${escapeHTML(x.note)}
-                             </div>`
-                          : ""
-                      }
-                    </div>
-                  `
-                )
-                .join("")
-            : `
-              <div style="
-                text-align:center;
-                padding:30px 10px;
-                color:#777;
-              ">
-                No transactions found.
-              </div>
-            `
-        }
+  a.remove();
 
-        <button
-          type="button"
-          id="clearTransactionsBtn"
-          style="
-            width:100%;
-            margin-top:18px;
-            padding:12px;
-            border:1px solid #dc2626;
-            color:#dc2626;
-            background:#fff;
-            border-radius:10px;
-            font-weight:700;
-          "
-        >
-          Clear Current Mode Transactions
-        </button>
-      `
-    );
+  setTimeout(
+    ()=>URL.revokeObjectURL(a.href),
+    500
+  );
+}
 
-    $("clearTransactionsBtn").addEventListener(
-      "click",
-      () => {
-        if (
-          confirm(
-            "Current mode ki income, expense aur Len-Den entries delete karni hain?"
-          )
-        ) {
-          acc.income = [];
-          acc.expense = [];
-          acc.lendden = [];
+function exportBackup(){
 
-          saveData();
-          closeModal();
-          updateHome();
-        }
+  download(
+    `HISAB-Backup-${today()}.json`,
+    JSON.stringify(
+      data,
+      null,
+      2
+    ),
+    'application/json'
+  );
+
+  toast('Backup exported');
+}
+
+function importBackup(event){
+
+  const file=
+    event?.target?.files?.[0];
+
+  if(!file)return;
+
+  const r=
+    new FileReader();
+
+  r.onload=e=>{
+
+    try{
+
+      const x=
+        JSON.parse(
+          e.target.result
+        );
+
+      if(
+        !x ||
+        !Array.isArray(x.transactions) ||
+        !Array.isArray(x.lendings)
+      ){
+        throw Error();
       }
-    );
-  }
 
-  /* =========================================================
-     REPORTS
-     ========================================================= */
+      data={
+        ...clone(DEFAULT),
+        ...x
+      };
 
-  function showReports() {
-    const totals = getTotals();
-    const acc = account();
+      data.settings={
+        ...DEFAULT.settings,
+        ...(x.settings||{})
+      };
 
-    const incomeCount = acc.income.length;
-    const expenseCount = acc.expense.length;
-    const lendCount = acc.lendden.length;
+      save();
+      renderAll();
 
-    const savingsTotal =
-      appData.savings
-        .filter(
-          (x) =>
-            x.mode === appData.mode
-        )
-        .reduce(
-          (sum, x) =>
-            sum + Number(x.amount || 0),
-          0
-        );
+      toast('Backup restored');
 
-    const pendingBills =
-      appData.bills
-        .filter(
-          (x) =>
-            x.mode === appData.mode &&
-            x.status === "pending"
-        )
-        .reduce(
-          (sum, x) =>
-            sum + Number(x.amount || 0),
-          0
-        );
+    }catch(err){
 
-    const activeEMI =
-      appData.loans
-        .filter(
-          (x) =>
-            x.mode === appData.mode &&
-            x.status === "active"
-        )
-        .reduce(
-          (sum, x) =>
-            sum + Number(x.emi || 0),
-          0
-        );
-
-    openModal(
-      "Reports & Analytics",
-      `
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-        ">
-          ${reportCard(
-            "Balance",
-            money(totals.balance)
-          )}
-
-          ${reportCard(
-            "Income",
-            money(totals.income)
-          )}
-
-          ${reportCard(
-            "Expense",
-            money(totals.expense)
-          )}
-
-          ${reportCard(
-            "Given",
-            money(totals.given)
-          )}
-
-          ${reportCard(
-            "Received",
-            money(totals.received)
-          )}
-
-          ${reportCard(
-            "Savings",
-            money(savingsTotal)
-          )}
-
-          ${reportCard(
-            "Pending Bills",
-            money(pendingBills)
-          )}
-
-          ${reportCard(
-            "Monthly EMI",
-            money(activeEMI)
-          )}
-        </div>
-
-        <hr style="margin:20px 0;">
-
-        <div style="line-height:1.9;">
-          <strong>Activity Summary</strong>
-
-          <div>Income entries: ${incomeCount}</div>
-          <div>Expense entries: ${expenseCount}</div>
-          <div>Len-Den entries: ${lendCount}</div>
-          <div>Goals: ${
-            appData.goals.filter(
-              (x) =>
-                x.mode === appData.mode
-            ).length
-          }</div>
-          <div>Bills: ${
-            appData.bills.filter(
-              (x) =>
-                x.mode === appData.mode
-            ).length
-          }</div>
-          <div>Loans: ${
-            appData.loans.filter(
-              (x) =>
-                x.mode === appData.mode
-            ).length
-          }</div>
-        </div>
-      `
-    );
-  }
-
-  function reportCard(title, value) {
-    return `
-      <div style="
-        padding:14px;
-        background:#f7f8fa;
-        border-radius:12px;
-      ">
-        <small style="color:#777;">
-          ${escapeHTML(title)}
-        </small>
-
-        <strong style="
-          display:block;
-          margin-top:4px;
-          font-size:17px;
-        ">
-          ${escapeHTML(value)}
-        </strong>
-      </div>
-    `;
-  }
-
-  /* =========================================================
-     BACKUP & RESTORE
-     ========================================================= */
-
-  function showBackup() {
-    openModal(
-      "Backup & Restore",
-      `
-        <p style="color:#666;">
-          Apna HISAB data phone me backup file ke
-          roop me save karo aur baad me restore karo.
-        </p>
-
-        <button
-          type="button"
-          id="exportBackupBtn"
-          style="
-            width:100%;
-            padding:13px;
-            margin-bottom:10px;
-            border:0;
-            border-radius:11px;
-            background:#0b1f33;
-            color:#fff;
-            font-weight:700;
-          "
-        >
-          💾 Download Backup
-        </button>
-
-        <label style="
-          display:block;
-          padding:13px;
-          border:1px dashed #aaa;
-          border-radius:11px;
-          text-align:center;
-          font-weight:700;
-        ">
-          📂 Restore Backup
-
-          <input
-            id="restoreBackupInput"
-            type="file"
-            accept=".json,application/json"
-            style="
-              display:block;
-              width:100%;
-              margin-top:10px;
-            "
-          >
-        </label>
-
-        <button
-          type="button"
-          id="resetAllBtn"
-          style="
-            width:100%;
-            padding:13px;
-            margin-top:20px;
-            border:1px solid #dc2626;
-            border-radius:11px;
-            background:#fff;
-            color:#dc2626;
-            font-weight:700;
-          "
-        >
-          Delete All HISAB Data
-        </button>
-      `
-    );
-
-    $("exportBackupBtn").addEventListener(
-      "click",
-      exportBackup
-    );
-
-    $("restoreBackupInput").addEventListener(
-      "change",
-      restoreBackup
-    );
-
-    $("resetAllBtn").addEventListener(
-      "click",
-      () => {
-        if (
-          confirm(
-            "WARNING: HISAB ka pura data delete ho jayega. Continue?"
-          )
-        ) {
-          appData = clone(DEFAULT_DATA);
-          saveData();
-          closeModal();
-          updateHome();
-          notify("All HISAB data deleted.");
-        }
-      }
-    );
-  }
-
-  function exportBackup() {
-    const payload = {
-      app: "HISAB",
-      version: 7,
-      exportedAt:
-        new Date().toISOString(),
-      data: appData
-    };
-
-    const blob = new Blob(
-      [JSON.stringify(payload, null, 2)],
-      {
-        type: "application/json"
-      }
-    );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const a =
-      document.createElement("a");
-
-    a.href = url;
-
-    a.download =
-      "HISAB-Backup-" +
-      today() +
-      ".json";
-
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    URL.revokeObjectURL(url);
-  }
-
-  function restoreBackup(event) {
-    const file =
-      event.target.files &&
-      event.target.files[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      try {
-        const parsed =
-          JSON.parse(reader.result);
-
-        const restored =
-          parsed.data || parsed;
-
-        if (
-          !restored ||
-          typeof restored !== "object"
-        ) {
-          throw new Error("Invalid backup");
-        }
-
-        if (
-          !confirm(
-            "Current HISAB data replace karke backup restore karna hai?"
-          )
-        ) {
-          return;
-        }
-
-        appData =
-          normalizeData(restored);
-
-        saveData();
-        closeModal();
-        updateHome();
-
-        notify(
-          "Backup successfully restored."
-        );
-      } catch (error) {
-        console.error(error);
-        notify(
-          "Backup file valid nahi hai."
-        );
-      }
-    };
-
-    reader.readAsText(file);
-  }
-
-  /* =========================================================
-     SECURITY
-     ========================================================= */
-
-  function showSecurity() {
-    openModal(
-      "Security",
-      `
-        <div style="
-          padding:14px;
-          background:#f7f8fa;
-          border-radius:12px;
-          margin-bottom:16px;
-        ">
-          <strong>🔐 Local Privacy</strong>
-          <p style="margin-bottom:0;color:#666;">
-            HISAB ka current data device ke local
-            storage me save hota hai. Login required nahi hai.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          id="securityInfoBtn"
-          style="
-            width:100%;
-            padding:13px;
-            border:1px solid #ddd;
-            background:#fff;
-            border-radius:10px;
-            font-weight:700;
-          "
-        >
-          Security Information
-        </button>
-      `
-    );
-
-    $("securityInfoBtn").addEventListener(
-      "click",
-      () => {
-        notify(
-          "HISAB V7 local-first hai. Sensitive data ko backup file share karte waqt carefully handle karein."
-        );
-      }
-    );
-  }
-
-  /* =========================================================
-     SETTINGS
-     ========================================================= */
-
-  function showSettings() {
-    openModal(
-      "Settings",
-      `
-        ${selectField(
-          "settingsCurrency",
-          "Currency",
-          [
-            { value: "₹", label: "₹ Indian Rupee" },
-            { value: "$", label: "$ US Dollar" },
-            { value: "€", label: "€ Euro" },
-            { value: "£", label: "£ British Pound" },
-            { value: "¥", label: "¥ Yen / Yuan" },
-            { value: "AED", label: "AED Dirham" },
-            { value: "SAR", label: "SAR Riyal" }
-          ],
-          appData.settings.currency
-        )}
-
-        ${selectField(
-          "settingsTheme",
-          "Theme",
-          [
-            {
-              value: "system",
-              label: "System Default"
-            },
-            {
-              value: "light",
-              label: "Light"
-            },
-            {
-              value: "dark",
-              label: "Dark"
-            }
-          ],
-          appData.settings.theme
-        )}
-
-        ${selectField(
-          "settingsLanguage",
-          "Language",
-          [
-            {
-              value: "English",
-              label: "English"
-            },
-            {
-              value: "Hindi",
-              label: "Hindi"
-            }
-          ],
-          appData.settings.language
-        )}
-
-        ${formButtons("Save Settings")}
-      `
-    );
-
-    bindForm(() => {
-      appData.settings.currency =
-        $("settingsCurrency").value;
-
-      appData.settings.theme =
-        $("settingsTheme").value;
-
-      appData.settings.language =
-        $("settingsLanguage").value;
-
-      saveData();
-
-      applyTheme();
-
-      closeModal();
-      updateHome();
-    });
-  }
-
-  function applyTheme() {
-    const theme =
-      appData.settings.theme;
-
-    if (theme === "dark") {
-      document.documentElement.style.colorScheme =
-        "dark";
-    } else if (theme === "light") {
-      document.documentElement.style.colorScheme =
-        "light";
-    } else {
-      document.documentElement.style.colorScheme =
-        "normal";
-    }
-  }
-
-  /* =========================================================
-     BUSINESS EXTRA VIEW
-     ========================================================= */
-
-  function showBusinessInfo() {
-    openModal(
-      "Business Money",
-      `
-        <div style="display:grid;gap:10px;">
-
-          ${businessCard(
-            "🛒 Sales",
-            "Business income / sales records"
-          )}
-
-          ${businessCard(
-            "📦 Purchase",
-            "Business purchase / expense records"
-          )}
-
-          ${businessCard(
-            "👥 Customers",
-            "Customer-wise Len-Den records"
-          )}
-
-          ${businessCard(
-            "🚚 Suppliers",
-            "Supplier-wise payment records"
-          )}
-
-          ${businessCard(
-            "📊 Business Reports",
-            "Income, expense and activity analytics"
-          )}
-
-        </div>
-
-        <p style="
-          margin-top:18px;
-          color:#777;
-          font-size:13px;
-        ">
-          Business mode me Income, Expense aur
-          Paisa Len-Den records automatically
-          separate account me save hote hain.
-        </p>
-      `
-    );
-  }
-
-  function businessCard(title, text) {
-    return `
-      <div style="
-        padding:14px;
-        border:1px solid #eee;
-        border-radius:12px;
-      ">
-        <strong>${escapeHTML(title)}</strong>
-        <small style="
-          display:block;
-          color:#777;
-          margin-top:4px;
-        ">
-          ${escapeHTML(text)}
-        </small>
-      </div>
-    `;
-  }
-
-  /* =========================================================
-     ACTION ROUTER
-     Exact index.html data-action names
-     ========================================================= */
-
-  function handleAction(action) {
-    switch (action) {
-      case "income":
-        showIncome();
-        break;
-
-      case "expense":
-        showExpense();
-        break;
-
-      case "lendden":
-        showLendDen();
-        break;
-
-      case "savings":
-        showSavings();
-        break;
-
-      case "budget":
-        showBudget();
-        break;
-
-      case "bills":
-        showBills();
-        break;
-
-      case "loans":
-        showLoans();
-        break;
-
-      case "goals":
-        showGoals();
-        break;
-
-      case "transactions":
-        showTransactions();
-        break;
-
-      case "reports":
-        showReports();
-        break;
-
-      case "backup":
-        showBackup();
-        break;
-
-      case "security":
-        showSecurity();
-        break;
-
-      default:
-        console.warn(
-          "Unknown HISAB action:",
-          action
-        );
-    }
-  }
-
-  /* =========================================================
-     EVENTS
-     ========================================================= */
-
-  function setupEvents() {
-    document.addEventListener(
-      "click",
-      (event) => {
-        const button =
-          event.target.closest(
-            "[data-action]"
-          );
-
-        if (!button) return;
-
-        const action =
-          button.getAttribute(
-            "data-action"
-          );
-
-        handleAction(action);
-      }
-    );
-
-    if ($("continueBtn")) {
-      $("continueBtn").addEventListener(
-        "click",
-        () => {
-          showScreen("homeScreen");
-          updateHome();
-        }
+      toast(
+        'Invalid HISAB backup'
       );
-    }
-
-    if ($("personalBtn")) {
-      $("personalBtn").addEventListener(
-        "click",
-        () => {
-          appData.mode = "personal";
-          saveData();
-          updateHome();
-        }
-      );
-    }
-
-    if ($("businessBtn")) {
-      $("businessBtn").addEventListener(
-        "click",
-        () => {
-          appData.mode = "business";
-          saveData();
-          updateHome();
-        }
-      );
-    }
-
-    if ($("settingsBtn")) {
-      $("settingsBtn").addEventListener(
-        "click",
-        showSettings
-      );
-    }
-
-    if ($("viewAllBtn")) {
-      $("viewAllBtn").addEventListener(
-        "click",
-        showTransactions
-      );
-    }
-  }
-
-  /* =========================================================
-     START
-     ========================================================= */
-
-  function startApp() {
-    createModalHost();
-    setupEvents();
-    applyTheme();
-    updateHome();
-
-    setTimeout(() => {
-      if (
-        $("splashScreen") &&
-        $("welcomeScreen")
-      ) {
-        showScreen("welcomeScreen");
-      }
-    }, 1200);
-  }
-
-  /* =========================================================
-     GLOBAL API
-     ========================================================= */
-
-  window.HISAB = {
-    version: 7,
-
-    getData() {
-      return clone(appData);
-    },
-
-    save() {
-      return saveData();
-    },
-
-    refresh() {
-      updateHome();
-    },
-
-    open(action) {
-      handleAction(action);
-    },
-
-    backup() {
-      exportBackup();
-    },
-
-    reset() {
-      appData = clone(DEFAULT_DATA);
-      saveData();
-      updateHome();
     }
   };
 
-  /* =========================================================
-     BOOT
-     ========================================================= */
+  r.readAsText(file);
+}
 
-  if (
-    document.readyState ===
-    "loading"
-  ) {
-    document.addEventListener(
-      "DOMContentLoaded",
-      startApp,
-      { once: true }
+function exportSummary(){
+
+  download(
+    `HISAB-Summary-${today()}.txt`,
+    summaryText(),
+    'text/plain'
+  );
+
+  toast('Summary exported');
+}
+
+function csvEscape(v){
+
+  return `"${String(v??'')
+    .replaceAll('"','""')}"`;
+}
+
+function exportCSV(){
+
+  const rows=[
+    [
+      'Date',
+      'Time',
+      'Mode',
+      'Type',
+      'Category',
+      'Amount',
+      'Note'
+    ],
+    ...modeTx().map(x=>[
+      x.date,
+      x.time,
+      x.mode,
+      x.type,
+      x.category,
+      x.amount,
+      x.note
+    ])
+  ];
+
+  download(
+    `HISAB-${mode()}-${today()}.csv`,
+    rows
+      .map(r=>
+        r.map(csvEscape).join(',')
+      )
+      .join('\n'),
+    'text/csv'
+  );
+
+  toast('CSV exported');
+}
+
+/* ================= PDF / PRINT ================= */
+
+function printHTML(
+  title,
+  body
+){
+
+  const w=
+    window.open(
+      '',
+      '_blank'
     );
-  } else {
-    startApp();
+
+  if(!w){
+    toast('Popup blocked');
+    return;
   }
+
+  w.document.write(`
+    <!doctype html>
+    <html>
+    <head>
+      <title>${esc(title)}</title>
+
+      <meta
+        name="viewport"
+        content="width=device-width"
+      >
+
+      <style>
+        body{
+          font-family:Arial;
+          padding:20px;
+          color:#111
+        }
+
+        table{
+          width:100%;
+          border-collapse:collapse
+        }
+
+        td,th{
+          border:1px solid #ccc;
+          padding:7px;
+          text-align:left
+        }
+
+        h1{
+          color:#0b1f33
+        }
+      </style>
+    </head>
+
+    <body>
+      ${body}
+
+      <script>
+        window.onload=()=>window.print()
+      <\/script>
+
+    </body>
+    </html>
+  `);
+
+  w.document.close();
+}
+
+function exportPDF(){
+
+  const t=totals();
+
+  const body=`
+    <h1>HISAB — ${mode()}</h1>
+
+    <p>
+      Generated ${fmtDate(today())}
+    </p>
+
+    <table>
+
+      <tr>
+        <th>Item</th>
+        <th>Amount</th>
+      </tr>
+
+      <tr>
+        <td>Income</td>
+        <td>${money(t.income)}</td>
+      </tr>
+
+      <tr>
+        <td>Expense</td>
+        <td>${money(t.expense)}</td>
+      </tr>
+
+      <tr>
+        <td>Balance</td>
+        <td>${money(t.balance)}</td>
+      </tr>
+
+      <tr>
+        <td>Money Given</td>
+        <td>${money(t.given)}</td>
+      </tr>
+
+      <tr>
+        <td>Money Received</td>
+        <td>${money(t.received)}</td>
+      </tr>
+
+    </table>
+  `;
+
+  printHTML(
+    'HISAB Report',
+    body
+  );
+}
+
+function exportPersonPDF(pid){
+
+  const p=
+    modePeople().find(
+      x=>x.id===pid
+    );
+
+  if(!p)return;
+
+  const b=
+    personBalance(p);
+
+  const rows=
+    modeLending()
+      .filter(
+        x=>x.personId===pid
+      )
+      .map(x=>`
+        <tr>
+          <td>${fmtDate(x.date)}</td>
+          <td>${x.type}</td>
+          <td>${money(x.amount)}</td>
+          <td>${money(x.paid||0)}</td>
+          <td>${money(
+            Math.max(
+              0,
+              x.amount-(x.paid||0)
+            )
+          )}</td>
+          <td>${esc(x.note||'')}</td>
+        </tr>
+      `)
+      .join('');
+
+  printHTML(
+    `HISAB - ${p.name}`,
+    `
+      <h1>HISAB Statement</h1>
+
+      <h2>${esc(p.name)}</h2>
+
+      <p>
+        Given: ${money(b.given)}
+        |
+        Received: ${money(b.received)}
+        |
+        Net: ${money(b.net)}
+      </p>
+
+      <table>
+
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Paid</th>
+          <th>Due</th>
+          <th>Note</th>
+        </tr>
+
+        ${rows}
+
+      </table>
+    `
+  );
+}
+
+/* ================= DASHBOARD ================= */
+
+function calcNetWorth(){
+
+  const t=totals();
+
+  return t.balance+
+    t.received-
+    t.given;
+}
+
+function renderDashboard(){
+
+  const t=totals();
+
+  const map={
+    totalIncome:t.income,
+    totalExpense:t.expense,
+    ledgerGiven:t.given,
+    ledgerReceived:t.received,
+    ledgerNet:t.net,
+    rIncome:t.income,
+    rExpense:t.expense,
+    rCount:modeTx().length,
+    rSaving:Math.max(0,t.balance)
+  };
+
+  Object.entries(map)
+    .forEach(([id,v])=>{
+
+      const e=$(id);
+
+      if(!e)return;
+
+      e.textContent=
+        id.startsWith('r') &&
+        id!=='rCount'
+          ?money(v)
+          :id==='rCount'
+            ?v
+            :money(v);
+    });
+
+  const b=$('todaySummary');
+
+  if(b){
+
+    b.innerHTML=`
+      <b>
+        ${mode()} • ${data.currency}
+      </b>
+
+      <br>
+
+      Balance:
+      <b>${money(t.balance)}</b>
+
+      <br>
+
+      Net Khata:
+      ${money(t.net)}
+    `;
+  }
+
+  const m=$('businessList');
+
+  if(
+    m &&
+    mode()==='Business'
+  ){
+
+    m.innerHTML=
+      data.business
+        .map(p=>`
+          <div class="person">
+
+            <b>${esc(p.name)}</b>
+
+            <br>
+
+            ${esc(p.phone||'')}
+
+            <br>
+
+            <button
+              onclick="showPersonHistory('${p.id}')"
+            >
+              Open Khata
+            </button>
+
+          </div>
+        `)
+        .join('')
+      ||
+      '<div class="person">No customers/suppliers.</div>';
+  }
+}
+
+/* ================= BILLS RENDER ================= */
+
+function renderBills(){
+
+  const box=$('remList');
+
+  if(box){
+
+    const bs=
+      data.bills.filter(
+        x=>
+          (x.mode||'Personal')===mode()
+      );
+
+    box.innerHTML=
+      bs
+        .map(x=>`
+          <div class="person">
+
+            <b>${esc(x.name)}</b>
+            —
+            ${money(x.amount)}
+
+            <br>
+
+            ${esc(x.kind)}
+            •
+            Due ${fmtDate(x.due)}
+            •
+            ${dueState(
+              x.due,
+              x.paid
+                ?0
+                :x.amount
+            )}
+
+            <br>
+
+            <button
+              onclick="toggleBill('${x.id}')"
+            >
+              ${
+                x.paid
+                  ?'Mark Pending'
+                  :'Mark Paid'
+              }
+            </button>
+
+            <button
+              onclick="deleteBill('${x.id}')"
+            >
+              Delete
+            </button>
+
+          </div>
+        `)
+        .join('')
+      ||
+      '';
+  }
+
+  const rs=$('remSummary');
+
+  if(rs){
+
+    const rr=
+      data.reminders.filter(
+        x=>
+          (x.mode||'Personal')===mode()
+      );
+
+    rs.innerHTML=`
+      <b>${rr.length}</b>
+      reminders
+      •
+      ${rr.filter(x=>!x.done).length}
+      active
+    `;
+  }
+}
+
+/* ================= FAMILY RENDER ================= */
+
+function renderFamily(){
+
+  const maps={
+    insList:data.insurance,
+    schoolList:data.school,
+    vehicleList:data.vehicles,
+    familyList:data.family,
+    shoppingList:data.shopping,
+    utilityList:data.utilities,
+    docsList:data.docs,
+    annualList:data.annualPlans,
+    limitsList:data.limits
+  };
+
+  for(
+    const [id,arr]
+    of Object.entries(maps)
+  ){
+
+    const e=$(id);
+
+    if(!e)continue;
+
+    e.innerHTML=
+      arr
+        .map(x=>`
+          <div class="person">
+
+            ${esc(
+              x.name||
+              x.child||
+              x.item||
+              'Entry'
+            )}
+
+            ${
+              x.amount
+                ?`— ${money(x.amount)}`
+                :''
+            }
+
+          </div>
+        `)
+        .join('')
+      ||
+      '';
+  }
+}
+
+/* ================= THEME ================= */
+
+function applyTheme(){
+  document.body.dataset.theme=
+    data.theme||'light';
+}
+
+function toggleTheme(){
+
+  data.theme=
+    data.theme==='dark'
+      ?'light'
+      :'dark';
+
+  save();
+  applyTheme();
+
+  toast(
+    data.theme+' mode'
+  );
+}
+
+/* ================= RESET ================= */
+
+function resetData(){
+
+  if(
+    !confirm(
+      'HISAB ka sara local data delete karna hai?'
+    )
+  )return;
+
+  data=clone(DEFAULT);
+
+  save();
+  renderAll();
+
+  toast('All data cleared');
+}
+
+/* ================= COMPATIBILITY HANDLERS ================= */
+
+function saveBudgetForm(){
+  calcBudget();
+}
+
+function saveGoalForm(){
+  calcGoal();
+}
+
+function addGoalSaving(){
+  calcGoal();
+}
+
+function withdrawGoalSaving(){
+  toast(
+    'Goal withdrawal: add an expense transaction for accurate balance'
+  );
+}
+
+function deleteGoal(id){
+
+  data.goals=
+    data.goals.filter(
+      x=>x.id!==id
+    );
+
+  save();
+  renderAll();
+}
+
+function deleteLoan(id){
+
+  data.loans=
+    data.loans.filter(
+      x=>x.id!==id
+    );
+
+  save();
+  renderAll();
+}
+
+function payEMI(id){
+
+  toast(
+    'EMI payment ko Expenses/transaction me record karein'
+  );
+}
+
+function calculateEMIForm(){
+  calcEMI();
+}
+
+function saveLoanForm(){
+
+  const amount=
+    Number(
+      prompt('Loan amount:')||0
+    );
+
+  const rate=
+    Number(
+      prompt('Annual rate %:')||0
+    );
+
+  const tenure=
+    Number(
+      prompt('Tenure months:')||0
+    );
+
+  if(
+    amount &&
+    tenure
+  ){
+
+    data.loans.push({
+      id:uid(),
+      amount,
+      rate,
+      tenure,
+      mode:mode()
+    });
+
+    save();
+    renderAll();
+
+    toast('Loan saved');
+  }
+}
+
+function searchHisab(){
+  searchAllData();
+}
+
+/* ================= RENDER ALL ================= */
+
+function renderAll(){
+
+  applyTheme();
+
+  renderDashboard();
+  renderPeople();
+  renderTransactions();
+  renderBills();
+  renderFamily();
+  renderComparison();
+}
+
+/* ================= START ================= */
+
+function restore(){
+
+  try{
+
+    const s=
+      localStorage.getItem(KEY);
+
+    if(!s)save();
+
+  }catch(e){}
+}
+
+/* ================= GLOBAL FUNCTIONS ================= */
+
+Object.assign(window,{
+
+  show,
+  enterGuestMode,
+  showGuestGate,
+
+  setMode,
+  toggleCurrency,
+  toggleLanguage,
+
+  setPin,
+  lockApp,
+
+  quickTransaction,
+  quickLending,
+
+  openLendingForm,
+  saveLendingForm,
+
+  addPerson,
+  addKhataTransaction,
+  showPersonHistory,
+  sharePerson,
+
+  filterLedger,
+  searchLedger,
+
+  markLendingPaid,
+  deleteLending,
+  editLending,
+
+  addTransaction,
+  deleteTransaction,
+  editTransaction,
+  setTxType,
+
+  totalIncome,
+  totalExpense,
+  moneyTransactions,
+
+  calcBudget,
+  calcGoal,
+  calcEMI,
+
+  addBill,
+  toggleBill,
+
+  addReminder,
+  markBillPaid,
+  deleteBill,
+
+  saveReminderForm,
+  saveBusiness,
+
+  addFamilyMember,
+  addShopping,
+  addUtility,
+
+  calcFD,
+  addInsurance,
+  addSchool,
+  addVehicle,
+
+  addDoc,
+  addAnnual,
+  saveLimit,
+
+  calcEmergency,
+  renderComparison,
+  searchAllData,
+
+  summaryText,
+  shareHisab,
+
+  exportBackup,
+  importBackup,
+  exportSummary,
+  exportCSV,
+
+  exportPDF,
+  exportPersonPDF,
+
+  toggleTheme,
+  resetData,
+
+  saveBudgetForm,
+  saveGoalForm,
+  addGoalSaving,
+  withdrawGoalSaving,
+
+  deleteGoal,
+  deleteLoan,
+  payEMI,
+  calculateEMIForm,
+  saveLoanForm,
+
+  searchHisab
+});
+
+document.addEventListener(
+  'DOMContentLoaded',
+  ()=>{
+    restore();
+    showGuestGate();
+
+    if(
+      data.locked &&
+      data.pin
+    ){
+      showLockOverlay();
+    }
+
+    renderAll();
+  }
+);
 
 })();
