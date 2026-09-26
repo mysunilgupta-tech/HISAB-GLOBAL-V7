@@ -1,6 +1,7 @@
 /* =========================================================
    HISAB V7 — PREMIUM FINANCE UI
-   Royal Blue + Emerald Green
+   Complete polished CSS
+   HTML + JavaScript structure unchanged
    ========================================================= */
 
 *{
@@ -25,18 +26,20 @@
   --orange:#f59e0b;
   --orange-soft:#fff7e6;
 
+  --purple:#7c5cff;
   --text:#182230;
   --muted:#718096;
 
   --bg:#f5f7fb;
-  --card:#ffffff;
+  --card:#fff;
   --border:#e7ebf2;
 
   --shadow:0 6px 22px rgba(30,55,90,.08);
   --radius:18px;
 }
 
-html,body{
+html,
+body{
   width:100%;
   min-height:100%;
   font-family:Arial,Helvetica,sans-serif;
@@ -48,9 +51,9 @@ body{
   padding-bottom:82px;
 }
 
-/* =========================
-   GUEST / SPLASH
-   ========================= */
+/* =========================================================
+   GUEST
+   ========================================================= */
 
 #guestGate{
   min-height:100vh;
@@ -95,19 +98,15 @@ body{
   max-width:320px;
 }
 
-/* =========================
-   APP SHELL
-   ========================= */
+/* =========================================================
+   APP SHELL / TOP BAR
+   ========================================================= */
 
 #appShell{
   display:none;
   min-height:100vh;
   background:var(--bg);
 }
-
-/* =========================
-   TOP BAR
-   ========================= */
 
 .topbar{
   position:sticky;
@@ -121,12 +120,14 @@ body{
   background:rgba(255,255,255,.96);
   border-bottom:1px solid var(--border);
   box-shadow:0 3px 15px rgba(30,55,90,.05);
+  backdrop-filter:blur(12px);
 }
 
 .brand{
   font-size:22px;
   font-weight:800;
   color:var(--blue-dark);
+  letter-spacing:.2px;
 }
 
 .topbar small{
@@ -150,9 +151,9 @@ body{
   font-weight:700;
 }
 
-/* =========================
-   PAGE
-   ========================= */
+/* =========================================================
+   PAGES
+   ========================================================= */
 
 .page{
   display:none;
@@ -179,9 +180,9 @@ body{
   color:var(--muted);
 }
 
-/* =========================
-   HOME HERO
-   ========================= */
+/* =========================================================
+   WELCOME HERO
+   ========================================================= */
 
 .hero-card{
   padding:22px;
@@ -234,9 +235,9 @@ body{
   color:#dce6ff;
 }
 
-/* =========================
+/* =========================================================
    OVERVIEW
-   ========================= */
+   ========================================================= */
 
 .overview-strip{
   display:grid;
@@ -266,9 +267,161 @@ body{
   word-break:break-word;
 }
 
-/* =========================
+/* =========================================================
+   HOME POLISH
+   ========================================================= */
+
+#home .page-title{
+  margin-bottom:14px;
+  padding:2px 2px 0;
+}
+
+#home .page-title h2{
+  font-size:23px;
+  font-weight:800;
+  letter-spacing:-.3px;
+}
+
+#home .page-title p{
+  margin-top:3px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--blue);
+}
+
+#home .overview-strip{
+  gap:8px;
+  margin:0 0 20px;
+}
+
+#home .summary-card{
+  min-height:82px;
+  padding:14px 11px;
+  border-radius:17px;
+  background:linear-gradient(180deg,#fff,#f9fbff);
+  box-shadow:0 5px 18px rgba(30,55,90,.07);
+  transition:.15s;
+}
+
+#home .summary-card:active{
+  transform:scale(.98);
+}
+
+#home .summary-card small{
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+}
+
+#home .summary-card strong{
+  margin-top:7px;
+  font-size:16px;
+  font-weight:800;
+}
+
+#home .summary-card:nth-child(1) strong{
+  color:var(--green-dark);
+}
+
+#home .summary-card:nth-child(2) strong{
+  color:var(--red);
+}
+
+#home .summary-card:nth-child(3){
+  background:linear-gradient(145deg,#edf3ff,#fff);
+  border-color:#d9e4ff;
+}
+
+#home .summary-card:nth-child(3) strong{
+  color:var(--blue-dark);
+  font-size:17px;
+}
+
+#home .section-head{
+  margin:2px 2px 10px;
+}
+
+#home .section-head h3{
+  font-size:17px;
+  font-weight:800;
+}
+
+#home .feature-grid{
+  gap:10px;
+}
+
+#home .feature-grid button{
+  min-height:102px;
+  padding:14px 13px;
+  border-radius:17px;
+  background:linear-gradient(180deg,#fff,#fbfcff);
+  border:1px solid #e4e9f1;
+  box-shadow:0 5px 17px rgba(30,55,90,.065);
+  position:relative;
+  overflow:hidden;
+}
+
+#home .feature-grid button::after{
+  content:"";
+  position:absolute;
+  right:-22px;
+  bottom:-25px;
+  width:65px;
+  height:65px;
+  border-radius:50%;
+  background:rgba(36,87,214,.035);
+  pointer-events:none;
+}
+
+#home .feature-grid button:active{
+  transform:scale(.965);
+  box-shadow:0 2px 8px rgba(30,55,90,.06);
+}
+
+#home .feature-grid span{
+  font-size:24px;
+  margin-bottom:8px;
+}
+
+#home .feature-grid b{
+  font-size:14px;
+  font-weight:800;
+}
+
+#home .feature-grid small{
+  margin-top:4px;
+  font-size:10.5px;
+  line-height:1.3;
+}
+
+#home .feature-grid button:nth-child(1){
+  border-top:3px solid var(--blue);
+}
+
+#home .feature-grid button:nth-child(2){
+  border-top:3px solid var(--green);
+}
+
+#home .feature-grid button:nth-child(3){
+  border-top:3px solid var(--orange);
+}
+
+#home .feature-grid button:nth-child(4){
+  border-top:3px solid var(--purple);
+}
+
+#home .feature-grid button:nth-child(5){
+  border-top:3px solid var(--blue-dark);
+}
+
+#home .feature-grid button:nth-child(6){
+  border-top:3px solid #64748b;
+}
+
+/* =========================================================
    SECTION
-   ========================= */
+   ========================================================= */
 
 .section-head{
   margin:15px 0 10px;
@@ -278,9 +431,9 @@ body{
   font-size:17px;
 }
 
-/* =========================
+/* =========================================================
    FEATURE GRID
-   ========================= */
+   ========================================================= */
 
 .feature-grid{
   display:grid;
@@ -322,9 +475,9 @@ body{
   font-size:11px;
 }
 
-/* =========================
+/* =========================================================
    BUTTONS
-   ========================= */
+   ========================================================= */
 
 button{
   border:0;
@@ -369,11 +522,12 @@ button,
   color:#fff;
   border:0;
   padding:14px;
+  box-shadow:0 7px 16px rgba(36,87,214,.18);
 }
 
-/* =========================
+/* =========================================================
    FORMS
-   ========================= */
+   ========================================================= */
 
 .form-card{
   background:var(--card);
@@ -407,6 +561,7 @@ textarea{
   color:var(--text);
   font-size:15px;
   outline:none;
+  transition:.15s;
 }
 
 input:focus,
@@ -428,9 +583,9 @@ hr{
   margin:18px 0;
 }
 
-/* =========================
+/* =========================================================
    SEARCH
-   ========================= */
+   ========================================================= */
 
 .search-box{
   margin-bottom:12px;
@@ -438,11 +593,12 @@ hr{
 
 .search-box input{
   background:#fff;
+  box-shadow:0 3px 12px rgba(30,55,90,.04);
 }
 
-/* =========================
+/* =========================================================
    TOTALS
-   ========================= */
+   ========================================================= */
 
 .totals-row{
   display:grid;
@@ -487,9 +643,9 @@ hr{
   color:var(--green);
 }
 
-/* =========================
+/* =========================================================
    FILTERS / TABS
-   ========================= */
+   ========================================================= */
 
 .filter-row,
 .business-tabs{
@@ -497,6 +653,12 @@ hr{
   gap:7px;
   overflow-x:auto;
   padding:3px 0 10px;
+  scrollbar-width:none;
+}
+
+.filter-row::-webkit-scrollbar,
+.business-tabs::-webkit-scrollbar{
+  display:none;
 }
 
 .filter-row button,
@@ -517,9 +679,9 @@ hr{
   border-color:var(--blue);
 }
 
-/* =========================
+/* =========================================================
    LISTS / CARDS
-   ========================= */
+   ========================================================= */
 
 .list{
   display:flex;
@@ -568,9 +730,9 @@ hr{
   color:var(--orange);
 }
 
-/* =========================
+/* =========================================================
    KHATA SUMMARY
-   ========================= */
+   ========================================================= */
 
 .khata-summary{
   display:grid;
@@ -598,9 +760,9 @@ hr{
   font-size:15px;
 }
 
-/* =========================
+/* =========================================================
    BUSINESS
-   ========================= */
+   ========================================================= */
 
 #business .business-tabs button:nth-child(1),
 #business .business-tabs button:nth-child(2){
@@ -615,9 +777,9 @@ hr{
   color:var(--red);
 }
 
-/* =========================
+/* =========================================================
    REPORTS
-   ========================= */
+   ========================================================= */
 
 .report-cards{
   display:grid;
@@ -642,9 +804,9 @@ hr{
   box-shadow:var(--shadow);
 }
 
-/* =========================
+/* =========================================================
    PAYMENTS
-   ========================= */
+   ========================================================= */
 
 #credit .form-card{
   border-top:4px solid var(--blue);
@@ -654,9 +816,9 @@ hr{
   color:var(--blue-dark);
 }
 
-/* =========================
-   SPECIAL STATUS
-   ========================= */
+/* =========================================================
+   STATUS
+   ========================================================= */
 
 .status-pending{
   display:inline-block;
@@ -678,9 +840,9 @@ hr{
   font-weight:700;
 }
 
-/* =========================
+/* =========================================================
    FILE BUTTON
-   ========================= */
+   ========================================================= */
 
 .file-btn{
   display:block;
@@ -688,9 +850,9 @@ hr{
   margin-top:10px;
 }
 
-/* =========================
+/* =========================================================
    BOTTOM NAV
-   ========================= */
+   ========================================================= */
 
 .bottom-nav{
   position:fixed;
@@ -706,6 +868,7 @@ hr{
   background:rgba(255,255,255,.98);
   border-top:1px solid var(--border);
   box-shadow:0 -5px 20px rgba(20,40,70,.08);
+  backdrop-filter:blur(12px);
 }
 
 .bottom-nav button{
@@ -742,34 +905,78 @@ hr{
   font-size:29px;
 }
 
-/* =========================
+/* =========================================================
    MOBILE
-   ========================= */
+   ========================================================= */
 
 @media(max-width:380px){
-  .feature-grid{
-    gap:8px;
+
+  #home{
+    padding-left:12px;
+    padding-right:12px;
   }
 
-  .feature-grid button{
-    min-height:100px;
-    padding:12px 9px;
-  }
-
-  .overview-strip{
+  #home .overview-strip{
     gap:6px;
   }
 
-  .summary-card{
-    padding:11px 7px;
+  #home .summary-card{
+    min-height:78px;
+    padding:12px 8px;
   }
 
-  .summary-card strong{
+  #home .summary-card strong{
     font-size:14px;
+  }
+
+  #home .summary-card:nth-child(3) strong{
+    font-size:15px;
+  }
+
+  #home .feature-grid{
+    gap:8px;
+  }
+
+  #home .feature-grid button{
+    min-height:96px;
+    padding:12px 10px;
+  }
+
+  #home .feature-grid span{
+    font-size:22px;
+  }
+
+  #home .feature-grid b{
+    font-size:13px;
+  }
+
+  #home .feature-grid small{
+    font-size:10px;
+  }
+
+  .topbar{
+    padding-left:12px;
+    padding-right:12px;
+  }
+
+  .top-actions{
+    gap:5px;
+  }
+
+  .top-actions button{
+    width:36px;
+    height:36px;
+    font-size:11px;
+  }
+
+  .page{
+    padding-left:12px;
+    padding-right:12px;
   }
 }
 
 @media(min-width:700px){
+
   .feature-grid{
     grid-template-columns:repeat(3,1fr);
   }
