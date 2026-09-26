@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="hi">
 <head>
 <meta charset="utf-8">
@@ -8,767 +9,817 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>HISAB Money Manager</title>
 <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-
-<!-- ================= GUEST GATE ================= -->
-<div id="guestGate" class="screen">
+</head><body><!-- ================= GUEST GATE ================= --><div id="guestGate" class="screen">
   <div class="logo">₹</div>
   <h1>HISAB</h1>
   <p>Track • Plan • Grow</p>
   <button onclick="enterGuestMode()">Start Using HISAB</button>
-</div>
-
-<!-- ================= APP SHELL ================= -->
-<div id="appShell" class="app-shell">
-
-  <!-- TOP BAR -->
-  <header class="topbar">
+</div><!-- ================= APP SHELL ================= --><div id="appShell" class="app-shell">  <!-- TOP BAR -->  <header class="topbar">
     <div>
       <div class="brand">₹ HISAB</div>
       <small>Track • Plan • Grow</small>
-    </div>
+    </div><div class="top-actions">
+  <button onclick="toggleLanguage()" title="Language">EN/हि</button>
+  <button onclick="toggleCurrency()" title="Currency">₹</button>
+  <button onclick="show('reminders')" title="Reminders">🔔</button>
+</div>
 
-    <div class="top-actions">
-      <button onclick="toggleLanguage()" title="Language">EN/हि</button>
-      <button onclick="toggleCurrency()" title="Currency">₹</button>
-      <button onclick="show('reminders')" title="Reminders">🔔</button>
-    </div>
-  </header>
-
-  <!-- ================= WELCOME ================= -->
-  <section id="welcome" class="page">
+  </header>  <!-- ================= WELCOME ================= -->  <section id="welcome" class="page">
     <div class="hero-card">
       <h2>Welcome to HISAB</h2>
-      <p>Your simple personal & business money manager.</p>
-
-      <div class="mode-cards">
-        <button class="mode-card" onclick="setMode('personal')">
-          <span>👤</span>
-          <strong>Personal</strong>
-          <small>Manage your daily money</small>
-        </button>
-
-        <button class="mode-card" onclick="setMode('business')">
-          <span>💼</span>
-          <strong>Business</strong>
-          <small>Manage customers & business</small>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= HOME ================= -->
-  <section id="home" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Dashboard</h2>
-        <p id="modeLabel">Personal</p>
-      </div>
-    </div>
-
-    <div class="overview-strip">
-      <div class="summary-card">
-        <small>Receivable</small>
-        <strong id="receivable">₹0</strong>
-      </div>
-
-      <div class="summary-card">
-        <small>Payable</small>
-        <strong id="payable">₹0</strong>
-      </div>
-
-      <div class="summary-card">
-        <small>Balance</small>
-        <strong id="homeBalance">₹0</strong>
-      </div>
-    </div>
-
-    <div class="section-head">
-      <h3>Quick Actions</h3>
-    </div>
-
-    <div class="feature-grid">
-
-      <button onclick="show('personal')">
-        <span>💰</span>
-        <b>Money</b>
-        <small>Income & Expense</small>
-      </button>
-
-      <button onclick="openKhataForm('personal')">
-        <span>📒</span>
-        <b>Udhar</b>
-        <small>Give / Receive</small>
-      </button>
-
-      <button onclick="show('planning')">
-        <span>🎯</span>
-        <b>Planning</b>
-        <small>Budget & Goals</small>
-      </button>
-
-      <button onclick="show('credit')">
-        <span>💳</span>
-        <b>Payments</b>
-        <small>Bills & EMI</small>
-      </button>
-
-      <button onclick="show('reports')">
-        <span>📊</span>
-        <b>Reports</b>
-        <small>Analytics</small>
-      </button>
-
-      <button onclick="show('privacy')">
-        <span>🔐</span>
-        <b>Security</b>
-        <small>PIN & Privacy</small>
-      </button>
-
-    </div>
-  </section>
-
-  <!-- ================= PERSONAL ================= -->
-  <section id="personal" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Personal Money</h2>
-        <p>Income, Expense & Udhar</p>
-      </div>
-    </div>
-
-    <div class="action-row">
-      <button onclick="show('transactions')">➕ Add Transaction</button>
-      <button onclick="openKhataForm('personal')">📒 Add Udhar</button>
-    </div>
-
-    <div class="search-box">
-      <input
-        id="personalSearch"
-        type="search"
-        placeholder="Search person..."
-        oninput="searchKhata('personal')">
-    </div>
-
-    <div class="totals-row">
-      <div>
-        <small>Total Give</small>
-        <strong id="ledgerGiven">₹0</strong>
-      </div>
-
-      <div>
-        <small>Total Receive</small>
-        <strong id="ledgerReceived">₹0</strong>
-      </div>
-
-      <div>
-        <small>Net</small>
-        <strong id="ledgerNet">₹0</strong>
-      </div>
-    </div>
-
-    <div class="filter-row">
-      <button onclick="filterKhata('personal','all',this)">All</button>
-      <button onclick="filterKhata('personal','give',this)">Give</button>
-      <button onclick="filterKhata('personal','receive',this)">Receive</button>
-      <button onclick="filterKhata('personal','pending',this)">Pending</button>
-    </div>
-
-    <div id="personalList" class="list"></div>
-
-  </section>
-
-  <!-- ================= BUSINESS ================= -->
-  <section id="business" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Business</h2>
-        <p>Customers, Suppliers & Cashflow</p>
-      </div>
-    </div>
-
-    <div class="action-row">
-      <button onclick="openKhataForm('business')">➕ Add Entry</button>
-      <button onclick="show('transactions')">💰 Money</button>
-    </div>
-
-    <div class="business-tabs">
-      <button onclick="businessFilter('customer',this)">Customers</button>
-      <button onclick="businessFilter('supplier',this)">Suppliers</button>
-      <button onclick="businessFilter('sales',this)">Sales</button>
-      <button onclick="businessFilter('purchase',this)">Purchase</button>
-    </div>
-
-    <div class="search-box">
-      <input
-        id="businessSearch"
-        type="search"
-        placeholder="Search business..."
-        oninput="searchKhata('business')">
-    </div>
-
-    <div class="totals-row">
-      <div>
-        <small>Total Give</small>
-        <strong id="businessGiven">₹0</strong>
-      </div>
-
-      <div>
-        <small>Total Receive</small>
-        <strong id="businessReceived">₹0</strong>
-      </div>
-
-      <div>
-        <small>Net</small>
-        <strong id="businessNet">₹0</strong>
-      </div>
-    </div>
-
-    <div id="businessList" class="list"></div>
-
-  </section>
-
-  <!-- ================= KHATA ENTRY ================= -->
-  <section id="khataEntry" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Udhar Entry</h2>
-        <p>Give / Receive</p>
-      </div>
-      <button type="button" onclick="closeKhataForm()">✕</button>
-    </div>
-
-    <div class="form-card">
-
-      <label>Person / Customer</label>
-      <input id="khataPerson" type="text" placeholder="Name">
-
-      <label>Entry Type</label>
-      <select id="khataType">
-        <option value="give">Give</option>
-        <option value="receive">Receive</option>
-      </select>
-
-      <label>Amount</label>
-      <input id="khataAmount" type="number" inputmode="decimal" placeholder="0">
-
-      <label>Date</label>
-      <input id="khataDate" type="date">
-
-      <label>Payment Method</label>
-      <select id="khataMethod">
-        <option value="Cash">Cash</option>
-        <option value="UPI">UPI</option>
-        <option value="Bank Transfer">Bank Transfer</option>
-        <option value="Debit Card">Debit Card</option>
-        <option value="Credit Card">Credit Card</option>
-        <option value="Wallet">Wallet</option>
-        <option value="Cheque">Cheque</option>
-        <option value="Other">Other</option>
-      </select>
-
-      <label>Status</label>
-      <select id="khataStatus">
-        <option value="pending">Pending</option>
-        <option value="settled">Settled</option>
-      </select>
-
-      <label>Note</label>
-      <textarea id="khataNote" placeholder="Note"></textarea>
-
-      <button class="primary-btn" type="button" onclick="saveKhataEntry()">
-        Save Entry
-      </button>
-
-    </div>
-  </section>
-
-  <!-- ================= KHATA DETAIL ================= -->
-  <section id="khataDetail" class="page">
-
-    <div class="page-title">
-      <button type="button" onclick="closeKhataDetail()">←</button>
-
-      <div>
-        <h2 id="detailPersonName">Khata</h2>
-        <p>Complete History</p>
-      </div>
-    </div>
-
-    <div class="khata-summary">
-      <div>
-        <small>Give</small>
-        <strong id="detailGive">₹0</strong>
-      </div>
-
-      <div>
-        <small>Receive</small>
-        <strong id="detailReceive">₹0</strong>
-      </div>
-
-      <div>
-        <small>Balance</small>
-        <strong id="detailBalance">₹0</strong>
-      </div>
-    </div>
-
-    <div class="filter-row">
-      <button onclick="detailFilter('all',this)">All</button>
-      <button onclick="detailFilter('give',this)">Give</button>
-      <button onclick="detailFilter('receive',this)">Receive</button>
-      <button onclick="detailFilter('pending',this)">Pending</button>
-    </div>
-
-    <div id="khataHistory" class="list"></div>
-
-    <div class="action-row">
-      <button onclick="openPaymentEntry()">💵 Payment</button>
-      <button onclick="shareKhata()">📤 Share</button>
-      <button onclick="exportKhataPDF()">📄 PDF</button>
-    </div>
-
-  </section>
-
-  <!-- ================= TRANSACTIONS ================= -->
-  <section id="transactions" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Transactions</h2>
-        <p>Income & Expense</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <label>Type</label>
-      <select id="transactionType">
-        <option value="income">Income</option>
-        <option value="expense">Expense</option>
-      </select>
-
-      <label>Amount</label>
-      <input id="transactionAmount" type="number" inputmode="decimal" placeholder="0">
-
-      <label>Category</label>
-      <input id="transactionCategory" type="text" placeholder="Category">
-
-      <label>Note</label>
-      <input id="transactionNote" type="text" placeholder="Note">
-
-      <label>Date</label>
-      <input id="transactionDate" type="date">
-
-      <button class="primary-btn" type="button" onclick="addTransaction()">
-        Add Transaction
-      </button>
-
-    </div>
-
-    <div id="transactionList" class="list"></div>
-
-  </section>
-
-  <!-- ================= PLANNING ================= -->
-  <section id="planning" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Planning</h2>
-        <p>Budget • Savings • Goals</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <h3>Budget</h3>
-
-      <label>Monthly Budget</label>
-      <input id="budgetAmount" type="number" inputmode="decimal">
-
-      <button type="button" onclick="calcBudget()">Save Budget</button>
-
-      <hr>
-
-      <h3>Goal / Savings</h3>
-
-      <label>Goal Name</label>
-      <input id="goalName" type="text" placeholder="e.g. Bike">
-
-      <label>Target Amount</label>
-      <input id="goalTarget" type="number" inputmode="decimal">
-
-      <label>Saved Amount</label>
-      <input id="goalSaved" type="number" inputmode="decimal">
-
-      <label>Goal Date</label>
-      <input id="goalDate" type="date">
-
-      <button type="button" onclick="calcGoal()">Save Goal</button>
-
-    </div>
-
-    <div id="goalList" class="list"></div>
-
-  </section>
-
-  <!-- ================= CREDIT / PAYMENTS ================= -->
-  <section id="credit" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Payments</h2>
-        <p>Bills • Credit Card • Loans & EMI</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <h3>Bill</h3>
-
-      <label>Bill Name</label>
-      <input id="billName" type="text" placeholder="Electricity">
-
-      <label>Amount</label>
-      <input id="billAmount" type="number" inputmode="decimal">
-
-      <label>Due Date</label>
-      <input id="billDue" type="date">
-
-      <button type="button" onclick="addBill('Bill')">Add Bill</button>
-
-      <hr>
-
-      <h3>Credit Card</h3>
-
-      <label>Card Bill Amount</label>
-      <input id="cardBill" type="number" inputmode="decimal">
-
-      <label>Due Date</label>
-      <input id="cardDue" type="date">
-
-      <button type="button" onclick="addBill('Credit Card')">
-        Add Credit Card Bill
-      </button>
-
-      <hr>
-
-      <h3>Loan / EMI</h3>
-
-      <label>Loan Amount</label>
-      <input id="emiPrincipal" type="number" inputmode="decimal">
-
-      <label>Interest %</label>
-      <input id="emiRate" type="number" inputmode="decimal">
-
-      <label>Tenure (Months)</label>
-      <input id="emiMonths" type="number" inputmode="numeric">
-
-      <button type="button" onclick="calcEMI()">Calculate EMI</button>
-
-      <div id="emiResult"></div>
-
-    </div>
-
-    <div id="billList" class="list"></div>
-
-  </section>
-
-  <!-- ================= REPORTS ================= -->
-  <section id="reports" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Reports & Analytics</h2>
-        <p>Your money overview</p>
-      </div>
-    </div>
-
-    <div class="report-cards">
-
-      <div class="summary-card">
-        <small>Total Income</small>
-        <strong id="reportIncome">₹0</strong>
-      </div>
-
-      <div class="summary-card">
-        <small>Total Expense</small>
-        <strong id="reportExpense">₹0</strong>
-      </div>
-
-      <div class="summary-card">
-        <small>Give</small>
-        <strong id="reportGive">₹0</strong>
-      </div>
-
-      <div class="summary-card">
-        <small>Receive</small>
-        <strong id="reportReceive">₹0</strong>
-      </div>
-
-    </div>
-
-    <div id="reportContent"></div>
-
-    <div class="action-row">
-      <button onclick="exportSummary()">📤 Export</button>
-      <button onclick="exportSummaryPDF()">📄 PDF</button>
-    </div>
-
-  </section>
-
-  <!-- ================= REMINDERS ================= -->
-  <section id="reminders" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Reminders</h2>
-        <p>Bills & important dates</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <label>Reminder</label>
-      <input id="reminderName" type="text" placeholder="Reminder">
-
-      <label>Date</label>
-      <input id="reminderDate" type="date">
-
-      <button onclick="addReminder()">Add Reminder</button>
-
-    </div>
-
-    <div id="reminderList" class="list"></div>
-
-  </section>
-
-  <!-- ================= PRIVACY / SECURITY ================= -->
-  <section id="privacy" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Security & Backup</h2>
-        <p>Keep your HISAB safe</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <h3>Security PIN</h3>
-
-      <input
-        id="pinInput"
-        type="password"
-        inputmode="numeric"
-        maxlength="6"
-        placeholder="Enter PIN">
-
-      <button onclick="setPin()">Set PIN</button>
-      <button onclick="lockApp()">Lock App</button>
-
-      <hr>
-
-      <h3>Backup & Restore</h3>
-
-      <button onclick="exportBackup()">⬇ Backup</button>
-
-      <label class="file-btn">
-        ⬆ Restore Backup
-        <input
-          type="file"
-          accept=".json,application/json"
-          onchange="importBackup(event)"
-          hidden>
-      </label>
-
-    </div>
-
-  </section>
-
-  <!-- ================= FAMILY ================= -->
-  <section id="family" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Family</h2>
-        <p>Family money planning</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <label>Family Member</label>
-      <input id="familyName" type="text" placeholder="Name">
-
-      <button onclick="addFamilyMember()">Add Member</button>
-
-    </div>
-
-    <div id="familyList" class="list"></div>
-
-  </section>
-
-  <!-- ================= ADS ================= -->
-  <section id="ads" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>HISAB Free</h2>
-        <p>Supported by advertisements</p>
-      </div>
-    </div>
-
-    <div id="adContainer"></div>
-
-  </section>
-
-  <!-- ================= FAMILY TOOLS ================= -->
-  <section id="familytools" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Family Tools</h2>
-      </div>
-    </div>
-
-    <div class="feature-grid">
-
-      <button onclick="show('family')">
-        👨‍👩‍👧 Family
-      </button>
-
-      <button onclick="show('planning')">
-        🎯 Goals
-      </button>
-
-      <button onclick="show('credit')">
-        💳 Payments
-      </button>
-
-    </div>
-
-  </section>
-
-  <!-- ================= TOOLS ================= -->
-  <section id="tools13" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>More Tools</h2>
-      </div>
-    </div>
-
-    <div class="feature-grid">
-
-      <button onclick="calcFD()">🏦 FD Calculator</button>
-      <button onclick="addInsurance()">🛡 Insurance</button>
-      <button onclick="addSchool()">🎓 School</button>
-      <button onclick="addVehicle()">🚗 Vehicle</button>
-      <button onclick="addShopping()">🛒 Shopping</button>
-      <button onclick="addUtility()">💡 Utility</button>
-      <button onclick="calcEmergency()">🚨 Emergency Fund</button>
-      <button onclick="addDoc()">📄 Documents</button>
-      <button onclick="addAnnual()">📅 Annual Planning</button>
-
-    </div>
-
-    <div class="form-card">
-
-      <h3>FD Calculator</h3>
-
-      <input id="fdPrincipal" type="number" placeholder="Principal">
-      <input id="fdRate" type="number" placeholder="Interest %">
-      <input id="fdN" type="number" placeholder="Months">
-
-      <button onclick="calcFD()">Calculate FD</button>
-
-      <div id="fdResult"></div>
-
-    </div>
-
-  </section>
-
-  <!-- ================= FINAL / SETTINGS ================= -->
-  <section id="final" class="page">
-
-    <div class="page-title">
-      <div>
-        <h2>Settings</h2>
-        <p>HISAB preferences</p>
-      </div>
-    </div>
-
-    <div class="form-card">
-
-      <label>Search Everything</label>
-
-      <input
-        id="searchAll"
-        type="search"
-        placeholder="Search HISAB..."
-        oninput="searchAllData(this.value)">
-
-      <div id="searchResults" class="list"></div>
-
-      <hr>
-
-      <button onclick="toggleLanguage()">🌐 Language</button>
-      <button onclick="toggleCurrency()">💱 Currency</button>
-      <button onclick="exportBackup()">💾 Backup</button>
-      <button onclick="exportSummary()">📤 Share Summary</button>
-      <button onclick="exportSummaryPDF()">📄 Export Summary PDF</button>
-
-    </div>
-
-  </section>
-
-  <!-- ================= BOTTOM NAV ================= -->
-  <nav class="bottom-nav">
-
-    <button onclick="show('home')">
-      <span>⌂</span>
-      <small>Home</small>
+      <p>Your simple personal & business money manager.</p>  <div class="mode-cards">
+    <button class="mode-card" onclick="setMode('personal')">
+      <span>👤</span>
+      <strong>Personal</strong>
+      <small>Manage your daily money</small>
     </button>
 
-    <button onclick="show('transactions')">
-      <span>↔</span>
-      <small>Transactions</small>
+    <button class="mode-card" onclick="setMode('business')">
+      <span>💼</span>
+      <strong>Business</strong>
+      <small>Manage customers & business</small>
     </button>
+  </div>
+</div>
 
-    <button class="add-btn" onclick="openQuickAdd()">
-      <span>＋</span>
-    </button>
+  </section>  <!-- ================= HOME ================= -->  <section id="home" class="page"><div class="page-title">
+  <div>
+    <h2>Dashboard</h2>
+    <p id="modeLabel">Personal</p>
+  </div>
+</div>
 
-    <button onclick="show('reports')">
-      <span>▥</span>
-      <small>Reports</small>
-    </button>
+<div class="overview-strip">
+  <div class="summary-card">
+    <small>Receivable</small>
+    <strong id="receivable">₹0</strong>
+  </div>
 
-    <button onclick="show('final')">
-      <span>☰</span>
-      <small>More</small>
-    </button>
+  <div class="summary-card">
+    <small>Payable</small>
+    <strong id="payable">₹0</strong>
+  </div>
 
-  </nav>
+  <div class="summary-card">
+    <small>Balance</small>
+    <strong id="homeBalance">₹0</strong>
+  </div>
+</div>
+
+<div class="section-head">
+  <h3>Quick Actions</h3>
+</div>
+
+<div class="feature-grid">
+
+  <button onclick="show('personal')">
+    <span>💰</span>
+    <b>Money</b>
+    <small>Income & Expense</small>
+  </button>
+
+  <button onclick="openKhataForm('personal')">
+    <span>📒</span>
+    <b>Udhar</b>
+    <small>Give / Receive</small>
+  </button>
+
+  <button onclick="show('planning')">
+    <span>🎯</span>
+    <b>Planning</b>
+    <small>Budget & Goals</small>
+  </button>
+
+  <button onclick="show('credit')">
+    <span>💳</span>
+    <b>Payments</b>
+    <small>Bills & EMI</small>
+  </button>
+
+  <button onclick="show('reports')">
+    <span>📊</span>
+    <b>Reports</b>
+    <small>Analytics</small>
+  </button>
+
+  <button onclick="show('privacy')">
+    <span>🔐</span>
+    <b>Security</b>
+    <small>PIN & Privacy</small>
+  </button>
 
 </div>
 
-<!-- ================= APP JS ================= -->
-<script src="app.js"></script>
-<script src="repair.js"></script>
+  </section>  <!-- ================= PERSONAL ================= -->  <section id="personal" class="page"><div class="page-title">
+  <div>
+    <h2>Personal Money</h2>
+    <p>Income, Expense & Udhar</p>
+  </div>
+</div>
 
-<script>
+<div class="action-row">
+  <button onclick="show('transactions')">➕ Add Transaction</button>
+  <button onclick="openKhataForm('personal')">📒 Add Udhar</button>
+</div>
+
+<div class="search-box">
+  <input
+    id="personalSearch"
+    type="search"
+    placeholder="Search person..."
+    oninput="searchKhata('personal')">
+</div>
+
+<div class="totals-row">
+  <div>
+    <small>Total Give</small>
+    <strong id="ledgerGiven">₹0</strong>
+  </div>
+
+  <div>
+    <small>Total Receive</small>
+    <strong id="ledgerReceived">₹0</strong>
+  </div>
+
+  <div>
+    <small>Net</small>
+    <strong id="ledgerNet">₹0</strong>
+  </div>
+</div>
+
+<div class="filter-row">
+  <button onclick="filterKhata('personal','all',this)">All</button>
+  <button onclick="filterKhata('personal','give',this)">Give</button>
+  <button onclick="filterKhata('personal','receive',this)">Receive</button>
+  <button onclick="filterKhata('personal','pending',this)">Pending</button>
+</div>
+
+<div id="personalList" class="list"></div>
+
+  </section>  <!-- ================= BUSINESS ================= -->  <section id="business" class="page"><div class="page-title">
+  <div>
+    <h2>Business</h2>
+    <p>Customers, Suppliers & Cashflow</p>
+  </div>
+</div>
+
+<!-- BUSINESS ACTIONS -->
+<div class="action-row">
+
+  <button type="button" onclick="addBusinessCustomer()">
+    👤 Add Customer
+  </button>
+
+  <button type="button" onclick="addBusinessSupplier()">
+    🚚 Add Supplier
+  </button>
+
+  <button type="button" onclick="openKhataForm('business')">
+    ➕ Add Entry
+  </button>
+
+  <button type="button" onclick="show('transactions')">
+    💰 Money
+  </button>
+
+</div>
+
+<!-- BUSINESS TABS -->
+<div class="business-tabs">
+
+  <button
+    type="button"
+    onclick="businessFilter('customer',this)">
+    👤 Customers
+  </button>
+
+  <button
+    type="button"
+    onclick="businessFilter('supplier',this)">
+    🚚 Suppliers
+  </button>
+
+  <button
+    type="button"
+    onclick="businessFilter('sales',this)">
+    🛒 Sales
+  </button>
+
+  <button
+    type="button"
+    onclick="businessFilter('purchase',this)">
+    📦 Purchase
+  </button>
+
+</div>
+
+<!-- BUSINESS SEARCH -->
+<div class="search-box">
+  <input
+    id="businessSearch"
+    type="search"
+    placeholder="Search customer / supplier..."
+    oninput="searchKhata('business')">
+</div>
+
+<!-- BUSINESS TOTALS -->
+<div class="totals-row">
+
+  <div>
+    <small>Total Give</small>
+    <strong id="businessGiven">₹0</strong>
+  </div>
+
+  <div>
+    <small>Total Receive</small>
+    <strong id="businessReceived">₹0</strong>
+  </div>
+
+  <div>
+    <small>Net</small>
+    <strong id="businessNet">₹0</strong>
+  </div>
+
+</div>
+
+<!-- BUSINESS LIST -->
+<div id="businessList" class="list"></div>
+
+  </section>  <!-- ================= KHATA ENTRY ================= -->  <section id="khataEntry" class="page"><div class="page-title">
+  <div>
+    <h2>Udhar Entry</h2>
+    <p>Give / Receive</p>
+  </div>
+
+  <button type="button" onclick="closeKhataForm()">✕</button>
+</div>
+
+<div class="form-card">
+
+  <label>Person / Customer</label>
+  <input id="khataPerson" type="text" placeholder="Name">
+
+  <label>Entry Type</label>
+  <select id="khataType">
+    <option value="give">Give</option>
+    <option value="receive">Receive</option>
+  </select>
+
+  <label>Amount</label>
+  <input id="khataAmount" type="number" inputmode="decimal" placeholder="0">
+
+  <label>Date</label>
+  <input id="khataDate" type="date">
+
+  <label>Payment Method</label>
+  <select id="khataMethod">
+    <option value="Cash">Cash</option>
+    <option value="UPI">UPI</option>
+    <option value="Bank Transfer">Bank Transfer</option>
+    <option value="Debit Card">Debit Card</option>
+    <option value="Credit Card">Credit Card</option>
+    <option value="Wallet">Wallet</option>
+    <option value="Cheque">Cheque</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <label>Status</label>
+  <select id="khataStatus">
+    <option value="pending">Pending</option>
+    <option value="settled">Settled</option>
+  </select>
+
+  <label>Note</label>
+  <textarea id="khataNote" placeholder="Note"></textarea>
+
+  <button
+    class="primary-btn"
+    type="button"
+    onclick="saveKhataEntry()">
+    Save Entry
+  </button>
+
+</div>
+
+  </section>  <!-- ================= KHATA DETAIL ================= -->  <section id="khataDetail" class="page"><div class="page-title">
+
+  <button type="button" onclick="closeKhataDetail()">←</button>
+
+  <div>
+    <h2 id="detailPersonName">Khata</h2>
+    <p>Complete History</p>
+  </div>
+
+</div>
+
+<div class="khata-summary">
+
+  <div>
+    <small>Give</small>
+    <strong id="detailGive">₹0</strong>
+  </div>
+
+  <div>
+    <small>Receive</small>
+    <strong id="detailReceive">₹0</strong>
+  </div>
+
+  <div>
+    <small>Balance</small>
+    <strong id="detailBalance">₹0</strong>
+  </div>
+
+</div>
+
+<div class="filter-row">
+  <button onclick="detailFilter('all',this)">All</button>
+  <button onclick="detailFilter('give',this)">Give</button>
+  <button onclick="detailFilter('receive',this)">Receive</button>
+  <button onclick="detailFilter('pending',this)">Pending</button>
+</div>
+
+<div id="khataHistory" class="list"></div>
+
+<div class="action-row">
+  <button onclick="openPaymentEntry()">💵 Payment</button>
+  <button onclick="shareKhata()">📤 Share</button>
+  <button onclick="exportKhataPDF()">📄 PDF</button>
+</div>
+
+  </section>  <!-- ================= TRANSACTIONS ================= -->  <section id="transactions" class="page"><div class="page-title">
+  <div>
+    <h2>Transactions</h2>
+    <p>Income & Expense</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <label>Type</label>
+
+  <select id="transactionType">
+    <option value="income">Income</option>
+    <option value="expense">Expense</option>
+  </select>
+
+  <label>Amount</label>
+
+  <input
+    id="transactionAmount"
+    type="number"
+    inputmode="decimal"
+    placeholder="0">
+
+  <label>Category</label>
+
+  <input
+    id="transactionCategory"
+    type="text"
+    placeholder="Category">
+
+  <label>Note</label>
+
+  <input
+    id="transactionNote"
+    type="text"
+    placeholder="Note">
+
+  <label>Date</label>
+
+  <input
+    id="transactionDate"
+    type="date">
+
+  <button
+    class="primary-btn"
+    type="button"
+    onclick="addTransaction()">
+    Add Transaction
+  </button>
+
+</div>
+
+<div id="transactionList" class="list"></div>
+
+  </section>  <!-- ================= PLANNING ================= -->  <section id="planning" class="page"><div class="page-title">
+  <div>
+    <h2>Planning</h2>
+    <p>Budget • Savings • Goals</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <h3>Budget</h3>
+
+  <label>Monthly Budget</label>
+
+  <input
+    id="budgetAmount"
+    type="number"
+    inputmode="decimal">
+
+  <button type="button" onclick="calcBudget()">
+    Save Budget
+  </button>
+
+  <hr>
+
+  <h3>Goal / Savings</h3>
+
+  <label>Goal Name</label>
+
+  <input
+    id="goalName"
+    type="text"
+    placeholder="e.g. Bike">
+
+  <label>Target Amount</label>
+
+  <input
+    id="goalTarget"
+    type="number"
+    inputmode="decimal">
+
+  <label>Saved Amount</label>
+
+  <input
+    id="goalSaved"
+    type="number"
+    inputmode="decimal">
+
+  <label>Goal Date</label>
+
+  <input
+    id="goalDate"
+    type="date">
+
+  <button type="button" onclick="calcGoal()">
+    Save Goal
+  </button>
+
+</div>
+
+<div id="goalList" class="list"></div>
+
+  </section>  <!-- ================= CREDIT / PAYMENTS ================= -->  <section id="credit" class="page"><div class="page-title">
+  <div>
+    <h2>Payments</h2>
+    <p>Bills • Credit Card • Loans & EMI</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <h3>Bill</h3>
+
+  <label>Bill Name</label>
+
+  <input
+    id="billName"
+    type="text"
+    placeholder="Electricity">
+
+  <label>Amount</label>
+
+  <input
+    id="billAmount"
+    type="number"
+    inputmode="decimal">
+
+  <label>Due Date</label>
+
+  <input
+    id="billDue"
+    type="date">
+
+  <button type="button" onclick="addBill('Bill')">
+    Add Bill
+  </button>
+
+  <hr>
+
+  <h3>Credit Card</h3>
+
+  <label>Card Bill Amount</label>
+
+  <input
+    id="cardBill"
+    type="number"
+    inputmode="decimal">
+
+  <label>Due Date</label>
+
+  <input
+    id="cardDue"
+    type="date">
+
+  <button
+    type="button"
+    onclick="addBill('Credit Card')">
+    Add Credit Card Bill
+  </button>
+
+  <hr>
+
+  <h3>Loan / EMI</h3>
+
+  <label>Loan Amount</label>
+
+  <input
+    id="emiPrincipal"
+    type="number"
+    inputmode="decimal">
+
+  <label>Interest %</label>
+
+  <input
+    id="emiRate"
+    type="number"
+    inputmode="decimal">
+
+  <label>Tenure (Months)</label>
+
+  <input
+    id="emiMonths"
+    type="number"
+    inputmode="numeric">
+
+  <button type="button" onclick="calcEMI()">
+    Calculate EMI
+  </button>
+
+  <div id="emiResult"></div>
+
+</div>
+
+<div id="billList" class="list"></div>
+
+  </section>  <!-- ================= REPORTS ================= -->  <section id="reports" class="page"><div class="page-title">
+  <div>
+    <h2>Reports & Analytics</h2>
+    <p>Your money overview</p>
+  </div>
+</div>
+
+<div class="report-cards">
+
+  <div class="summary-card">
+    <small>Total Income</small>
+    <strong id="reportIncome">₹0</strong>
+  </div>
+
+  <div class="summary-card">
+    <small>Total Expense</small>
+    <strong id="reportExpense">₹0</strong>
+  </div>
+
+  <div class="summary-card">
+    <small>Give</small>
+    <strong id="reportGive">₹0</strong>
+  </div>
+
+  <div class="summary-card">
+    <small>Receive</small>
+    <strong id="reportReceive">₹0</strong>
+  </div>
+
+</div>
+
+<div id="reportContent"></div>
+
+<div class="action-row">
+  <button onclick="exportSummary()">📤 Export</button>
+  <button onclick="exportSummaryPDF()">📄 PDF</button>
+</div>
+
+  </section>  <!-- ================= REMINDERS ================= -->  <section id="reminders" class="page"><div class="page-title">
+  <div>
+    <h2>Reminders</h2>
+    <p>Bills & important dates</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <label>Reminder</label>
+
+  <input
+    id="reminderName"
+    type="text"
+    placeholder="Reminder">
+
+  <label>Date</label>
+
+  <input
+    id="reminderDate"
+    type="date">
+
+  <button onclick="addReminder()">
+    Add Reminder
+  </button>
+
+</div>
+
+<div id="reminderList" class="list"></div>
+
+  </section>  <!-- ================= PRIVACY / SECURITY ================= -->  <section id="privacy" class="page"><div class="page-title">
+  <div>
+    <h2>Security & Backup</h2>
+    <p>Keep your HISAB safe</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <h3>Security PIN</h3>
+
+  <input
+    id="pinInput"
+    type="password"
+    inputmode="numeric"
+    maxlength="6"
+    placeholder="Enter PIN">
+
+  <button onclick="setPin()">Set PIN</button>
+  <button onclick="lockApp()">Lock App</button>
+
+  <hr>
+
+  <h3>Backup & Restore</h3>
+
+  <button onclick="exportBackup()">⬇ Backup</button>
+
+  <label class="file-btn">
+    ⬆ Restore Backup
+
+    <input
+      type="file"
+      accept=".json,application/json"
+      onchange="importBackup(event)"
+      hidden>
+  </label>
+
+</div>
+
+  </section>  <!-- ================= FAMILY ================= -->  <section id="family" class="page"><div class="page-title">
+  <div>
+    <h2>Family</h2>
+    <p>Family money planning</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <label>Family Member</label>
+
+  <input
+    id="familyName"
+    type="text"
+    placeholder="Name">
+
+  <button onclick="addFamilyMember()">
+    Add Member
+  </button>
+
+</div>
+
+<div id="familyList" class="list"></div>
+
+  </section>  <!-- ================= ADS ================= -->  <section id="ads" class="page"><div class="page-title">
+  <div>
+    <h2>HISAB Free</h2>
+    <p>Supported by advertisements</p>
+  </div>
+</div>
+
+<div id="adContainer"></div>
+
+  </section>  <!-- ================= FAMILY TOOLS ================= -->  <section id="familytools" class="page"><div class="page-title">
+  <div>
+    <h2>Family Tools</h2>
+  </div>
+</div>
+
+<div class="feature-grid">
+
+  <button onclick="show('family')">
+    👨‍👩‍👧 Family
+  </button>
+
+  <button onclick="show('planning')">
+    🎯 Goals
+  </button>
+
+  <button onclick="show('credit')">
+    💳 Payments
+  </button>
+
+</div>
+
+  </section>  <!-- ================= TOOLS ================= -->  <section id="tools13" class="page"><div class="page-title">
+  <div>
+    <h2>More Tools</h2>
+  </div>
+</div>
+
+<div class="feature-grid">
+
+  <button onclick="calcFD()">🏦 FD Calculator</button>
+  <button onclick="addInsurance()">🛡 Insurance</button>
+  <button onclick="addSchool()">🎓 School</button>
+  <button onclick="addVehicle()">🚗 Vehicle</button>
+  <button onclick="addShopping()">🛒 Shopping</button>
+  <button onclick="addUtility()">💡 Utility</button>
+  <button onclick="calcEmergency()">🚨 Emergency Fund</button>
+  <button onclick="addDoc()">📄 Documents</button>
+  <button onclick="addAnnual()">📅 Annual Planning</button>
+
+</div>
+
+<div class="form-card">
+
+  <h3>FD Calculator</h3>
+
+  <input
+    id="fdPrincipal"
+    type="number"
+    placeholder="Principal">
+
+  <input
+    id="fdRate"
+    type="number"
+    placeholder="Interest %">
+
+  <input
+    id="fdN"
+    type="number"
+    placeholder="Months">
+
+  <button onclick="calcFD()">
+    Calculate FD
+  </button>
+
+  <div id="fdResult"></div>
+
+</div>
+
+  </section>  <!-- ================= FINAL / SETTINGS ================= -->  <section id="final" class="page"><div class="page-title">
+  <div>
+    <h2>Settings</h2>
+    <p>HISAB preferences</p>
+  </div>
+</div>
+
+<div class="form-card">
+
+  <label>Search Everything</label>
+
+  <input
+    id="searchAll"
+    type="search"
+    placeholder="Search HISAB..."
+    oninput="searchAllData(this.value)">
+
+  <div id="searchResults" class="list"></div>
+
+  <hr>
+
+  <button onclick="toggleLanguage()">🌐 Language</button>
+  <button onclick="toggleCurrency()">💱 Currency</button>
+  <button onclick="exportBackup()">💾 Backup</button>
+  <button onclick="exportSummary()">📤 Share Summary</button>
+  <button onclick="exportSummaryPDF()">📄 Export Summary PDF</button>
+
+</div>
+
+  </section>  <!-- ================= BOTTOM NAV ================= -->  <nav class="bottom-nav"><button onclick="show('home')">
+  <span>⌂</span>
+  <small>Home</small>
+</button>
+
+<button onclick="show('transactions')">
+  <span>↔</span>
+  <small>Transactions</small>
+</button>
+
+<button class="add-btn" onclick="openQuickAdd()">
+  <span>＋</span>
+</button>
+
+<button onclick="show('reports')">
+  <span>▥</span>
+  <small>Reports</small>
+</button>
+
+<button onclick="show('final')">
+  <span>☰</span>
+  <small>More</small>
+</button>
+
+  </nav></div><!-- ================= APP JS ================= --><script src="app.js"></script><script src="repair.js"></script><script>
   if (typeof showGuestGate === "function") {
     showGuestGate();
   }
-</script>
-
-</body>
+</script></body>
 </html>
