@@ -69,7 +69,6 @@
       </div>
     </div>
 
-    <!-- OVERVIEW -->
     <div class="overview-strip">
       <div class="summary-card">
         <small>Receivable</small>
@@ -87,7 +86,6 @@
       </div>
     </div>
 
-    <!-- QUICK ACTIONS -->
     <div class="section-head">
       <h3>Quick Actions</h3>
     </div>
@@ -243,7 +241,7 @@
         <h2>Udhar Entry</h2>
         <p>Give / Receive</p>
       </div>
-      <button onclick="closeKhataForm()">✕</button>
+      <button type="button" onclick="closeKhataForm()">✕</button>
     </div>
 
     <div class="form-card">
@@ -284,7 +282,7 @@
       <label>Note</label>
       <textarea id="khataNote" placeholder="Note"></textarea>
 
-      <button class="primary-btn" onclick="saveKhataEntry()">
+      <button class="primary-btn" type="button" onclick="saveKhataEntry()">
         Save Entry
       </button>
 
@@ -295,7 +293,7 @@
   <section id="khataDetail" class="page">
 
     <div class="page-title">
-      <button onclick="closeKhataDetail()">←</button>
+      <button type="button" onclick="closeKhataDetail()">←</button>
 
       <div>
         <h2 id="detailPersonName">Khata</h2>
@@ -304,7 +302,6 @@
     </div>
 
     <div class="khata-summary">
-
       <div>
         <small>Give</small>
         <strong id="detailGive">₹0</strong>
@@ -319,7 +316,6 @@
         <small>Balance</small>
         <strong id="detailBalance">₹0</strong>
       </div>
-
     </div>
 
     <div class="filter-row">
@@ -369,7 +365,7 @@
       <label>Date</label>
       <input id="transactionDate" type="date">
 
-      <button class="primary-btn" onclick="addTransaction()">
+      <button class="primary-btn" type="button" onclick="addTransaction()">
         Add Transaction
       </button>
 
@@ -396,7 +392,7 @@
       <label>Monthly Budget</label>
       <input id="budgetAmount" type="number" inputmode="decimal">
 
-      <button onclick="calcBudget()">Save Budget</button>
+      <button type="button" onclick="calcBudget()">Save Budget</button>
 
       <hr>
 
@@ -414,7 +410,7 @@
       <label>Goal Date</label>
       <input id="goalDate" type="date">
 
-      <button onclick="calcGoal()">Save Goal</button>
+      <button type="button" onclick="calcGoal()">Save Goal</button>
 
     </div>
 
@@ -445,7 +441,7 @@
       <label>Due Date</label>
       <input id="billDue" type="date">
 
-      <button onclick="addBill('Bill')">Add Bill</button>
+      <button type="button" onclick="addBill('Bill')">Add Bill</button>
 
       <hr>
 
@@ -457,7 +453,7 @@
       <label>Due Date</label>
       <input id="cardDue" type="date">
 
-      <button onclick="addBill('Credit Card')">
+      <button type="button" onclick="addBill('Credit Card')">
         Add Credit Card Bill
       </button>
 
@@ -474,7 +470,7 @@
       <label>Tenure (Months)</label>
       <input id="emiMonths" type="number" inputmode="numeric">
 
-      <button onclick="calcEMI()">Calculate EMI</button>
+      <button type="button" onclick="calcEMI()">Calculate EMI</button>
 
       <div id="emiResult"></div>
 
@@ -671,41 +667,15 @@
 
     <div class="feature-grid">
 
-      <button onclick="calcFD()">
-        🏦 FD Calculator
-      </button>
-
-      <button onclick="addInsurance()">
-        🛡 Insurance
-      </button>
-
-      <button onclick="addSchool()">
-        🎓 School
-      </button>
-
-      <button onclick="addVehicle()">
-        🚗 Vehicle
-      </button>
-
-      <button onclick="addShopping()">
-        🛒 Shopping
-      </button>
-
-      <button onclick="addUtility()">
-        💡 Utility
-      </button>
-
-      <button onclick="calcEmergency()">
-        🚨 Emergency Fund
-      </button>
-
-      <button onclick="addDoc()">
-        📄 Documents
-      </button>
-
-      <button onclick="addAnnual()">
-        📅 Annual Planning
-      </button>
+      <button onclick="calcFD()">🏦 FD Calculator</button>
+      <button onclick="addInsurance()">🛡 Insurance</button>
+      <button onclick="addSchool()">🎓 School</button>
+      <button onclick="addVehicle()">🚗 Vehicle</button>
+      <button onclick="addShopping()">🛒 Shopping</button>
+      <button onclick="addUtility()">💡 Utility</button>
+      <button onclick="calcEmergency()">🚨 Emergency Fund</button>
+      <button onclick="addDoc()">📄 Documents</button>
+      <button onclick="addAnnual()">📅 Annual Planning</button>
 
     </div>
 
@@ -713,20 +683,9 @@
 
       <h3>FD Calculator</h3>
 
-      <input
-        id="fdPrincipal"
-        type="number"
-        placeholder="Principal">
-
-      <input
-        id="fdRate"
-        type="number"
-        placeholder="Interest %">
-
-      <input
-        id="fdN"
-        type="number"
-        placeholder="Months">
+      <input id="fdPrincipal" type="number" placeholder="Principal">
+      <input id="fdRate" type="number" placeholder="Interest %">
+      <input id="fdN" type="number" placeholder="Months">
 
       <button onclick="calcFD()">Calculate FD</button>
 
@@ -760,25 +719,11 @@
 
       <hr>
 
-      <button onclick="toggleLanguage()">
-        🌐 Language
-      </button>
-
-      <button onclick="toggleCurrency()">
-        💱 Currency
-      </button>
-
-      <button onclick="exportBackup()">
-        💾 Backup
-      </button>
-
-      <button onclick="exportSummary()">
-        📤 Share Summary
-      </button>
-
-      <button onclick="exportSummaryPDF()">
-        📄 Export Summary PDF
-      </button>
+      <button onclick="toggleLanguage()">🌐 Language</button>
+      <button onclick="toggleCurrency()">💱 Currency</button>
+      <button onclick="exportBackup()">💾 Backup</button>
+      <button onclick="exportSummary()">📤 Share Summary</button>
+      <button onclick="exportSummaryPDF()">📄 Export Summary PDF</button>
 
     </div>
 
@@ -818,6 +763,12 @@
 <!-- ================= APP JS ================= -->
 <script src="app.js"></script>
 <script src="repair.js"></script>
+
 <script>
-  showGuestGate();
+  if (typeof showGuestGate === "function") {
+    showGuestGate();
+  }
 </script>
+
+</body>
+</html>
