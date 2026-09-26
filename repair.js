@@ -1,5 +1,5 @@
 /* HISAB V7 — repair.js
-   Small compatibility/wiring patch
+   Navigation + compatibility/wiring patch
 */
 (function () {
   "use strict";
@@ -16,6 +16,39 @@
       return oldShow(id);
     };
   }
+
+  /* ---------- UNIVERSAL BACK ---------- */
+  window.back = function () {
+    if (typeof window.goBack === "function") {
+      return window.goBack();
+    }
+
+    if (typeof window.show === "function") {
+      return window.show("home");
+    }
+  };
+
+  /* ---------- CLOSE KHATA FORM ---------- */
+  const oldCloseKhataForm = window.closeKhataForm;
+
+  window.closeKhataForm = function () {
+    if (typeof oldCloseKhataForm === "function") {
+      return oldCloseKhataForm();
+    }
+
+    return window.back();
+  };
+
+  /* ---------- CLOSE KHATA DETAIL ---------- */
+  const oldCloseKhataDetail = window.closeKhataDetail;
+
+  window.closeKhataDetail = function () {
+    if (typeof oldCloseKhataDetail === "function") {
+      return oldCloseKhataDetail();
+    }
+
+    return window.back();
+  };
 
   /* ---------- KHATA FORM ---------- */
   const oldKhataForm = window.openKhataForm;
@@ -35,10 +68,6 @@
 
   if (typeof oldFilter === "function") {
     window.filterKhata = function (mode, type, btn) {
-      /* Supports both:
-         filterKhata('personal','give',this)
-         filterKhata('give',this)
-      */
       if (typeof type !== "string") {
         btn = type;
         type = mode;
@@ -59,7 +88,7 @@
     window.businessFilter = function (type, btn) {
       D.businessFilter = type || "customer";
       D.businessEntryRole =
-        (type === "supplier") ? "supplier" : "customer";
+        type === "supplier" ? "supplier" : "customer";
 
       save();
 
@@ -68,8 +97,6 @@
   }
 
   /* ---------- TEXT SHARE ---------- */
-  const oldShareText = window.shareText;
-
   window.shareText = async function (text, title) {
     try {
       if (navigator.share) {
@@ -92,10 +119,16 @@
   /* ---------- SAFE DATE DEFAULTS ---------- */
   function setDate(id) {
     const el = document.getElementById(id);
+
     if (el && !el.value) {
       el.value = new Date().toISOString().slice(0, 10);
     }
   }
+
+  /* ---------- ANDROID / BROWSER BACK ---------- */
+  window.addEventListener("popstate", function () {
+    window.back();
+  });
 
   document.addEventListener("DOMContentLoaded", function () {
     setDate("khataDate");
