@@ -1,39 +1,74 @@
-/* HISAB V7 — repair.js */
-
+/* HISAB V7 — repair.js
+   Small compatibility/wiring patch
+*/
 (function () {
   "use strict";
 
-  const _show = window.show;
+  /* ---------- MODE ---------- */
+  const oldShow = window.show;
 
-  window.show = function (id) {
-    if (id === "personal") D.mode = "personal";
-    if (id === "business") D.mode = "business";
-    save();
-    return _show(id);
-  };
+  if (typeof oldShow === "function") {
+    window.show = function (id) {
+      if (id === "personal") D.mode = "personal";
+      if (id === "business") D.mode = "business";
 
-  const _khata = window.openKhataForm;
+      save();
+      return oldShow(id);
+    };
+  }
 
-  window.openKhataForm = function (mode, person, phone) {
-    if (mode === "business") {
-      D.businessEntryRole = D.businessFilter || "customer";
-    }
-    return _khata(mode, person, phone);
-  };
+  /* ---------- KHATA FORM ---------- */
+  const oldKhataForm = window.openKhataForm;
 
-  const _filter = window.filterKhata;
+  if (typeof oldKhataForm === "function") {
+    window.openKhataForm = function (mode, person, phone) {
+      if (mode === "business") {
+        D.businessEntryRole = D.businessFilter || "customer";
+      }
 
-  window.filterKhata = function (mode, type, btn) {
-    if (type === undefined) {
-      type = mode;
-      mode = "personal";
-    }
+      return oldKhataForm(mode, person, phone);
+    };
+  }
 
-    D.filter = type || "all";
-    save();
+  /* ---------- PERSONAL KHATA FILTER ---------- */
+  const oldFilter = window.filterKhata;
 
-    return _filter(mode, type, btn);
-  };
+  if (typeof oldFilter === "function") {
+    window.filterKhata = function (mode, type, btn) {
+      /* Supports both:
+         filterKhata('personal','give',this)
+         filterKhata('give',this)
+      */
+      if (typeof type !== "string") {
+        btn = type;
+        type = mode;
+        mode = "personal";
+      }
+
+      D.filter = type || "all";
+      save();
+
+      return oldFilter(mode, type, btn);
+    };
+  }
+
+  /* ---------- BUSINESS FILTER ---------- */
+  const oldBusinessFilter = window.businessFilter;
+
+  if (typeof oldBusinessFilter === "function") {
+    window.businessFilter = function (type, btn) {
+      D.businessFilter = type || "customer";
+      D.businessEntryRole =
+        (type === "supplier") ? "supplier" : "customer";
+
+      save();
+
+      return oldBusinessFilter(type, btn);
+    };
+  }
+
+  /* ---------- TEXT SHARE ---------- */
+  const oldShareText = window.shareText;
 
   window.shareText = async function (text, title) {
     try {
@@ -42,15 +77,34 @@
           title: title || "HISAB",
           text: text || ""
         });
-        return;
+        return true;
       }
     } catch (e) {}
 
     if (typeof copyText === "function") {
       copyText(text || "");
+      return true;
     }
+
+    return false;
   };
 
-  console.log("HISAB repair.js loaded");
+  /* ---------- SAFE DATE DEFAULTS ---------- */
+  function setDate(id) {
+    const el = document.getElementById(id);
+    if (el && !el.value) {
+      el.value = new Date().toISOString().slice(0, 10);
+    }
+  }
 
+  document.addEventListener("DOMContentLoaded", function () {
+    setDate("khataDate");
+    setDate("transactionDate");
+    setDate("billDue");
+    setDate("cardDue");
+    setDate("goalDate");
+    setDate("reminderDate");
+  });
+
+  console.log("HISAB V7 repair.js loaded");
 })();
