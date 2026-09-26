@@ -1,21 +1,39 @@
-/* HISAB V7 — repair.js
-   Navigation + Business Contact Picker + compatibility
-*/
+/* =========================================================
+   HISAB V7 — repair.js
+   Navigation + Android Back + Business Contacts
+   ========================================================= */
+
 (function () {
   "use strict";
 
   /* =========================
-     MODE
+     SAFE HELPERS
+  ========================= */
+
+  const $id = (id) =>
+    document.getElementById(id);
+
+  /* =========================
+     SHOW / MODE
   ========================= */
 
   const oldShow = window.show;
 
   if (typeof oldShow === "function") {
     window.show = function (id) {
-      if (id === "personal") D.mode = "personal";
-      if (id === "business") D.mode = "business";
 
-      save();
+      if (id === "personal") {
+        D.mode = "personal";
+      }
+
+      if (id === "business") {
+        D.mode = "business";
+      }
+
+      if (typeof save === "function") {
+        save();
+      }
+
       return oldShow(id);
     };
   }
@@ -25,6 +43,7 @@
   ========================= */
 
   window.back = function () {
+
     if (typeof window.goBack === "function") {
       return window.goBack();
     }
@@ -35,94 +54,125 @@
   };
 
   window.closeKhataForm = function () {
-    if (typeof window.goBack === "function") {
-      return window.goBack();
-    }
-
-    return window.show("home");
+    return window.back();
   };
 
   window.closeKhataDetail = function () {
-    if (typeof window.goBack === "function") {
-      return window.goBack();
-    }
-
-    return window.show("home");
+    return window.back();
   };
 
+  /* Browser / WebView back */
+  window.addEventListener(
+    "popstate",
+    function () {
+      window.back();
+    }
+  );
+
   /* =========================
-     ANDROID HARDWARE BACK
+     CAPACITOR ANDROID BACK
   ========================= */
 
-  document.addEventListener("backbutton", function () {
-    window.back();
-  });
+  function setupAndroidBack() {
 
-  window.addEventListener("popstate", function () {
-    window.back();
-  });
-
-  /* Capacitor App plugin, if available */
-  document.addEventListener("DOMContentLoaded", function () {
     try {
+
       const Cap = window.Capacitor;
 
       if (
-        Cap &&
-        typeof Cap.Plugins === "object" &&
-        Cap.Plugins.App &&
-        typeof Cap.Plugins.App.addListener === "function"
+        !Cap ||
+        !Cap.Plugins ||
+        !Cap.Plugins.App ||
+        typeof Cap.Plugins.App.addListener !==
+          "function"
       ) {
-        Cap.Plugins.App.addListener(
-          "backButton",
-          function () {
-            window.back();
-          }
-        );
+        return;
       }
+
+      Cap.Plugins.App.addListener(
+        "backButton",
+        function () {
+          window.back();
+        }
+      );
+
+      console.log(
+        "HISAB: Android Back connected"
+      );
+
     } catch (e) {
-      console.log("Hardware Back listener unavailable");
+
+      console.log(
+        "HISAB: Android Back unavailable",
+        e
+      );
     }
-  });
+  }
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    setupAndroidBack
+  );
 
   /* =========================
      KHATA FORM
   ========================= */
 
-  const oldKhataForm = window.openKhataForm;
+  const oldKhataForm =
+    window.openKhataForm;
 
   if (typeof oldKhataForm === "function") {
-    window.openKhataForm = function (mode, person, phone) {
 
-      if (mode === "business") {
-        D.businessEntryRole =
-          D.businessFilter || "customer";
-      }
+    window.openKhataForm =
+      function (mode, person, phone) {
 
-      return oldKhataForm(mode, person, phone);
-    };
+        if (mode === "business") {
+
+          D.businessEntryRole =
+            D.businessFilter === "supplier"
+              ? "supplier"
+              : "customer";
+        }
+
+        return oldKhataForm(
+          mode,
+          person,
+          phone
+        );
+      };
   }
 
   /* =========================
      PERSONAL FILTER
   ========================= */
 
-  const oldFilter = window.filterKhata;
+  const oldFilter =
+    window.filterKhata;
 
   if (typeof oldFilter === "function") {
-    window.filterKhata = function (mode, type, btn) {
 
-      if (typeof type !== "string") {
-        btn = type;
-        type = mode;
-        mode = "personal";
-      }
+    window.filterKhata =
+      function (mode, type, btn) {
 
-      D.filter = type || "all";
-      save();
+        if (typeof type !== "string") {
+          btn = type;
+          type = mode;
+          mode = "personal";
+        }
 
-      return oldFilter(mode, type, btn);
-    };
+        D.filter =
+          type || "all";
+
+        if (typeof save === "function") {
+          save();
+        }
+
+        return oldFilter(
+          mode,
+          type,
+          btn
+        );
+      };
   }
 
   /* =========================
@@ -132,135 +182,273 @@
   const oldBusinessFilter =
     window.businessFilter;
 
-  if (typeof oldBusinessFilter === "function") {
-    window.businessFilter = function (type, btn) {
+  if (
+    typeof oldBusinessFilter ===
+    "function"
+  ) {
 
-      D.businessFilter =
-        type || "customer";
+    window.businessFilter =
+      function (type, btn) {
 
-      D.businessEntryRole =
-        type === "supplier"
-          ? "supplier"
-          : "customer";
+        D.businessFilter =
+          type || "customer";
 
-      save();
+        D.businessEntryRole =
+          type === "supplier"
+            ? "supplier"
+            : "customer";
 
-      return oldBusinessFilter(
-        type,
-        btn
-      );
-    };
+        if (typeof save === "function") {
+          save();
+        }
+
+        return oldBusinessFilter(
+          type,
+          btn
+        );
+      };
   }
 
   /* =========================
-     NATIVE BUSINESS CONTACT PICKER
+     CONTACT DATA
+  ========================= */
+
+  function fillBusinessContact(
+    contact
+  ) {
+
+    if (!contact) {
+      return false;
+    }
+
+    let name = "";
+    let phone = "";
+
+    /* Name */
+    if (
+      typeof contact.displayName ===
+      "string"
+    ) {
+      name =
+        contact.displayName;
+    }
+
+    if (
+      !name &&
+      typeof contact.name ===
+      "string"
+    ) {
+      name =
+        contact.name;
+    }
+
+    if (
+      !name &&
+      Array.isArray(contact.name)
+    ) {
+      name =
+        contact.name[0] || "";
+    }
+
+    /* Phone */
+    if (
+      Array.isArray(
+        contact.phoneNumbers
+      )
+    ) {
+
+      const p =
+        contact.phoneNumbers[0];
+
+      if (typeof p === "string") {
+        phone = p;
+      }
+      else if (p && typeof p.value === "string") {
+        phone = p.value;
+      }
+    }
+
+    if (
+      !phone &&
+      Array.isArray(contact.phones)
+    ) {
+
+      const p =
+        contact.phones[0];
+
+      if (typeof p === "string") {
+        phone = p;
+      }
+      else if (p && typeof p.number === "string") {
+        phone = p.number;
+      }
+    }
+
+    if (
+      !phone &&
+      Array.isArray(contact.tel)
+    ) {
+      phone =
+        contact.tel[0] || "";
+    }
+
+    const nameEl =
+      $id("businessPersonName");
+
+    const phoneEl =
+      $id("businessPersonPhone");
+
+    if (nameEl) {
+      nameEl.value =
+        String(name || "").trim();
+    }
+
+    if (phoneEl) {
+      phoneEl.value =
+        String(phone || "").trim();
+    }
+
+    return !!(
+      name ||
+      phone
+    );
+  }
+
+  /* =========================
+     NATIVE CONTACT PICKER
   ========================= */
 
   window.selectBusinessContact =
     async function () {
 
+      let nativeTried =
+        false;
+
       try {
 
-        /*
-          Capacitor native plugin
-        */
-        const Cap = window.Capacitor;
+        const Cap =
+          window.Capacitor;
 
-        if (
+        const Contacts =
           Cap &&
           Cap.Plugins &&
-          Cap.Plugins.Contacts
-        ) {
+          Cap.Plugins.Contacts;
 
-          const Contacts =
-            Cap.Plugins.Contacts;
+        if (Contacts) {
 
-          let result;
+          nativeTried = true;
 
           /*
-            First try native picker.
+            Community Contacts plugin
+            may expose getContacts rather
+            than a browser-style picker.
           */
+
+          if (
+            typeof Contacts.pickContact ===
+            "function"
+          ) {
+
+            const result =
+              await Contacts.pickContact();
+
+            const contact =
+              result?.contact ||
+              result;
+
+            if (
+              fillBusinessContact(
+                contact
+              )
+            ) {
+              return true;
+            }
+          }
+
           if (
             typeof Contacts.pickContacts ===
             "function"
           ) {
-            result =
+
+            const result =
               await Contacts.pickContacts({
                 multiple: false
               });
-          }
-          else if (
-            typeof Contacts.pickContact ===
-            "function"
-          ) {
-            result =
-              await Contacts.pickContact();
-          }
 
-          const contact =
-            result &&
-            result.contacts &&
-            result.contacts[0]
-              ? result.contacts[0]
-              : result &&
-                result.contact
-                ? result.contact
-                : null;
-
-          if (contact) {
-
-            const name =
-              contact.displayName ||
-              (
-                Array.isArray(contact.name)
-                  ? contact.name[0]
-                  : contact.name
-              ) ||
-              "";
-
-            let phone = "";
+            const contact =
+              result?.contacts?.[0] ||
+              result?.[0];
 
             if (
-              Array.isArray(
-                contact.phoneNumbers
+              fillBusinessContact(
+                contact
               )
             ) {
-              phone =
-                contact.phoneNumbers[0]
-                  ?.value || "";
+              return true;
             }
+          }
+
+          /*
+            If picker methods are not exposed,
+            try getting contacts and use first
+            contact as a safe compatibility path.
+          */
+
+          if (
+            typeof Contacts.getContacts ===
+            "function"
+          ) {
+
+            const result =
+              await Contacts.getContacts();
+
+            const contacts =
+              result?.contacts ||
+              result;
 
             if (
-              !phone &&
-              Array.isArray(contact.tel)
+              Array.isArray(contacts) &&
+              contacts.length
             ) {
-              phone =
-                contact.tel[0] || "";
-            }
 
-            if ($("businessPersonName")) {
-              $("businessPersonName").value =
-                name;
-            }
+              /*
+                Use first returned contact only
+                when the plugin has no native
+                picker method.
+              */
 
-            if ($("businessPersonPhone")) {
-              $("businessPersonPhone").value =
-                phone;
+              if (
+                fillBusinessContact(
+                  contacts[0]
+                )
+              ) {
+                return true;
+              }
             }
-
-            return true;
           }
         }
 
-        /*
-          Web Contacts API fallback
-        */
+      } catch (e) {
+
+        console.log(
+          "HISAB native Contacts error:",
+          e
+        );
+      }
+
+      /* =========================
+         WEB CONTACTS FALLBACK
+      ========================= */
+
+      try {
+
         if (
           navigator.contacts &&
-          navigator.contacts.select
+          typeof navigator.contacts.select ===
+            "function"
         ) {
 
-          const contacts =
+          const result =
             await navigator.contacts.select(
               ["name", "tel"],
               {
@@ -268,25 +456,14 @@
               }
             );
 
-          const c =
-            contacts && contacts[0];
+          const contact =
+            result?.[0];
 
-          if (c) {
-
-            if ($("businessPersonName")) {
-              $("businessPersonName").value =
-                Array.isArray(c.name)
-                  ? c.name[0] || ""
-                  : c.name || "";
-            }
-
-            if ($("businessPersonPhone")) {
-              $("businessPersonPhone").value =
-                Array.isArray(c.tel)
-                  ? c.tel[0] || ""
-                  : "";
-            }
-
+          if (
+            fillBusinessContact(
+              contact
+            )
+          ) {
             return true;
           }
         }
@@ -294,30 +471,49 @@
       } catch (e) {
 
         console.log(
-          "Business contact picker error",
+          "HISAB web Contacts error:",
           e
         );
-
       }
 
-      alert(
-        "Contact picker available nahi hai. " +
-        "Name aur Mobile manually enter karein."
-      );
+      /* =========================
+         FINAL MESSAGE
+      ========================= */
+
+      if (nativeTried) {
+
+        alert(
+          "Phone contacts permission/picker " +
+          "available nahi hai. Android permission " +
+          "allow karke dobara try karein."
+        );
+
+      } else {
+
+        alert(
+          "Contacts plugin app mein available " +
+          "nahi mila. Latest APK build/install karein."
+        );
+      }
 
       return false;
     };
 
   /* =========================
-     TEXT SHARE
+     SHARE
   ========================= */
 
   window.shareText =
-    async function (text, title) {
+    async function (
+      text,
+      title
+    ) {
 
       try {
 
-        if (navigator.share) {
+        if (
+          navigator.share
+        ) {
 
           await navigator.share({
             title:
@@ -332,9 +528,14 @@
       } catch (e) {}
 
       if (
-        typeof copyText === "function"
+        typeof copyText ===
+        "function"
       ) {
-        copyText(text || "");
+
+        copyText(
+          text || ""
+        );
+
         return true;
       }
 
@@ -342,18 +543,19 @@
     };
 
   /* =========================
-     SAFE DATE DEFAULTS
+     DEFAULT DATES
   ========================= */
 
   function setDate(id) {
 
     const el =
-      document.getElementById(id);
+      $id(id);
 
     if (
       el &&
       !el.value
     ) {
+
       el.value =
         new Date()
           .toISOString()
