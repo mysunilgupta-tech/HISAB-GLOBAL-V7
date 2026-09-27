@@ -1,22 +1,39 @@
-/* =========================================================
-   HISAB V7 — FINAL REPAIR / FUNCTION CONNECTOR
-   Personal + Business + Udhaar
-   Bills + Loans + EMI
-   Payment Status + History Support
-   Visible Back Button
-   Works with existing index.html + app.js + style.css
-   ========================================================= */
+ /* =========================================================
+    HISAB V7 — FINAL REPAIR CONTROLLER
+    Works with existing:
+    index.html + app.js + style.css
+
+    Includes:
+    • Visible Back Button
+    • Android/Browser Back
+    • Personal / Business mode safety
+    • Contact picker
+    • Bills Paid/Pending
+    • Multiple Bill records
+    • Loan payment support
+    • Loan payment history
+    • EMI Paid/Pending
+    • EMI history
+    • Budget helpers
+    • Savings helpers
+    • PDF/Share connectors
+
+    IMPORTANT:
+    This file does not replace the main app controller.
+    ========================================================= */
 
 (function () {
+
   "use strict";
 
-  const $ = id => document.getElementById(id);
-
   /* =======================================================
-     SAFE ACCESS
+     SAFE HELPERS
      ======================================================= */
 
-  function data() {
+  const $ = id =>
+    document.getElementById(id);
+
+  function getData() {
     try {
       return D;
     } catch (e) {
@@ -26,92 +43,89 @@
 
   function saveSafe() {
     try {
-      if (typeof save === "function") save();
-    } catch (e) {}
-  }
-
-  function refreshPage() {
-    try {
-      const p =
-        typeof currentPage === "function"
-          ? currentPage()
-          : null;
-
-      if (p && typeof window.show === "function") {
-        window.show(p.id);
+      if (typeof save === "function") {
+        save();
       }
     } catch (e) {}
   }
 
-  /* =======================================================
-     FIX SHOW / MODE
-     ======================================================= */
-
-  const originalShow =
-    typeof window.show === "function"
-      ? window.show
-      : null;
-
-  window.show = function (id) {
-
+  function safeUid() {
     try {
-      const d = data();
-
-      if (d) {
-        if (id === "personal") {
-          d.mode = "personal";
-        }
-
-        if (id === "business") {
-          d.mode = "business";
-        }
-
-        saveSafe();
+      if (typeof uid === "function") {
+        return uid();
       }
     } catch (e) {}
 
-    if (originalShow) {
-      return originalShow(id);
-    }
-  };
+    return (
+      Date.now().toString(36) +
+      Math.random()
+        .toString(36)
+        .slice(2, 8)
+    );
+  }
+
+  function safeToday() {
+    try {
+      if (typeof today === "function") {
+        return today();
+      }
+    } catch (e) {}
+
+    return new Date()
+      .toISOString()
+      .slice(0, 10);
+  }
+
+  function safeMoney(value) {
+
+    try {
+      if (typeof money === "function") {
+        return money(value);
+      }
+    } catch (e) {}
+
+    const d = getData();
+
+    return (
+      (d?.currency || "₹") +
+      Number(value || 0)
+        .toLocaleString(
+          "en-IN",
+          {
+            maximumFractionDigits: 2
+          }
+        )
+    );
+  }
+
+  function safeEsc(value) {
+
+    try {
+      if (typeof esc === "function") {
+        return esc(value);
+      }
+    } catch (e) {}
+
+    return String(value ?? "")
+      .replace(
+        /[&<>"']/g,
+        function (m) {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+          }[m];
+        }
+      );
+  }
 
   /* =======================================================
-     BACK HISTORY
+     BACK BUTTON
      ======================================================= */
 
-  let lastPage = "home";
-
-  const originalShowForHistory = window.show;
-
-  window.show = function (id) {
-
-    if (id && id !== lastPage) {
-      try {
-        history.pushState(
-          { hisabPage: id },
-          "",
-          "#" + id
-        );
-      } catch (e) {}
-    }
-
-    lastPage = id || "home";
-
-    const result =
-      originalShowForHistory
-        ? originalShowForHistory(id)
-        : undefined;
-
-    setTimeout(addVisibleBackButton, 20);
-
-    return result;
-  };
-
-  /* =======================================================
-     VISIBLE BACK BUTTON
-     ======================================================= */
-
-  const backPages = [
+  const BACK_PAGES = [
     "personal",
     "business",
     "khataEntry",
@@ -128,128 +142,331 @@
     "final"
   ];
 
-  function addVisibleBackButton() {
+  let backButton = null;
 
-    try {
+  let backBusy = false;
 
-      document
-        .querySelectorAll(".hisab-visible-back")
-        .forEach(x => x.remove());
+  let currentHistoryPage = "home";
 
-      const page =
-        typeof currentPage === "function"
-          ? currentPage()
-          : null;
+  function createBackButton() {
 
-      if (!page) return;
+    if (
+      backButton &&
+      document.body &&
+      document.body.contains(backButton)
+    ) {
+      return;
+    }
 
-      if (!backPages.includes(page.id)) {
-        return;
-      }
+    if (!document.body) {
+      return;
+    }
 
-      const btn =
-        document.createElement("button");
+    backButton =
+      document.createElement("button");
 
-      btn.className =
-        "hisab-visible-back";
+    backButton.id =
+      "hisabGlobalBackButton";
 
-      btn.type = "button";
+    backButton.type =
+      "button";
 
-      btn.textContent = "← Back";
+    backButton.textContent =
+      "← Back";
 
-      btn.style.cssText = `
-        display:block;
-        width:calc(100% - 24px);
-        margin:10px 12px 6px;
-        padding:11px 14px;
-        border:0;
-        border-radius:12px;
-        background:#eef2f7;
-        color:#082b45;
-        font-size:15px;
-        font-weight:700;
-        text-align:left;
-        cursor:pointer;
-        box-sizing:border-box;
-      `;
+    backButton.setAttribute(
+      "aria-label",
+      "Back"
+    );
 
-      btn.onclick = function () {
+    backButton.style.cssText = `
+      position:fixed;
+      left:12px;
+      top:calc(8px + env(safe-area-inset-top));
+      z-index:999999;
+      display:none;
+      padding:10px 16px;
+      min-height:42px;
+      border:0;
+      border-radius:12px;
+      background:#eef2f7;
+      color:#082b45;
+      font-size:15px;
+      font-weight:700;
+      line-height:20px;
+      box-shadow:0 3px 12px rgba(0,0,0,.18);
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    `;
 
-        if (
-          typeof window.back ===
-          "function"
-        ) {
-          window.back();
+    backButton.onclick =
+      function () {
+
+        if (backBusy) {
           return;
         }
 
-        if (
-          typeof window.goBack ===
-          "function"
-        ) {
-          window.goBack();
-          return;
+        backBusy = true;
+
+        try {
+
+          /* Khata Entry / Detail should return
+             directly to the correct parent screen. */
+
+          let pageId = "";
+
+          try {
+            const p =
+              typeof currentPage ===
+              "function"
+                ? currentPage()
+                : null;
+
+            pageId =
+              p?.id || "";
+          } catch (e) {}
+
+          if (
+            pageId ===
+              "khataEntry" ||
+            pageId ===
+              "khataDetail"
+          ) {
+
+            const d =
+              getData();
+
+            const parent =
+              d &&
+              d.detailMode ===
+                "business"
+                ? "business"
+                : "personal";
+
+            if (
+              typeof window.show ===
+              "function"
+            ) {
+              window.show(parent);
+            }
+
+            setTimeout(
+              function () {
+                backBusy = false;
+                updateBackButton();
+              },
+              200
+            );
+
+            return;
+          }
+
+          /* Normal pages */
+
+          if (
+            typeof window.back ===
+            "function"
+          ) {
+            window.back();
+
+          } else if (
+            typeof window.goBack ===
+            "function"
+          ) {
+            window.goBack();
+
+          } else {
+
+            if (
+              typeof window.show ===
+              "function"
+            ) {
+              window.show("home");
+            }
+
+          }
+
+        } catch (e) {
+
+          try {
+
+            if (
+              typeof window.show ===
+              "function"
+            ) {
+              window.show("home");
+            }
+
+          } catch (x) {}
+
         }
 
-        if (
-          typeof window.show ===
-          "function"
-        ) {
-          window.show("home");
-        }
+        setTimeout(
+          function () {
+            backBusy = false;
+            updateBackButton();
+          },
+          250
+        );
 
       };
 
-      page.insertBefore(
-        btn,
-        page.firstElementChild
-      );
+    document.body.appendChild(
+      backButton
+    );
+  }
+
+  function getCurrentPageId() {
+
+    try {
+
+      if (
+        typeof currentPage ===
+        "function"
+      ) {
+
+        const p =
+          currentPage();
+
+        if (p && p.id) {
+          return p.id;
+        }
+
+      }
 
     } catch (e) {}
+
+    return "";
+  }
+
+  function updateBackButton() {
+
+    if (!document.body) {
+      return;
+    }
+
+    createBackButton();
+
+    if (!backButton) {
+      return;
+    }
+
+    const id =
+      getCurrentPageId();
+
+    if (
+      BACK_PAGES.includes(id)
+    ) {
+
+      backButton.style.display =
+        "block";
+
+    } else {
+
+      backButton.style.display =
+        "none";
+
+    }
   }
 
   /* =======================================================
-     BACK BUTTON FUNCTION
+     SHOW WRAPPER
      ======================================================= */
 
-  window.back = function () {
+  const appShow =
+    typeof window.show ===
+    "function"
+      ? window.show
+      : null;
+
+  if (appShow) {
+
+    window.show =
+      function (id) {
+
+        currentHistoryPage =
+          id || "home";
+
+        try {
+
+          const d =
+            getData();
+
+          if (d) {
+
+            if (
+              id === "personal"
+            ) {
+              d.mode =
+                "personal";
+            }
+
+            if (
+              id === "business"
+            ) {
+              d.mode =
+                "business";
+            }
+
+            saveSafe();
+
+          }
+
+        } catch (e) {}
+
+        let result;
+
+        try {
+
+          result =
+            appShow.apply(
+              this,
+              arguments
+            );
+
+        } catch (e) {
+
+          result =
+            undefined;
+
+        }
+
+        setTimeout(
+          updateBackButton,
+          30
+        );
+
+        return result;
+      };
+
+  }
+
+  /* =======================================================
+     INITIAL HISTORY STATE
+     ======================================================= */
+
+  function setupHistory() {
 
     try {
 
       if (
-        location.hash &&
-        history.length > 1
+        !history.state ||
+        !history.state.hisabPage
       ) {
-        history.back();
-        return;
+
+        history.replaceState(
+          {
+            hisabPage: "home"
+          },
+          "",
+          "#home"
+        );
+
       }
 
     } catch (e) {}
 
-    try {
-
-      if (
-        typeof window.goBack ===
-        "function"
-      ) {
-        window.goBack();
-        return;
-      }
-
-    } catch (e) {}
-
-    try {
-
-      if (
-        typeof window.show ===
-        "function"
-      ) {
-        window.show("home");
-      }
-
-    } catch (e) {}
-
-  };
+  }
 
   /* =======================================================
      POPSTATE
@@ -259,13 +476,15 @@
     "popstate",
     function () {
 
-      let id = "home";
+      let id =
+        "home";
 
       try {
 
         id =
           location.hash
-            ? location.hash.substring(1)
+            ? location.hash
+                .substring(1)
             : "home";
 
       } catch (e) {}
@@ -274,29 +493,27 @@
         id = "home";
       }
 
-      lastPage = id;
+      currentHistoryPage =
+        id;
 
       try {
 
-        if (
-          typeof originalShowForHistory ===
-          "function"
-        ) {
-          originalShowForHistory(id);
+        if (appShow) {
+          appShow(id);
         }
 
       } catch (e) {}
 
       setTimeout(
-        addVisibleBackButton,
-        30
+        updateBackButton,
+        50
       );
 
     }
   );
 
   /* =======================================================
-     ANDROID / BROWSER BACK
+     ANDROID BACK EVENT
      ======================================================= */
 
   document.addEventListener(
@@ -307,56 +524,184 @@
         e.preventDefault();
       } catch (x) {}
 
-      window.back();
+      if (
+        backButton &&
+        backButton.style.display !==
+          "none"
+      ) {
+
+        backButton.click();
+
+      } else {
+
+        try {
+
+          if (
+            typeof window.show ===
+            "function"
+          ) {
+            window.show("home");
+          }
+
+        } catch (x) {}
+
+      }
 
     },
     false
   );
 
   /* =======================================================
-     BUSINESS CONTACT PICKER
+     CAPACITOR APP BACK SUPPORT
      ======================================================= */
 
-  function fillBusinessContact(contact) {
+  function setupCapacitorBack() {
 
-    if (!contact) return;
+    try {
+
+      if (
+        window.Capacitor &&
+        typeof
+          window.Capacitor.Plugins !==
+          "undefined"
+      ) {
+
+        const App =
+          window.Capacitor.Plugins.App;
+
+        if (
+          App &&
+          typeof App.addListener ===
+            "function"
+        ) {
+
+          App.addListener(
+            "backButton",
+            function () {
+
+              if (
+                backButton &&
+                backButton.style.display !==
+                  "none"
+              ) {
+
+                backButton.click();
+
+              } else {
+
+                try {
+
+                  if (
+                    typeof window.show ===
+                    "function"
+                  ) {
+                    window.show(
+                      "home"
+                    );
+                  }
+
+                } catch (e) {}
+
+              }
+
+            }
+          );
+
+        }
+
+      }
+
+    } catch (e) {}
+
+  }
+
+  /* =======================================================
+     BUSINESS CONTACT
+     ======================================================= */
+
+  function fillBusinessContact(
+    contact
+  ) {
+
+    if (!contact) {
+      return;
+    }
 
     let name = "";
     let phone = "";
 
-    if (Array.isArray(contact.name)) {
-      name =
-        contact.name[0] || "";
-    } else {
-      name =
-        contact.name || "";
-    }
+    try {
 
-    if (Array.isArray(contact.phones)) {
+      if (
+        Array.isArray(
+          contact.name
+        )
+      ) {
 
-      phone =
-        contact.phones[0]?.number ||
-        contact.phones[0]?.value ||
-        "";
+        name =
+          contact.name[0] ||
+          "";
+
+      } else {
+
+        name =
+          contact.name ||
+          "";
+
+      }
+
+    } catch (e) {}
+
+    try {
+
+      if (
+        Array.isArray(
+          contact.phones
+        )
+      ) {
+
+        phone =
+          contact.phones[0]?.number ||
+          contact.phones[0]?.value ||
+          "";
+
+      }
+
+    } catch (e) {}
+
+    try {
+
+      if (
+        !phone &&
+        Array.isArray(
+          contact.tel
+        )
+      ) {
+
+        phone =
+          contact.tel[0] ||
+          "";
+
+      }
+
+    } catch (e) {}
+
+    if (
+      $("businessPersonName")
+    ) {
+
+      $("businessPersonName")
+        .value = name;
 
     }
 
     if (
-      !phone &&
-      Array.isArray(contact.tel)
+      $("businessPersonPhone")
     ) {
-      phone =
-        contact.tel[0] || "";
-    }
 
-    if ($("businessPersonName")) {
-      $("businessPersonName").value =
-        name;
-    }
+      $("businessPersonPhone")
+        .value = phone;
 
-    if ($("businessPersonPhone")) {
-      $("businessPersonPhone").value =
-        phone;
     }
 
   }
@@ -365,6 +710,8 @@
     async function () {
 
       try {
+
+        /* Capacitor plugin */
 
         if (
           window.Capacitor &&
@@ -388,7 +735,8 @@
           ) {
 
             const result =
-              await Contacts.pickContact();
+              await Contacts
+                .pickContact();
 
             const contact =
               result?.contact ||
@@ -414,9 +762,10 @@
           ) {
 
             const result =
-              await Contacts.pickContacts({
-                multiple:false
-              });
+              await Contacts
+                .pickContacts({
+                  multiple:false
+                });
 
             const contact =
               result?.contacts?.[0] ||
@@ -436,7 +785,7 @@
 
         }
 
-        /* Browser fallback */
+        /* Browser Contacts API */
 
         if (
           navigator.contacts &&
@@ -446,14 +795,18 @@
         ) {
 
           const contacts =
-            await navigator.contacts.select(
-              ["name","tel"],
-              {
-                multiple:false
-              }
-            );
+            await navigator.contacts
+              .select(
+                ["name","tel"],
+                {
+                  multiple:false
+                }
+              );
 
-          if (contacts?.[0]) {
+          if (
+            contacts &&
+            contacts[0]
+          ) {
 
             fillBusinessContact(
               contacts[0]
@@ -480,59 +833,17 @@
 
     };
 
-  /* =======================================================
-     DYNAMIC CONTACT BUTTON
-     ======================================================= */
-
   function connectContactButton() {
 
     const btn =
       $("selectBusinessContact");
 
-    if (!btn) return;
+    if (!btn) {
+      return;
+    }
 
     btn.onclick =
       window.selectBusinessContact;
-
-  }
-
-  const observer =
-    new MutationObserver(
-      function () {
-        connectContactButton();
-        addVisibleBackButton();
-      }
-    );
-
-  function startObserver() {
-
-    if (!document.body) {
-
-      setTimeout(
-        startObserver,
-        300
-      );
-
-      return;
-
-    }
-
-    try {
-
-      observer.observe(
-        document.body,
-        {
-          childList:true,
-          subtree:true
-        }
-      );
-
-    } catch (e) {}
-
-    connectContactButton();
-
-    addVisibleBackButton();
-
   }
 
   /* =======================================================
@@ -541,43 +852,81 @@
 
   function ensureBillData() {
 
-    const d = data();
+    const d =
+      getData();
 
-    if (!d) return;
+    if (!d) {
+      return;
+    }
 
     if (
       !Array.isArray(d.bills)
     ) {
+
       d.bills = [];
+
     }
 
     let changed = false;
 
-    d.bills.forEach(x => {
+    d.bills.forEach(
+      function (x) {
 
-      if (!x.id) {
-        x.id = uid();
-        changed = true;
+        if (!x.id) {
+
+          x.id =
+            safeUid();
+
+          changed = true;
+
+        }
+
+        if (!x.status) {
+
+          x.status =
+            "pending";
+
+          changed = true;
+
+        }
+
+        if (!x.date) {
+
+          x.date =
+            x.due ||
+            safeToday();
+
+          changed = true;
+
+        }
+
+        if (
+          x.paid ===
+          undefined
+        ) {
+
+          x.paid =
+            x.status ===
+            "settled";
+
+          changed = true;
+
+        }
+
+        if (
+          !Array.isArray(
+            x.history
+          )
+        ) {
+
+          x.history = [];
+
+          changed = true;
+
+        }
+
       }
-
-      if (!x.status) {
-        x.status = "pending";
-        changed = true;
-      }
-
-      if (!x.date) {
-        x.date =
-          x.due || today();
-        changed = true;
-      }
-
-      if (x.paid === undefined) {
-        x.paid =
-          x.status === "settled";
-        changed = true;
-      }
-
-    });
+    );
 
     if (changed) {
       saveSafe();
@@ -586,81 +935,54 @@
   }
 
   /* =======================================================
-     ADD BILL
-     ======================================================= */
-
-  const originalAddBill =
-    window.addBill;
-
-  window.addBill =
-    function (kind = "Bill") {
-
-      if (
-        typeof originalAddBill ===
-        "function"
-      ) {
-        originalAddBill(kind);
-      }
-
-      setTimeout(
-        function () {
-
-          ensureBillData();
-
-          try {
-            renderEnhancedPayments();
-          } catch (e) {}
-
-        },
-        30
-      );
-
-    };
-
-  /* =======================================================
-     BILL PAID / PENDING
+     BILL PAID
      ======================================================= */
 
   window.markBillPaid =
     function (id) {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
-      const x =
+      const bill =
         d.bills.find(
-          a => a.id === id
+          function (x) {
+            return x.id === id;
+          }
         );
 
-      if (!x) return;
+      if (!bill) {
+        return;
+      }
 
-      x.status = "settled";
-      x.paid = true;
-      x.paidDate = today();
+      bill.status =
+        "settled";
 
-      saveSafe();
+      bill.paid = true;
 
-      renderEnhancedPayments();
+      bill.paidDate =
+        safeToday();
 
-    };
+      if (
+        !Array.isArray(
+          bill.history
+        )
+      ) {
+        bill.history = [];
+      }
 
-  window.markBillPending =
-    function (id) {
-
-      const d = data();
-
-      if (!d) return;
-
-      const x =
-        d.bills.find(
-          a => a.id === id
-        );
-
-      if (!x) return;
-
-      x.status = "pending";
-      x.paid = false;
+      bill.history.push({
+        id:safeUid(),
+        type:"payment",
+        amount:Number(
+          bill.amount || 0
+        ),
+        date:safeToday()
+      });
 
       saveSafe();
 
@@ -669,220 +991,318 @@
     };
 
   /* =======================================================
-     LOAN / EMI DATA
+     BILL PENDING
+     ======================================================= */
+
+  window.markBillPending =
+    function (id) {
+
+      const d =
+        getData();
+
+      if (!d) {
+        return;
+      }
+
+      const bill =
+        d.bills.find(
+          function (x) {
+            return x.id === id;
+          }
+        );
+
+      if (!bill) {
+        return;
+      }
+
+      bill.status =
+        "pending";
+
+      bill.paid =
+        false;
+
+      saveSafe();
+
+      renderEnhancedPayments();
+
+    };
+
+  /* =======================================================
+     BILL HISTORY
+     ======================================================= */
+
+  window.viewBillHistory =
+    function (id) {
+
+      const d =
+        getData();
+
+      if (!d) {
+        return;
+      }
+
+      const bill =
+        d.bills.find(
+          function (x) {
+            return x.id === id;
+          }
+        );
+
+      if (!bill) {
+        return;
+      }
+
+      const history =
+        Array.isArray(
+          bill.history
+        )
+          ? bill.history
+          : [];
+
+      let text =
+        "HISAB BILL HISTORY\n\n";
+
+      text +=
+        "Bill: " +
+        (bill.name || "") +
+        "\n";
+
+      text +=
+        "Amount: " +
+        safeMoney(
+          bill.amount
+        ) +
+        "\n\n";
+
+      if (!history.length) {
+
+        text +=
+          "No payment history yet.";
+
+      } else {
+
+        history.forEach(
+          function (p,i) {
+
+            text +=
+              (i + 1) +
+              ". " +
+              (p.date || "-") +
+              "  " +
+              safeMoney(
+                p.amount || 0
+              ) +
+              "\n";
+
+          }
+        );
+
+      }
+
+      shareTextSafe(
+        text,
+        "HISAB Bill History"
+      );
+
+    };
+
+  /* =======================================================
+     ORIGINAL ADD BILL WRAPPER
+     ======================================================= */
+
+  const originalAddBill =
+    window.addBill;
+
+  if (
+    typeof originalAddBill ===
+    "function"
+  ) {
+
+    window.addBill =
+      function (kind = "Bill") {
+
+        originalAddBill(
+          kind
+        );
+
+        setTimeout(
+          function () {
+
+            ensureBillData();
+
+            try {
+              renderEnhancedPayments();
+            } catch (e) {}
+
+          },
+          40
+        );
+
+      };
+
+  }
+
+  /* =======================================================
+     LOAN DATA
      ======================================================= */
 
   function ensureLoanData() {
 
-    const d = data();
+    const d =
+      getData();
 
-    if (!d) return;
-
-    if (
-      !Array.isArray(d.loans)
-    ) {
-      d.loans = [];
+    if (!d) {
+      return;
     }
 
     if (
-      !Array.isArray(d.emis)
+      !Array.isArray(
+        d.loans
+      )
     ) {
+
+      d.loans = [];
+
+    }
+
+    if (
+      !Array.isArray(
+        d.emis
+      )
+    ) {
+
       d.emis = [];
+
     }
 
     let changed = false;
 
-    d.loans.forEach(x => {
+    d.loans.forEach(
+      function (x) {
 
-      if (!x.id) {
-        x.id = uid();
-        changed = true;
+        if (!x.id) {
+
+          x.id =
+            safeUid();
+
+          changed = true;
+
+        }
+
+        if (!x.date) {
+
+          x.date =
+            safeToday();
+
+          changed = true;
+
+        }
+
+        if (!x.status) {
+
+          x.status =
+            "active";
+
+          changed = true;
+
+        }
+
+        if (
+          x.paid ===
+          undefined
+        ) {
+
+          x.paid = 0;
+
+          changed = true;
+
+        }
+
+        if (
+          x.remaining ===
+          undefined
+        ) {
+
+          x.remaining =
+            Math.max(
+              0,
+              Number(
+                x.amount || 0
+              ) -
+              Number(
+                x.paid || 0
+              )
+            );
+
+          changed = true;
+
+        }
+
+        if (
+          !Array.isArray(
+            x.history
+          )
+        ) {
+
+          x.history = [];
+
+          changed = true;
+
+        }
+
       }
+    );
 
-      if (!x.date) {
-        x.date = today();
-        changed = true;
+    d.emis.forEach(
+      function (x) {
+
+        if (!x.id) {
+
+          x.id =
+            safeUid();
+
+          changed = true;
+
+        }
+
+        if (!x.date) {
+
+          x.date =
+            safeToday();
+
+          changed = true;
+
+        }
+
+        if (!x.status) {
+
+          x.status =
+            "pending";
+
+          changed = true;
+
+        }
+
+        if (
+          !Array.isArray(
+            x.history
+          )
+        ) {
+
+          x.history = [];
+
+          changed = true;
+
+        }
+
       }
-
-      if (!x.status) {
-        x.status = "active";
-        changed = true;
-      }
-
-      if (x.paid === undefined) {
-        x.paid = 0;
-        changed = true;
-      }
-
-      if (
-        x.remaining ===
-        undefined
-      ) {
-
-        x.remaining =
-          Math.max(
-            0,
-            Number(x.amount || 0) -
-            Number(x.paid || 0)
-          );
-
-        changed = true;
-
-      }
-
-      if (
-        !Array.isArray(x.history)
-      ) {
-        x.history = [];
-        changed = true;
-      }
-
-    });
-
-    d.emis.forEach(x => {
-
-      if (!x.id) {
-        x.id = uid();
-        changed = true;
-      }
-
-      if (!x.date) {
-        x.date = today();
-        changed = true;
-      }
-
-      if (!x.status) {
-        x.status = "pending";
-        changed = true;
-      }
-
-      if (
-        !Array.isArray(x.history)
-      ) {
-        x.history = [];
-        changed = true;
-      }
-
-    });
+    );
 
     if (changed) {
       saveSafe();
     }
 
   }
-
-  /* =======================================================
-     LOAN SAVE
-     ======================================================= */
-
-  const originalSaveLoan =
-    window.saveLoan;
-
-  window.saveLoan =
-    function () {
-
-      if (
-        typeof originalSaveLoan ===
-        "function"
-      ) {
-        originalSaveLoan();
-      }
-
-      setTimeout(
-        function () {
-
-          ensureLoanData();
-
-          try {
-            renderEnhancedPayments();
-          } catch (e) {}
-
-        },
-        30
-      );
-
-    };
-
-  /* =======================================================
-     EMI CALCULATOR
-     ======================================================= */
-
-  const originalCalcEMI =
-    window.calcEMI;
-
-  window.calcEMI =
-    function () {
-
-      if (
-        typeof originalCalcEMI ===
-        "function"
-      ) {
-        originalCalcEMI();
-      }
-
-      setTimeout(
-        function () {
-
-          ensureLoanData();
-
-          try {
-            renderEnhancedPayments();
-          } catch (e) {}
-
-        },
-        30
-      );
-
-    };
-
-  /* =======================================================
-     EMI PAID / PENDING
-     ======================================================= */
-
-  window.markEMIPaid =
-    function (id) {
-
-      const d = data();
-
-      if (!d) return;
-
-      const x =
-        d.emis.find(
-          a => a.id === id
-        );
-
-      if (!x) return;
-
-      x.status = "paid";
-      x.paidDate = today();
-
-      saveSafe();
-
-      renderEnhancedPayments();
-
-    };
-
-  window.markEMIPending =
-    function (id) {
-
-      const d = data();
-
-      if (!d) return;
-
-      const x =
-        d.emis.find(
-          a => a.id === id
-        );
-
-      if (!x) return;
-
-      x.status = "pending";
-
-      saveSafe();
-
-      renderEnhancedPayments();
-
-    };
 
   /* =======================================================
      LOAN PAYMENT
@@ -891,16 +1311,23 @@
   window.addLoanPayment =
     function (id) {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
-      const x =
+      const loan =
         d.loans.find(
-          a => a.id === id
+          function (x) {
+            return x.id === id;
+          }
         );
 
-      if (!x) return;
+      if (!loan) {
+        return;
+      }
 
       const amount =
         Number(
@@ -919,39 +1346,76 @@
 
       }
 
-      if (
-        !Array.isArray(x.history)
-      ) {
-        x.history = [];
-      }
-
-      const payment = {
-        id:uid(),
-        amount,
-        date:today()
-      };
-
-      x.history.push(payment);
-
-      x.paid =
-        Number(x.paid || 0) +
-        amount;
-
-      x.remaining =
+      const remaining =
         Math.max(
           0,
-          Number(x.amount || 0) -
-          x.paid
+          Number(
+            loan.amount || 0
+          ) -
+          Number(
+            loan.paid || 0
+          )
         );
 
-      x.lastPaymentDate =
-        today();
+      if (
+        amount > remaining &&
+        remaining > 0
+      ) {
+
+        alert(
+          "Payment cannot be greater than remaining amount."
+        );
+
+        return;
+
+      }
 
       if (
-        x.remaining <= 0
+        !Array.isArray(
+          loan.history
+        )
       ) {
-        x.status =
+
+        loan.history = [];
+
+      }
+
+      loan.history.push({
+        id:safeUid(),
+        amount,
+        date:safeToday()
+      });
+
+      loan.paid =
+        Number(
+          loan.paid || 0
+        ) +
+        amount;
+
+      loan.remaining =
+        Math.max(
+          0,
+          Number(
+            loan.amount || 0
+          ) -
+          loan.paid
+        );
+
+      loan.lastPaymentDate =
+        safeToday();
+
+      if (
+        loan.remaining <= 0
+      ) {
+
+        loan.status =
           "completed";
+
+      } else {
+
+        loan.status =
+          "active";
+
       }
 
       saveSafe();
@@ -961,66 +1425,80 @@
     };
 
   /* =======================================================
-     LOAN PAYMENT HISTORY
+     LOAN HISTORY
      ======================================================= */
 
   window.viewLoanHistory =
     function (id) {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
-
-      const x =
-        d.loans.find(
-          a => a.id === id
-        );
-
-      if (!x) return;
-
-      const history =
-        Array.isArray(x.history)
-          ? x.history
-          : [];
-
-      if (!history.length) {
-
-        alert(
-          "No payment history yet."
-        );
-
+      if (!d) {
         return;
-
       }
 
+      const loan =
+        d.loans.find(
+          function (x) {
+            return x.id === id;
+          }
+        );
+
+      if (!loan) {
+        return;
+      }
+
+      const history =
+        Array.isArray(
+          loan.history
+        )
+          ? loan.history
+          : [];
+
       let text =
-        "LOAN PAYMENT HISTORY\n\n";
+        "HISAB LOAN PAYMENT HISTORY\n\n";
 
       text +=
         "Loan: " +
-        (x.name || "") +
+        (loan.name || "") +
         "\n\n";
 
-      history.forEach(
-        (p,i) => {
+      if (!history.length) {
 
-          text +=
-            (i + 1) +
-            ". " +
-            (p.date || "-") +
-            "  " +
-            moneySafe(
-              p.amount
-            ) +
-            "\n";
+        text +=
+          "No payments yet.";
 
-        }
-      );
+      } else {
+
+        history.forEach(
+          function (p,i) {
+
+            text +=
+              (i + 1) +
+              ". " +
+              (p.date || "-") +
+              "  " +
+              safeMoney(
+                p.amount || 0
+              ) +
+              "\n";
+
+          }
+        );
+
+      }
 
       text +=
         "\nTotal Paid: " +
-        moneySafe(
-          x.paid || 0
+        safeMoney(
+          loan.paid || 0
+        );
+
+      text +=
+        "\nRemaining: " +
+        safeMoney(
+          loan.remaining || 0
         );
 
       shareTextSafe(
@@ -1031,54 +1509,154 @@
     };
 
   /* =======================================================
+     EMI PAID
+     ======================================================= */
+
+  window.markEMIPaid =
+    function (id) {
+
+      const d =
+        getData();
+
+      if (!d) {
+        return;
+      }
+
+      const emi =
+        d.emis.find(
+          function (x) {
+            return x.id === id;
+          }
+        );
+
+      if (!emi) {
+        return;
+      }
+
+      emi.status =
+        "paid";
+
+      emi.paidDate =
+        safeToday();
+
+      if (
+        !Array.isArray(
+          emi.history
+        )
+      ) {
+
+        emi.history = [];
+
+      }
+
+      emi.history.push({
+        id:safeUid(),
+        amount:Number(
+          emi.emi || 0
+        ),
+        date:safeToday()
+      });
+
+      saveSafe();
+
+      renderEnhancedPayments();
+
+    };
+
+  /* =======================================================
+     EMI PENDING
+     ======================================================= */
+
+  window.markEMIPending =
+    function (id) {
+
+      const d =
+        getData();
+
+      if (!d) {
+        return;
+      }
+
+      const emi =
+        d.emis.find(
+          function (x) {
+            return x.id === id;
+          }
+        );
+
+      if (!emi) {
+        return;
+      }
+
+      emi.status =
+        "pending";
+
+      saveSafe();
+
+      renderEnhancedPayments();
+
+    };
+
+  /* =======================================================
      EMI HISTORY
      ======================================================= */
 
   window.viewEMIHistory =
     function (id) {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
-      const x =
+      const emi =
         d.emis.find(
-          a => a.id === id
+          function (x) {
+            return x.id === id;
+          }
         );
 
-      if (!x) return;
+      if (!emi) {
+        return;
+      }
 
       const history =
-        Array.isArray(x.history)
-          ? x.history
+        Array.isArray(
+          emi.history
+        )
+          ? emi.history
           : [];
 
       let text =
-        "EMI PAYMENT HISTORY\n\n";
+        "HISAB EMI PAYMENT HISTORY\n\n";
 
       text +=
         "EMI: " +
-        moneySafe(x.emi) +
+        safeMoney(
+          emi.emi || 0
+        ) +
         "\n\n";
 
       if (!history.length) {
 
         text +=
-          "No payment history yet.";
+          "No payments yet.";
 
       } else {
 
         history.forEach(
-          (p,i) => {
+          function (p,i) {
 
             text +=
               (i + 1) +
               ". " +
               (p.date || "-") +
               "  " +
-              moneySafe(
+              safeMoney(
                 p.amount ||
-                x.emi ||
+                emi.emi ||
                 0
               ) +
               "\n";
@@ -1096,7 +1674,71 @@
     };
 
   /* =======================================================
-     ENHANCED PAYMENTS DISPLAY
+     ORIGINAL LOAN / EMI WRAPPERS
+     ======================================================= */
+
+  const originalSaveLoan =
+    window.saveLoan;
+
+  if (
+    typeof originalSaveLoan ===
+    "function"
+  ) {
+
+    window.saveLoan =
+      function () {
+
+        originalSaveLoan();
+
+        setTimeout(
+          function () {
+
+            ensureLoanData();
+
+            try {
+              renderEnhancedPayments();
+            } catch (e) {}
+
+          },
+          40
+        );
+
+      };
+
+  }
+
+  const originalCalcEMI =
+    window.calcEMI;
+
+  if (
+    typeof originalCalcEMI ===
+    "function"
+  ) {
+
+    window.calcEMI =
+      function () {
+
+        originalCalcEMI();
+
+        setTimeout(
+          function () {
+
+            ensureLoanData();
+
+            try {
+              renderEnhancedPayments();
+            } catch (e) {}
+
+          },
+          40
+        );
+
+      };
+
+  }
+
+  /* =======================================================
+     ENHANCED PAYMENT DISPLAY
      ======================================================= */
 
   window.renderEnhancedPayments =
@@ -1108,20 +1750,29 @@
       const list =
         $("billList");
 
-      if (!list) return;
+      if (!list) {
+        return;
+      }
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
       const bills =
         d.bills.filter(
-          x => x.kind === "bill"
+          function (x) {
+            return x.kind === "bill";
+          }
         );
 
       const cards =
         d.bills.filter(
-          x => x.kind === "card"
+          function (x) {
+            return x.kind === "card";
+          }
         );
 
       const loans =
@@ -1132,94 +1783,140 @@
 
       list.innerHTML = `
 
+        <!-- BILLS -->
+
         <div class="list-card">
 
           <h3>🧾 Bills</h3>
 
           ${
             bills.length
-            ? bills.map(x => `
 
-              <div class="list-card">
+            ? bills.map(
+                function (x) {
 
-                <b>
-                  ${escSafe(x.name)}
-                </b>
+                  const paid =
+                    x.status ===
+                    "settled";
 
-                <div class="amount">
-                  ${moneySafe(x.amount)}
-                </div>
+                  return `
 
-                <div class="meta">
-                  Date:
-                  ${escSafe(
-                    x.date || "-"
-                  )}
-                </div>
+                    <div class="list-card">
 
-                <div class="meta">
-                  Due:
-                  ${escSafe(
-                    x.due || "-"
-                  )}
-                </div>
+                      <b>
+                        ${safeEsc(
+                          x.name
+                        )}
+                      </b>
 
-                <div
-                  style="margin-top:7px"
-                >
+                      <div class="amount">
+                        ${safeMoney(
+                          x.amount
+                        )}
+                      </div>
 
-                  <span class="${
-                    x.status === "settled"
-                    ? "status-settled"
-                    : "status-pending"
-                  }">
+                      <div class="meta">
+                        Date:
+                        ${safeEsc(
+                          x.date || "-"
+                        )}
+                      </div>
 
-                    ${
-                      x.status ===
-                      "settled"
-                      ? "Paid"
-                      : "Pending"
-                    }
+                      <div class="meta">
+                        Due:
+                        ${safeEsc(
+                          x.due || "-"
+                        )}
+                      </div>
 
-                  </span>
+                      <div
+                        style="
+                          margin-top:8px;
+                          font-weight:700;
+                        "
+                      >
 
-                </div>
+                        ${
+                          paid
 
-                <div
-                  class="action-row"
-                  style="margin-top:9px"
-                >
+                          ? `
+                            <span
+                              class="status-settled"
+                            >
+                              ✓ Paid
+                            </span>
+                          `
 
-                  ${
-                    x.status !==
-                    "settled"
-                    ? `
-                      <button
-                        type="button"
-                        onclick="markBillPaid('${x.id}')">
-                        ✓ Mark Paid
-                      </button>
-                    `
-                    : `
-                      <button
-                        type="button"
-                        onclick="markBillPending('${x.id}')">
-                        ↩ Pending
-                      </button>
-                    `
-                  }
+                          : `
+                            <span
+                              class="status-pending"
+                            >
+                              🟠 Pending
+                            </span>
+                          `
+                        }
 
-                  <button
-                    type="button"
-                    onclick="deleteBill('${x.id}')">
-                    Delete
-                  </button>
+                      </div>
 
-                </div>
+                      <div
+                        class="action-row"
+                        style="margin-top:9px"
+                      >
 
-              </div>
+                        ${
+                          !paid
 
-            `).join("")
+                          ? `
+                            <button
+                              type="button"
+                              onclick="markBillPaid('${x.id}')"
+                            >
+                              ✓ Mark Paid
+                            </button>
+                          `
+
+                          : `
+                            <button
+                              type="button"
+                              onclick="markBillPending('${x.id}')"
+                            >
+                              ↩ Pending
+                            </button>
+                          `
+                        }
+
+                        ${
+                          x.history &&
+                          x.history.length
+
+                          ? `
+                            <button
+                              type="button"
+                              onclick="viewBillHistory('${x.id}')"
+                            >
+                              History
+                            </button>
+                          `
+
+                          : ""
+                        }
+
+                        <button
+                          type="button"
+                          onclick="deleteBill('${x.id}')"
+                        >
+                          Delete
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  `;
+
+                }
+              ).join("")
+
             : `
               <div class="meta">
                 No bills yet.
@@ -1230,87 +1927,130 @@
         </div>
 
 
+        <!-- CREDIT CARDS -->
+
         <div class="list-card">
 
           <h3>💳 Credit Cards</h3>
 
           ${
             cards.length
-            ? cards.map(x => `
 
-              <div class="list-card">
+            ? cards.map(
+                function (x) {
 
-                <b>
-                  ${escSafe(x.name)}
-                </b>
+                  const paid =
+                    x.status ===
+                    "settled";
 
-                <div class="amount">
-                  ${moneySafe(x.amount)}
-                </div>
+                  return `
 
-                <div class="meta">
-                  Due:
-                  ${escSafe(
-                    x.due || "-"
-                  )}
-                </div>
+                    <div class="list-card">
 
-                <div
-                  style="margin-top:7px"
-                >
+                      <b>
+                        ${safeEsc(
+                          x.name
+                        )}
+                      </b>
 
-                  <span class="${
-                    x.status === "settled"
-                    ? "status-settled"
-                    : "status-pending"
-                  }">
+                      <div class="amount">
+                        ${safeMoney(
+                          x.amount
+                        )}
+                      </div>
 
-                    ${
-                      x.status ===
-                      "settled"
-                      ? "Paid"
-                      : "Pending"
-                    }
+                      <div class="meta">
+                        Due:
+                        ${safeEsc(
+                          x.due || "-"
+                        )}
+                      </div>
 
-                  </span>
+                      <div
+                        style="margin-top:8px"
+                      >
 
-                </div>
+                        ${
+                          paid
 
-                <div
-                  class="action-row"
-                  style="margin-top:9px"
-                >
+                          ? `
+                            <span
+                              class="status-settled"
+                            >
+                              ✓ Paid
+                            </span>
+                          `
 
-                  ${
-                    x.status !==
-                    "settled"
-                    ? `
-                      <button
-                        type="button"
-                        onclick="markBillPaid('${x.id}')">
-                        ✓ Mark Paid
-                      </button>
-                    `
-                    : `
-                      <button
-                        type="button"
-                        onclick="markBillPending('${x.id}')">
-                        ↩ Pending
-                      </button>
-                    `
-                  }
+                          : `
+                            <span
+                              class="status-pending"
+                            >
+                              🟠 Pending
+                            </span>
+                          `
+                        }
 
-                  <button
-                    type="button"
-                    onclick="deleteBill('${x.id}')">
-                    Delete
-                  </button>
+                      </div>
 
-                </div>
+                      <div
+                        class="action-row"
+                        style="margin-top:9px"
+                      >
 
-              </div>
+                        ${
+                          !paid
 
-            `).join("")
+                          ? `
+                            <button
+                              type="button"
+                              onclick="markBillPaid('${x.id}')"
+                            >
+                              ✓ Mark Paid
+                            </button>
+                          `
+
+                          : `
+                            <button
+                              type="button"
+                              onclick="markBillPending('${x.id}')"
+                            >
+                              ↩ Pending
+                            </button>
+                          `
+                        }
+
+                        ${
+                          x.history &&
+                          x.history.length
+
+                          ? `
+                            <button
+                              type="button"
+                              onclick="viewBillHistory('${x.id}')"
+                            >
+                              History
+                            </button>
+                          `
+
+                          : ""
+                        }
+
+                        <button
+                          type="button"
+                          onclick="deleteBill('${x.id}')"
+                        >
+                          Delete
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  `;
+
+                }
+              ).join("")
+
             : `
               <div class="meta">
                 No credit card bills.
@@ -1321,158 +2061,208 @@
         </div>
 
 
+        <!-- LOANS -->
+
         <div class="list-card">
 
           <h3>🏦 Loans</h3>
 
           ${
             loans.length
-            ? loans.map(x => {
 
-              const amount =
-                Number(
-                  x.amount || 0
-                );
+            ? loans.map(
+                function (x) {
 
-              const paid =
-                Number(
-                  x.paid || 0
-                );
+                  const amount =
+                    Number(
+                      x.amount || 0
+                    );
 
-              const remaining =
-                Math.max(
-                  0,
-                  Number(
-                    x.remaining !==
-                    undefined
-                      ? x.remaining
-                      : amount - paid
-                  )
-                );
+                  const paid =
+                    Number(
+                      x.paid || 0
+                    );
 
-              const percent =
-                amount > 0
-                ? Math.min(
-                    100,
-                    Math.round(
-                      paid /
-                      amount *
-                      100
-                    )
-                  )
-                : 0;
+                  const remaining =
+                    Math.max(
+                      0,
+                      Number(
+                        x.remaining !==
+                        undefined
+                          ? x.remaining
+                          : amount - paid
+                      )
+                    );
 
-              return `
+                  const percent =
+                    amount > 0
 
-                <div class="list-card">
+                    ? Math.min(
+                        100,
+                        Math.round(
+                          paid /
+                          amount *
+                          100
+                        )
+                      )
 
-                  <b>
-                    ${escSafe(x.name)}
-                  </b>
+                    : 0;
 
-                  <div class="amount">
-                    ${moneySafe(amount)}
-                  </div>
+                  const completed =
+                    remaining <= 0;
 
-                  <div class="meta">
-                    Interest:
-                    ${escSafe(
-                      x.rate || 0
-                    )}%
-                    •
-                    ${escSafe(
-                      x.months || 0
-                    )}
-                    months
-                  </div>
+                  return `
 
-                  <div class="meta">
-                    Loan Date:
-                    ${escSafe(
-                      x.date || "-"
-                    )}
-                  </div>
+                    <div class="list-card">
 
-                  <div class="meta">
-                    Paid:
-                    ${moneySafe(paid)}
-                  </div>
+                      <b>
+                        ${safeEsc(
+                          x.name
+                        )}
+                      </b>
 
-                  <div class="meta">
-                    Remaining:
-                    ${moneySafe(
-                      remaining
-                    )}
-                  </div>
+                      <div class="amount">
+                        ${safeMoney(
+                          amount
+                        )}
+                      </div>
 
-                  <div
-                    style="
-                      margin-top:9px;
-                      background:#edf1f7;
-                      border-radius:10px;
-                      overflow:hidden;
-                      height:9px;
-                    "
-                  >
+                      <div class="meta">
+                        Interest:
+                        ${safeEsc(
+                          x.rate || 0
+                        )}%
+                        •
+                        ${safeEsc(
+                          x.months || 0
+                        )}
+                        months
+                      </div>
 
-                    <div
-                      style="
-                        width:${percent}%;
-                        height:100%;
-                        background:var(--green,#12a875);
-                      "
-                    ></div>
+                      <div class="meta">
+                        Loan Date:
+                        ${safeEsc(
+                          x.date || "-"
+                        )}
+                      </div>
 
-                  </div>
+                      <div class="meta">
+                        Paid:
+                        ${safeMoney(
+                          paid
+                        )}
+                      </div>
 
-                  <div class="meta">
-                    ${percent}%
-                    completed
-                  </div>
+                      <div class="meta">
+                        Remaining:
+                        ${safeMoney(
+                          remaining
+                        )}
+                      </div>
 
-                  <div
-                    class="action-row"
-                    style="margin-top:9px"
-                  >
+                      <div
+                        style="
+                          margin-top:9px;
+                          background:#edf1f7;
+                          border-radius:10px;
+                          overflow:hidden;
+                          height:9px;
+                        "
+                      >
 
-                    ${
-                      remaining > 0
-                      ? `
+                        <div
+                          style="
+                            width:${percent}%;
+                            height:100%;
+                            background:var(--green,#12a875);
+                          "
+                        ></div>
+
+                      </div>
+
+                      <div class="meta">
+                        ${percent}%
+                        completed
+                      </div>
+
+                      <div
+                        style="margin-top:8px"
+                      >
+
+                        ${
+                          completed
+
+                          ? `
+                            <span
+                              class="status-settled"
+                            >
+                              ✓ Completed
+                            </span>
+                          `
+
+                          : `
+                            <span
+                              class="status-pending"
+                            >
+                              🟠 Active
+                            </span>
+                          `
+                        }
+
+                      </div>
+
+                      <div
+                        class="action-row"
+                        style="margin-top:9px"
+                      >
+
+                        ${
+                          !completed
+
+                          ? `
+                            <button
+                              type="button"
+                              onclick="addLoanPayment('${x.id}')"
+                            >
+                              💵 Payment
+                            </button>
+                          `
+
+                          : ""
+                        }
+
+                        ${
+                          x.history &&
+                          x.history.length
+
+                          ? `
+                            <button
+                              type="button"
+                              onclick="viewLoanHistory('${x.id}')"
+                            >
+                              History
+                            </button>
+                          `
+
+                          : ""
+                        }
+
                         <button
                           type="button"
-                          onclick="addLoanPayment('${x.id}')">
-                          💵 Payment
+                          onclick="deleteLoan('${x.id}')"
+                        >
+                          Delete
                         </button>
-                      `
-                      : ""
-                    }
 
-                    ${
-                      x.history &&
-                      x.history.length
-                      ? `
-                        <button
-                          type="button"
-                          onclick="viewLoanHistory('${x.id}')">
-                          History
-                        </button>
-                      `
-                      : ""
-                    }
+                      </div>
 
-                    <button
-                      type="button"
-                      onclick="deleteLoan('${x.id}')">
-                      Delete
-                    </button>
+                    </div>
 
-                  </div>
+                  `;
 
-                </div>
+                }
+              ).join("")
 
-              `;
-
-            }).join("")
             : `
               <div class="meta">
                 No loans yet.
@@ -1483,110 +2273,140 @@
         </div>
 
 
+        <!-- EMI -->
+
         <div class="list-card">
 
           <h3>📅 EMI</h3>
 
           ${
             emis.length
-            ? emis.map(x => `
 
-              <div class="list-card">
+            ? emis.map(
+                function (x) {
 
-                <b>
-                  EMI
-                  ${moneySafe(x.emi)}
-                </b>
+                  const paid =
+                    x.status ===
+                    "paid";
 
-                <div class="meta">
-                  Principal:
-                  ${moneySafe(
-                    x.principal
-                  )}
-                </div>
+                  return `
 
-                <div class="meta">
-                  Tenure:
-                  ${escSafe(
-                    x.months || 0
-                  )}
-                  months
-                </div>
+                    <div class="list-card">
 
-                <div class="meta">
-                  Date:
-                  ${escSafe(
-                    x.date || "-"
-                  )}
-                </div>
+                      <b>
+                        EMI
+                        ${safeMoney(
+                          x.emi
+                        )}
+                      </b>
 
-                <div
-                  style="margin-top:7px"
-                >
+                      <div class="meta">
+                        Principal:
+                        ${safeMoney(
+                          x.principal
+                        )}
+                      </div>
 
-                  <span class="${
-                    x.status === "paid"
-                    ? "status-settled"
-                    : "status-pending"
-                  }">
+                      <div class="meta">
+                        Tenure:
+                        ${safeEsc(
+                          x.months || 0
+                        )}
+                        months
+                      </div>
 
-                    ${
-                      x.status === "paid"
-                      ? "Paid"
-                      : "Pending"
-                    }
+                      <div class="meta">
+                        Date:
+                        ${safeEsc(
+                          x.date || "-"
+                        )}
+                      </div>
 
-                  </span>
+                      <div
+                        style="margin-top:8px"
+                      >
 
-                </div>
+                        ${
+                          paid
 
-                <div
-                  class="action-row"
-                  style="margin-top:9px"
-                >
+                          ? `
+                            <span
+                              class="status-settled"
+                            >
+                              ✓ Paid
+                            </span>
+                          `
 
-                  ${
-                    x.status !== "paid"
-                    ? `
-                      <button
-                        type="button"
-                        onclick="markEMIPaid('${x.id}')">
-                        ✓ EMI Paid
-                      </button>
-                    `
-                    : `
-                      <button
-                        type="button"
-                        onclick="markEMIPending('${x.id}')">
-                        ↩ Pending
-                      </button>
-                    `
-                  }
+                          : `
+                            <span
+                              class="status-pending"
+                            >
+                              🟠 Pending
+                            </span>
+                          `
+                        }
 
-                  ${
-                    x.history &&
-                    x.history.length
-                    ? `
-                      <button
-                        type="button"
-                        onclick="viewEMIHistory('${x.id}')">
-                        History
-                      </button>
-                    `
-                    : ""
-                  }
+                      </div>
 
-                  <button
-                    type="button"
-                    onclick="deleteEMI('${x.id}')">
-                    Delete
-                  </button>
+                      <div
+                        class="action-row"
+                        style="margin-top:9px"
+                      >
 
-                </div>
+                        ${
+                          !paid
 
-              </div>
+                          ? `
+                            <button
+                              type="button"
+                              onclick="markEMIPaid('${x.id}')"
+                            >
+                              ✓ EMI Paid
+                            </button>
+                          `
 
-            `).join("")
+                          : `
+                            <button
+                              type="button"
+                              onclick="markEMIPending('${x.id}')"
+                            >
+                              ↩ Pending
+                            </button>
+                          `
+                        }
+
+                        ${
+                          x.history &&
+                          x.history.length
+
+                          ? `
+                            <button
+                              type="button"
+                              onclick="viewEMIHistory('${x.id}')"
+                            >
+                              History
+                            </button>
+                          `
+
+                          : ""
+                        }
+
+                        <button
+                          type="button"
+                          onclick="deleteEMI('${x.id}')"
+                        >
+                          Delete
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  `;
+
+                }
+              ).join("")
+
             : `
               <div class="meta">
                 No EMI records.
@@ -1601,142 +2421,52 @@
     };
 
   /* =======================================================
-     SAFE TEXT HELPERS
-     ======================================================= */
-
-  function escSafe(v) {
-
-    try {
-
-      if (
-        typeof esc ===
-        "function"
-      ) {
-        return esc(v);
-      }
-
-    } catch (e) {}
-
-    return String(v ?? "")
-      .replace(
-        /[&<>"']/g,
-        function (m) {
-
-          return {
-            "&":"&amp;",
-            "<":"&lt;",
-            ">":"&gt;",
-            '"':"&quot;",
-            "'":"&#039;"
-          }[m];
-
-        }
-      );
-
-  }
-
-  function moneySafe(v) {
-
-    try {
-
-      if (
-        typeof money ===
-        "function"
-      ) {
-        return money(v);
-      }
-
-    } catch (e) {}
-
-    const d = data();
-
-    return (
-      (d?.currency || "₹") +
-      Number(v || 0)
-        .toLocaleString(
-          "en-IN",
-          {
-            maximumFractionDigits:2
-          }
-        )
-    );
-
-  }
-
-  function shareTextSafe(
-    text,
-    title
-  ) {
-
-    try {
-
-      if (
-        typeof shareText ===
-        "function"
-      ) {
-        shareText(
-          text,
-          title
-        );
-        return;
-      }
-
-    } catch (e) {}
-
-    try {
-
-      if (
-        navigator.clipboard
-      ) {
-
-        navigator.clipboard
-          .writeText(text)
-          .then(
-            () =>
-              alert("Copied")
-          );
-
-        return;
-
-      }
-
-    } catch (e) {}
-
-    alert(text);
-
-  }
-
-  /* =======================================================
-     BUDGET
+     BUDGET HELPERS
      ======================================================= */
 
   window.viewBudget =
     function () {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
-      const spent =
-        typeof totalExpense ===
-        "function"
-          ? totalExpense()
-          : 0;
+      let spent = 0;
 
-      const remaining =
-        Number(d.budget || 0) -
-        spent;
+      try {
+
+        if (
+          typeof totalExpense ===
+          "function"
+        ) {
+          spent =
+            totalExpense();
+        }
+
+      } catch (e) {}
+
+      const budget =
+        Number(
+          d.budget || 0
+        );
 
       alert(
         "Monthly Budget\n\n" +
         "Budget: " +
-        moneySafe(
-          d.budget || 0
+        safeMoney(
+          budget
         ) +
         "\nSpent: " +
-        moneySafe(spent) +
+        safeMoney(
+          spent
+        ) +
         "\nRemaining: " +
-        moneySafe(remaining)
+        safeMoney(
+          budget - spent
+        )
       );
 
     };
@@ -1744,9 +2474,12 @@
   window.changeBudget =
     function () {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
       const amount =
         Number(
@@ -1766,36 +2499,48 @@
 
       }
 
-      d.budget = amount;
+      d.budget =
+        amount;
 
       saveSafe();
 
-      if (
-        typeof renderPlanning ===
-        "function"
-      ) {
-        renderPlanning();
-      }
+      try {
+
+        if (
+          typeof renderPlanning ===
+          "function"
+        ) {
+          renderPlanning();
+        }
+
+      } catch (e) {}
 
     };
 
   /* =======================================================
-     SAVINGS / GOAL UPDATE
+     SAVINGS
      ======================================================= */
 
   window.updateSavings =
     function (id) {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
-      const g =
+      const goal =
         d.goals.find(
-          x => x.id === id
+          function (x) {
+            return x.id === id;
+          }
         );
 
-      if (!g) return;
+      if (!goal) {
+        return;
+      }
 
       const amount =
         Number(
@@ -1815,27 +2560,36 @@
 
       }
 
-      g.saved =
-        Number(g.saved || 0) +
+      goal.saved =
+        Number(
+          goal.saved || 0
+        ) +
         amount;
 
       saveSafe();
 
-      if (
-        typeof renderPlanning ===
-        "function"
-      ) {
-        renderPlanning();
-      }
+      try {
+
+        if (
+          typeof renderPlanning ===
+          "function"
+        ) {
+          renderPlanning();
+        }
+
+      } catch (e) {}
 
     };
 
   window.deleteGoal =
     function (id) {
 
-      const d = data();
+      const d =
+        getData();
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
       if (
         !confirm(
@@ -1846,23 +2600,30 @@
       }
 
       d.goals =
-        d.goals.filter(
-          x => x.id !== id
-        );
+        (d.goals || [])
+          .filter(
+            function (x) {
+              return x.id !== id;
+            }
+          );
 
       saveSafe();
 
-      if (
-        typeof renderPlanning ===
-        "function"
-      ) {
-        renderPlanning();
-      }
+      try {
+
+        if (
+          typeof renderPlanning ===
+          "function"
+        ) {
+          renderPlanning();
+        }
+
+      } catch (e) {}
 
     };
 
   /* =======================================================
-     FAMILY DELETE FIX
+     FAMILY DELETE
      ======================================================= */
 
   if (
@@ -1873,145 +2634,162 @@
     window.deleteFamily =
       function (id) {
 
-        const d = data();
+        const d =
+          getData();
 
-        if (!d) return;
+        if (!d) {
+          return;
+        }
 
         d.family =
           (d.family || [])
             .filter(
-              x => x.id !== id
+              function (x) {
+                return x.id !== id;
+              }
             );
 
         saveSafe();
 
-        if (
-          typeof renderFamily ===
-          "function"
-        ) {
-          renderFamily();
-        }
+        try {
+
+          if (
+            typeof renderFamily ===
+            "function"
+          ) {
+            renderFamily();
+          }
+
+        } catch (e) {}
 
       };
 
   }
 
   /* =======================================================
-     PLANNING DISPLAY
+     PLANNING ACTIONS
      ======================================================= */
 
-  const originalRenderPlanning =
+  const originalPlanning =
     window.renderPlanning;
 
-  window.renderPlanning =
-    function () {
+  if (
+    typeof originalPlanning ===
+    "function"
+  ) {
 
-      if (
-        typeof originalRenderPlanning ===
-        "function"
-      ) {
-        originalRenderPlanning();
-      }
+    window.renderPlanning =
+      function () {
 
-      setTimeout(
-        function () {
+        originalPlanning();
 
-          const list =
-            $("goalList");
+        setTimeout(
+          function () {
 
-          const d = data();
+            const list =
+              $("goalList");
 
-          if (!list || !d) {
-            return;
-          }
+            const d =
+              getData();
 
-          const goals =
-            Array.isArray(d.goals)
-              ? d.goals
-              : [];
+            if (
+              !list ||
+              !d ||
+              !Array.isArray(
+                d.goals
+              ) ||
+              !d.goals.length
+            ) {
+              return;
+            }
 
-          if (!goals.length) {
-            return;
-          }
-
-          const existing =
-            list.querySelectorAll(
-              ".hisab-goal-actions"
-            );
-
-          if (existing.length) {
-            return;
-          }
-
-          const cards =
-            list.querySelectorAll(
-              ".list-card"
-            );
-
-          goals.forEach(
-            function (g,i) {
-
-              const card =
-                cards[i + 1];
-
-              if (!card) return;
-
-              const actions =
-                document.createElement(
-                  "div"
-                );
-
-              actions.className =
-                "hisab-goal-actions action-row";
-
-              actions.style.marginTop =
-                "9px";
-
-              actions.innerHTML = `
-
-                <button
-                  type="button"
-                  onclick="updateSavings('${g.id}')">
-                  + Save
-                </button>
-
-                <button
-                  type="button"
-                  onclick="deleteGoal('${g.id}')">
-                  Delete
-                </button>
-
-              `;
-
-              card.appendChild(
-                actions
+            const cards =
+              list.querySelectorAll(
+                ".list-card"
               );
 
-            }
-          );
+            d.goals.forEach(
+              function (g,i) {
 
-        },
-        20
-      );
+                const card =
+                  cards[i + 1];
 
-    };
+                if (!card) {
+                  return;
+                }
+
+                if (
+                  card.querySelector(
+                    ".hisab-goal-actions"
+                  )
+                ) {
+                  return;
+                }
+
+                const actions =
+                  document.createElement(
+                    "div"
+                  );
+
+                actions.className =
+                  "hisab-goal-actions action-row";
+
+                actions.style.marginTop =
+                  "9px";
+
+                actions.innerHTML = `
+
+                  <button
+                    type="button"
+                    onclick="updateSavings('${g.id}')"
+                  >
+                    + Save
+                  </button>
+
+                  <button
+                    type="button"
+                    onclick="deleteGoal('${g.id}')"
+                  >
+                    Delete
+                  </button>
+
+                `;
+
+                card.appendChild(
+                  actions
+                );
+
+              }
+            );
+
+          },
+          30
+        );
+
+      };
+
+  }
 
   /* =======================================================
-     PDF / SHARE CONNECTION
+     SHARE / PDF
      ======================================================= */
 
   window.shareCurrentKhata =
     function () {
 
-      if (
-        typeof shareKhata ===
-        "function"
-      ) {
+      try {
 
-        shareKhata();
-        return;
+        if (
+          typeof shareKhata ===
+          "function"
+        ) {
 
-      }
+          shareKhata();
+          return;
+
+        }
+
+      } catch (e) {}
 
       alert(
         "Share function unavailable"
@@ -2022,15 +2800,19 @@
   window.pdfCurrentKhata =
     function () {
 
-      if (
-        typeof exportKhataPDF ===
-        "function"
-      ) {
+      try {
 
-        exportKhataPDF();
-        return;
+        if (
+          typeof exportKhataPDF ===
+          "function"
+        ) {
 
-      }
+          exportKhataPDF();
+          return;
+
+        }
+
+      } catch (e) {}
 
       alert(
         "PDF function unavailable"
@@ -2045,6 +2827,10 @@
   function startupRepair() {
 
     try {
+      setupHistory();
+    } catch (e) {}
+
+    try {
       ensureBillData();
     } catch (e) {}
 
@@ -2052,29 +2838,103 @@
       ensureLoanData();
     } catch (e) {}
 
-    connectContactButton();
+    try {
+      connectContactButton();
+    } catch (e) {}
+
+    try {
+      setupCapacitorBack();
+    } catch (e) {}
 
     setTimeout(
       function () {
 
         try {
-          renderEnhancedPayments();
+          createBackButton();
         } catch (e) {}
 
         try {
+          connectContactButton();
+        } catch (e) {}
+
+        try {
+
           if (
             typeof ensureModeSwitch ===
             "function"
           ) {
             ensureModeSwitch();
           }
+
         } catch (e) {}
 
-        addVisibleBackButton();
+        try {
+
+          if (
+            typeof renderEnhancedPayments ===
+            "function"
+          ) {
+            renderEnhancedPayments();
+          }
+
+        } catch (e) {}
+
+        try {
+          updateBackButton();
+        } catch (e) {}
 
       },
-      150
+      250
     );
+
+  }
+
+  /* =======================================================
+     DOM OBSERVER
+     ======================================================= */
+
+  function startObserver() {
+
+    if (!document.body) {
+      return;
+    }
+
+    try {
+
+      const observer =
+        new MutationObserver(
+          function () {
+
+            connectContactButton();
+
+            /*
+              Do not constantly recreate
+              the Back button.
+            */
+
+            if (
+              !backButton ||
+              !document.body.contains(
+                backButton
+              )
+            ) {
+              createBackButton();
+            }
+
+            updateBackButton();
+
+          }
+        );
+
+      observer.observe(
+        document.body,
+        {
+          childList:true,
+          subtree:true
+        }
+      );
+
+    } catch (e) {}
 
   }
 
@@ -2089,12 +2949,18 @@
 
     document.addEventListener(
       "DOMContentLoaded",
-      startupRepair
+      function () {
+
+        startupRepair();
+        startObserver();
+
+      }
     );
 
   } else {
 
     startupRepair();
+    startObserver();
 
   }
 
