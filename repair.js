@@ -1,7 +1,10 @@
 /* =========================================================
    HISAB V7 — FINAL REPAIR / FUNCTION CONNECTOR
+   Personal + Business + Udhaar
+   Bills + Loans + EMI
+   Payment Status + History Support
+   Visible Back Button
    Works with existing index.html + app.js + style.css
-   No UI rewrite
    ========================================================= */
 
 (function () {
@@ -29,9 +32,13 @@
 
   function refreshPage() {
     try {
-      const p = currentPage();
-      if (p && typeof show === "function") {
-        show(p.id);
+      const p =
+        typeof currentPage === "function"
+          ? currentPage()
+          : null;
+
+      if (p && typeof window.show === "function") {
+        window.show(p.id);
       }
     } catch (e) {}
   }
@@ -69,7 +76,7 @@
   };
 
   /* =======================================================
-     BACK BUTTON
+     BACK HISTORY
      ======================================================= */
 
   let lastPage = "home";
@@ -90,46 +97,203 @@
 
     lastPage = id || "home";
 
-    return originalShowForHistory(id);
+    const result =
+      originalShowForHistory
+        ? originalShowForHistory(id)
+        : undefined;
+
+    setTimeout(addVisibleBackButton, 20);
+
+    return result;
   };
+
+  /* =======================================================
+     VISIBLE BACK BUTTON
+     ======================================================= */
+
+  const backPages = [
+    "personal",
+    "business",
+    "khataEntry",
+    "khataDetail",
+    "transactions",
+    "planning",
+    "credit",
+    "reports",
+    "reminders",
+    "privacy",
+    "family",
+    "familytools",
+    "tools13",
+    "final"
+  ];
+
+  function addVisibleBackButton() {
+
+    try {
+
+      document
+        .querySelectorAll(".hisab-visible-back")
+        .forEach(x => x.remove());
+
+      const page =
+        typeof currentPage === "function"
+          ? currentPage()
+          : null;
+
+      if (!page) return;
+
+      if (!backPages.includes(page.id)) {
+        return;
+      }
+
+      const btn =
+        document.createElement("button");
+
+      btn.className =
+        "hisab-visible-back";
+
+      btn.type = "button";
+
+      btn.textContent = "← Back";
+
+      btn.style.cssText = `
+        display:block;
+        width:calc(100% - 24px);
+        margin:10px 12px 6px;
+        padding:11px 14px;
+        border:0;
+        border-radius:12px;
+        background:#eef2f7;
+        color:#082b45;
+        font-size:15px;
+        font-weight:700;
+        text-align:left;
+        cursor:pointer;
+        box-sizing:border-box;
+      `;
+
+      btn.onclick = function () {
+
+        if (
+          typeof window.back ===
+          "function"
+        ) {
+          window.back();
+          return;
+        }
+
+        if (
+          typeof window.goBack ===
+          "function"
+        ) {
+          window.goBack();
+          return;
+        }
+
+        if (
+          typeof window.show ===
+          "function"
+        ) {
+          window.show("home");
+        }
+
+      };
+
+      page.insertBefore(
+        btn,
+        page.firstElementChild
+      );
+
+    } catch (e) {}
+  }
+
+  /* =======================================================
+     BACK BUTTON FUNCTION
+     ======================================================= */
 
   window.back = function () {
 
     try {
-      if (history.length > 1) {
+
+      if (
+        location.hash &&
+        history.length > 1
+      ) {
         history.back();
         return;
       }
+
     } catch (e) {}
-
-    if (typeof window.goBack === "function") {
-      window.goBack();
-    } else {
-      window.show("home");
-    }
-  };
-
-  window.addEventListener("popstate", function () {
-
-    let id = "home";
 
     try {
-      id =
-        location.hash
-          ? location.hash.substring(1)
-          : "home";
+
+      if (
+        typeof window.goBack ===
+        "function"
+      ) {
+        window.goBack();
+        return;
+      }
+
     } catch (e) {}
 
-    if (!$(id)) {
-      id = "home";
-    }
+    try {
 
-    lastPage = id;
+      if (
+        typeof window.show ===
+        "function"
+      ) {
+        window.show("home");
+      }
 
-    if (typeof originalShowForHistory === "function") {
-      originalShowForHistory(id);
+    } catch (e) {}
+
+  };
+
+  /* =======================================================
+     POPSTATE
+     ======================================================= */
+
+  window.addEventListener(
+    "popstate",
+    function () {
+
+      let id = "home";
+
+      try {
+
+        id =
+          location.hash
+            ? location.hash.substring(1)
+            : "home";
+
+      } catch (e) {}
+
+      if (!$(id)) {
+        id = "home";
+      }
+
+      lastPage = id;
+
+      try {
+
+        if (
+          typeof originalShowForHistory ===
+          "function"
+        ) {
+          originalShowForHistory(id);
+        }
+
+      } catch (e) {}
+
+      setTimeout(
+        addVisibleBackButton,
+        30
+      );
+
     }
-  });
+  );
 
   /* =======================================================
      ANDROID / BROWSER BACK
@@ -138,11 +302,13 @@
   document.addEventListener(
     "backbutton",
     function (e) {
+
       try {
         e.preventDefault();
       } catch (x) {}
 
       window.back();
+
     },
     false
   );
@@ -159,109 +325,160 @@
     let phone = "";
 
     if (Array.isArray(contact.name)) {
-      name = contact.name[0] || "";
+      name =
+        contact.name[0] || "";
     } else {
-      name = contact.name || "";
+      name =
+        contact.name || "";
     }
 
     if (Array.isArray(contact.phones)) {
+
       phone =
         contact.phones[0]?.number ||
         contact.phones[0]?.value ||
         "";
+
     }
 
-    if (!phone && Array.isArray(contact.tel)) {
-      phone = contact.tel[0] || "";
+    if (
+      !phone &&
+      Array.isArray(contact.tel)
+    ) {
+      phone =
+        contact.tel[0] || "";
     }
 
     if ($("businessPersonName")) {
-      $("businessPersonName").value = name;
+      $("businessPersonName").value =
+        name;
     }
 
     if ($("businessPersonPhone")) {
-      $("businessPersonPhone").value = phone;
+      $("businessPersonPhone").value =
+        phone;
     }
+
   }
 
-  window.selectBusinessContact = async function () {
+  window.selectBusinessContact =
+    async function () {
 
-    try {
-
-      if (
-        window.Capacitor &&
-        typeof window.Capacitor.registerPlugin === "function"
-      ) {
-
-        const Contacts =
-          window.Capacitor.registerPlugin("Contacts");
+      try {
 
         if (
-          Contacts &&
-          typeof Contacts.pickContact === "function"
+          window.Capacitor &&
+          typeof
+            window.Capacitor
+              .registerPlugin ===
+            "function"
         ) {
 
-          const result =
-            await Contacts.pickContact();
+          const Contacts =
+            window.Capacitor
+              .registerPlugin(
+                "Contacts"
+              );
 
-          const contact =
-            result?.contact ||
-            result;
+          if (
+            Contacts &&
+            typeof
+              Contacts.pickContact ===
+              "function"
+          ) {
 
-          if (contact) {
-            fillBusinessContact(contact);
-            return;
+            const result =
+              await Contacts.pickContact();
+
+            const contact =
+              result?.contact ||
+              result;
+
+            if (contact) {
+
+              fillBusinessContact(
+                contact
+              );
+
+              return;
+
+            }
+
           }
+
+          if (
+            Contacts &&
+            typeof
+              Contacts.pickContacts ===
+              "function"
+          ) {
+
+            const result =
+              await Contacts.pickContacts({
+                multiple:false
+              });
+
+            const contact =
+              result?.contacts?.[0] ||
+              result?.[0];
+
+            if (contact) {
+
+              fillBusinessContact(
+                contact
+              );
+
+              return;
+
+            }
+
+          }
+
         }
+
+        /* Browser fallback */
 
         if (
-          Contacts &&
-          typeof Contacts.pickContacts === "function"
+          navigator.contacts &&
+          typeof
+            navigator.contacts.select ===
+            "function"
         ) {
 
-          const result =
-            await Contacts.pickContacts({
-              multiple: false
-            });
+          const contacts =
+            await navigator.contacts.select(
+              ["name","tel"],
+              {
+                multiple:false
+              }
+            );
 
-          const contact =
-            result?.contacts?.[0] ||
-            result?.[0];
+          if (contacts?.[0]) {
 
-          if (contact) {
-            fillBusinessContact(contact);
+            fillBusinessContact(
+              contacts[0]
+            );
+
             return;
+
           }
+
         }
+
+        throw new Error(
+          "Contact picker unavailable"
+        );
+
+      } catch (e) {
+
+        alert(
+          "Phone contact picker available nahi hai.\n\n" +
+          "Name aur Mobile number manually enter karein."
+        );
+
       }
 
-      if (
-        navigator.contacts &&
-        typeof navigator.contacts.select === "function"
-      ) {
-
-        const contacts =
-          await navigator.contacts.select(
-            ["name", "tel"],
-            { multiple: false }
-          );
-
-        if (contacts?.[0]) {
-          fillBusinessContact(contacts[0]);
-          return;
-        }
-      }
-
-      throw new Error("Contact picker unavailable");
-
-    } catch (e) {
-
-      alert(
-        "Phone contact picker available nahi hai.\n\n" +
-        "Name aur Mobile number manually enter karein."
-      );
-    }
-  };
+    };
 
   /* =======================================================
      DYNAMIC CONTACT BUTTON
@@ -276,36 +493,50 @@
 
     btn.onclick =
       window.selectBusinessContact;
+
   }
 
   const observer =
-    new MutationObserver(function () {
-      connectContactButton();
-    });
+    new MutationObserver(
+      function () {
+        connectContactButton();
+        addVisibleBackButton();
+      }
+    );
 
   function startObserver() {
 
     if (!document.body) {
-      setTimeout(startObserver, 300);
+
+      setTimeout(
+        startObserver,
+        300
+      );
+
       return;
+
     }
 
     try {
+
       observer.observe(
         document.body,
         {
-          childList: true,
-          subtree: true
+          childList:true,
+          subtree:true
         }
       );
+
     } catch (e) {}
 
     connectContactButton();
+
+    addVisibleBackButton();
+
   }
 
   /* =======================================================
-     BILL IMPROVEMENT
-     Multiple entries + date + status + paid
+     BILL DATA
      ======================================================= */
 
   function ensureBillData() {
@@ -314,111 +545,131 @@
 
     if (!d) return;
 
-    if (!Array.isArray(d.bills)) {
+    if (
+      !Array.isArray(d.bills)
+    ) {
       d.bills = [];
     }
 
+    let changed = false;
+
     d.bills.forEach(x => {
 
-      if (!x.id) x.id = uid();
+      if (!x.id) {
+        x.id = uid();
+        changed = true;
+      }
 
       if (!x.status) {
         x.status = "pending";
+        changed = true;
       }
 
       if (!x.date) {
-        x.date = x.due || today();
+        x.date =
+          x.due || today();
+        changed = true;
       }
 
       if (x.paid === undefined) {
-        x.paid = x.status === "settled";
+        x.paid =
+          x.status === "settled";
+        changed = true;
       }
 
     });
 
-    saveSafe();
+    if (changed) {
+      saveSafe();
+    }
+
   }
+
+  /* =======================================================
+     ADD BILL
+     ======================================================= */
 
   const originalAddBill =
     window.addBill;
 
-  window.addBill = function (kind = "Bill") {
+  window.addBill =
+    function (kind = "Bill") {
 
-    if (typeof originalAddBill === "function") {
-      originalAddBill(kind);
-    }
+      if (
+        typeof originalAddBill ===
+        "function"
+      ) {
+        originalAddBill(kind);
+      }
 
-    setTimeout(() => {
+      setTimeout(
+        function () {
+
+          ensureBillData();
+
+          try {
+            renderEnhancedPayments();
+          } catch (e) {}
+
+        },
+        30
+      );
+
+    };
+
+  /* =======================================================
+     BILL PAID / PENDING
+     ======================================================= */
+
+  window.markBillPaid =
+    function (id) {
 
       const d = data();
 
-      if (!d || !Array.isArray(d.bills)) return;
+      if (!d) return;
 
-      const last =
-        d.bills[d.bills.length - 1];
+      const x =
+        d.bills.find(
+          a => a.id === id
+        );
 
-      if (last) {
+      if (!x) return;
 
-        if (!last.id)
-          last.id = uid();
+      x.status = "settled";
+      x.paid = true;
+      x.paidDate = today();
 
-        if (!last.date)
-          last.date =
-            last.due || today();
+      saveSafe();
 
-        if (!last.status)
-          last.status = "pending";
+      renderEnhancedPayments();
 
-        last.paid =
-          last.status === "settled";
+    };
 
-        saveSafe();
-        renderEnhancedPayments();
-      }
+  window.markBillPending =
+    function (id) {
 
-    }, 30);
-  };
+      const d = data();
 
-  window.markBillPaid = function (id) {
+      if (!d) return;
 
-    const d = data();
+      const x =
+        d.bills.find(
+          a => a.id === id
+        );
 
-    if (!d) return;
+      if (!x) return;
 
-    const x =
-      d.bills.find(a => a.id === id);
+      x.status = "pending";
+      x.paid = false;
 
-    if (!x) return;
+      saveSafe();
 
-    x.status = "settled";
-    x.paid = true;
-    x.paidDate = today();
+      renderEnhancedPayments();
 
-    saveSafe();
-    renderEnhancedPayments();
-  };
-
-  window.markBillPending = function (id) {
-
-    const d = data();
-
-    if (!d) return;
-
-    const x =
-      d.bills.find(a => a.id === id);
-
-    if (!x) return;
-
-    x.status = "pending";
-    x.paid = false;
-
-    saveSafe();
-    renderEnhancedPayments();
-  };
+    };
 
   /* =======================================================
-     LOAN / EMI IMPROVEMENT
-     Multiple loans + multiple EMI records
+     LOAN / EMI DATA
      ======================================================= */
 
   function ensureLoanData() {
@@ -427,162 +678,422 @@
 
     if (!d) return;
 
-    if (!Array.isArray(d.loans))
+    if (
+      !Array.isArray(d.loans)
+    ) {
       d.loans = [];
+    }
 
-    if (!Array.isArray(d.emis))
+    if (
+      !Array.isArray(d.emis)
+    ) {
       d.emis = [];
+    }
+
+    let changed = false;
 
     d.loans.forEach(x => {
 
-      if (!x.id)
+      if (!x.id) {
         x.id = uid();
+        changed = true;
+      }
 
-      if (!x.date)
+      if (!x.date) {
         x.date = today();
+        changed = true;
+      }
 
-      if (!x.status)
+      if (!x.status) {
         x.status = "active";
+        changed = true;
+      }
 
-      if (x.paid === undefined)
+      if (x.paid === undefined) {
         x.paid = 0;
+        changed = true;
+      }
 
-      if (x.remaining === undefined) {
+      if (
+        x.remaining ===
+        undefined
+      ) {
+
         x.remaining =
           Math.max(
             0,
             Number(x.amount || 0) -
             Number(x.paid || 0)
           );
+
+        changed = true;
+
+      }
+
+      if (
+        !Array.isArray(x.history)
+      ) {
+        x.history = [];
+        changed = true;
       }
 
     });
 
     d.emis.forEach(x => {
 
-      if (!x.id)
+      if (!x.id) {
         x.id = uid();
+        changed = true;
+      }
 
-      if (!x.date)
+      if (!x.date) {
         x.date = today();
+        changed = true;
+      }
 
-      if (!x.status)
+      if (!x.status) {
         x.status = "pending";
+        changed = true;
+      }
+
+      if (
+        !Array.isArray(x.history)
+      ) {
+        x.history = [];
+        changed = true;
+      }
 
     });
 
-    saveSafe();
+    if (changed) {
+      saveSafe();
+    }
+
   }
+
+  /* =======================================================
+     LOAN SAVE
+     ======================================================= */
 
   const originalSaveLoan =
     window.saveLoan;
 
-  window.saveLoan = function () {
+  window.saveLoan =
+    function () {
 
-    if (typeof originalSaveLoan === "function") {
-      originalSaveLoan();
-    }
+      if (
+        typeof originalSaveLoan ===
+        "function"
+      ) {
+        originalSaveLoan();
+      }
 
-    setTimeout(() => {
+      setTimeout(
+        function () {
 
-      ensureLoanData();
-      renderEnhancedPayments();
+          ensureLoanData();
 
-    }, 30);
-  };
+          try {
+            renderEnhancedPayments();
+          } catch (e) {}
+
+        },
+        30
+      );
+
+    };
+
+  /* =======================================================
+     EMI CALCULATOR
+     ======================================================= */
 
   const originalCalcEMI =
     window.calcEMI;
 
-  window.calcEMI = function () {
+  window.calcEMI =
+    function () {
 
-    if (typeof originalCalcEMI === "function") {
-      originalCalcEMI();
-    }
+      if (
+        typeof originalCalcEMI ===
+        "function"
+      ) {
+        originalCalcEMI();
+      }
 
-    setTimeout(() => {
+      setTimeout(
+        function () {
 
-      ensureLoanData();
+          ensureLoanData();
+
+          try {
+            renderEnhancedPayments();
+          } catch (e) {}
+
+        },
+        30
+      );
+
+    };
+
+  /* =======================================================
+     EMI PAID / PENDING
+     ======================================================= */
+
+  window.markEMIPaid =
+    function (id) {
+
+      const d = data();
+
+      if (!d) return;
+
+      const x =
+        d.emis.find(
+          a => a.id === id
+        );
+
+      if (!x) return;
+
+      x.status = "paid";
+      x.paidDate = today();
+
+      saveSafe();
+
       renderEnhancedPayments();
 
-    }, 30);
-  };
+    };
 
-  window.markEMIPaid = function (id) {
+  window.markEMIPending =
+    function (id) {
 
-    const d = data();
+      const d = data();
 
-    if (!d) return;
+      if (!d) return;
 
-    const x =
-      d.emis.find(a => a.id === id);
+      const x =
+        d.emis.find(
+          a => a.id === id
+        );
 
-    if (!x) return;
+      if (!x) return;
 
-    x.status = "paid";
-    x.paidDate = today();
+      x.status = "pending";
 
-    saveSafe();
-    renderEnhancedPayments();
-  };
+      saveSafe();
 
-  window.markEMIPending = function (id) {
+      renderEnhancedPayments();
 
-    const d = data();
+    };
 
-    if (!d) return;
+  /* =======================================================
+     LOAN PAYMENT
+     ======================================================= */
 
-    const x =
-      d.emis.find(a => a.id === id);
+  window.addLoanPayment =
+    function (id) {
 
-    if (!x) return;
+      const d = data();
 
-    x.status = "pending";
+      if (!d) return;
 
-    saveSafe();
-    renderEnhancedPayments();
-  };
+      const x =
+        d.loans.find(
+          a => a.id === id
+        );
 
-  window.addLoanPayment = function (id) {
+      if (!x) return;
 
-    const d = data();
+      const amount =
+        Number(
+          prompt(
+            "Payment amount"
+          ) || 0
+        );
 
-    if (!d) return;
+      if (amount <= 0) {
 
-    const x =
-      d.loans.find(a => a.id === id);
+        alert(
+          "Enter valid payment amount"
+        );
 
-    if (!x) return;
+        return;
 
-    const amount =
-      Number(
-        prompt("Payment amount") || 0
+      }
+
+      if (
+        !Array.isArray(x.history)
+      ) {
+        x.history = [];
+      }
+
+      const payment = {
+        id:uid(),
+        amount,
+        date:today()
+      };
+
+      x.history.push(payment);
+
+      x.paid =
+        Number(x.paid || 0) +
+        amount;
+
+      x.remaining =
+        Math.max(
+          0,
+          Number(x.amount || 0) -
+          x.paid
+        );
+
+      x.lastPaymentDate =
+        today();
+
+      if (
+        x.remaining <= 0
+      ) {
+        x.status =
+          "completed";
+      }
+
+      saveSafe();
+
+      renderEnhancedPayments();
+
+    };
+
+  /* =======================================================
+     LOAN PAYMENT HISTORY
+     ======================================================= */
+
+  window.viewLoanHistory =
+    function (id) {
+
+      const d = data();
+
+      if (!d) return;
+
+      const x =
+        d.loans.find(
+          a => a.id === id
+        );
+
+      if (!x) return;
+
+      const history =
+        Array.isArray(x.history)
+          ? x.history
+          : [];
+
+      if (!history.length) {
+
+        alert(
+          "No payment history yet."
+        );
+
+        return;
+
+      }
+
+      let text =
+        "LOAN PAYMENT HISTORY\n\n";
+
+      text +=
+        "Loan: " +
+        (x.name || "") +
+        "\n\n";
+
+      history.forEach(
+        (p,i) => {
+
+          text +=
+            (i + 1) +
+            ". " +
+            (p.date || "-") +
+            "  " +
+            moneySafe(
+              p.amount
+            ) +
+            "\n";
+
+        }
       );
 
-    if (amount <= 0) {
-      alert("Enter valid payment amount");
-      return;
-    }
+      text +=
+        "\nTotal Paid: " +
+        moneySafe(
+          x.paid || 0
+        );
 
-    x.paid =
-      Number(x.paid || 0) + amount;
-
-    x.remaining =
-      Math.max(
-        0,
-        Number(x.amount || 0) -
-        x.paid
+      shareTextSafe(
+        text,
+        "HISAB Loan History"
       );
 
-    x.lastPaymentDate = today();
+    };
 
-    if (x.remaining <= 0) {
-      x.status = "completed";
-    }
+  /* =======================================================
+     EMI HISTORY
+     ======================================================= */
 
-    saveSafe();
-    renderEnhancedPayments();
-  };
+  window.viewEMIHistory =
+    function (id) {
+
+      const d = data();
+
+      if (!d) return;
+
+      const x =
+        d.emis.find(
+          a => a.id === id
+        );
+
+      if (!x) return;
+
+      const history =
+        Array.isArray(x.history)
+          ? x.history
+          : [];
+
+      let text =
+        "EMI PAYMENT HISTORY\n\n";
+
+      text +=
+        "EMI: " +
+        moneySafe(x.emi) +
+        "\n\n";
+
+      if (!history.length) {
+
+        text +=
+          "No payment history yet.";
+
+      } else {
+
+        history.forEach(
+          (p,i) => {
+
+            text +=
+              (i + 1) +
+              ". " +
+              (p.date || "-") +
+              "  " +
+              moneySafe(
+                p.amount ||
+                x.emi ||
+                0
+              ) +
+              "\n";
+
+          }
+        );
+
+      }
+
+      shareTextSafe(
+        text,
+        "HISAB EMI History"
+      );
+
+    };
 
   /* =======================================================
      ENHANCED PAYMENTS DISPLAY
@@ -600,6 +1111,8 @@
       if (!list) return;
 
       const d = data();
+
+      if (!d) return;
 
       const bills =
         d.bills.filter(
@@ -629,7 +1142,9 @@
 
               <div class="list-card">
 
-                <b>${escSafe(x.name)}</b>
+                <b>
+                  ${escSafe(x.name)}
+                </b>
 
                 <div class="amount">
                   ${moneySafe(x.amount)}
@@ -637,15 +1152,21 @@
 
                 <div class="meta">
                   Date:
-                  ${escSafe(x.date || "-")}
+                  ${escSafe(
+                    x.date || "-"
+                  )}
                 </div>
 
                 <div class="meta">
                   Due:
-                  ${escSafe(x.due || "-")}
+                  ${escSafe(
+                    x.due || "-"
+                  )}
                 </div>
 
-                <div style="margin-top:7px">
+                <div
+                  style="margin-top:7px"
+                >
 
                   <span class="${
                     x.status === "settled"
@@ -654,7 +1175,8 @@
                   }">
 
                     ${
-                      x.status === "settled"
+                      x.status ===
+                      "settled"
                       ? "Paid"
                       : "Pending"
                     }
@@ -663,11 +1185,14 @@
 
                 </div>
 
-                <div class="action-row"
-                  style="margin-top:9px">
+                <div
+                  class="action-row"
+                  style="margin-top:9px"
+                >
 
                   ${
-                    x.status !== "settled"
+                    x.status !==
+                    "settled"
                     ? `
                       <button
                         type="button"
@@ -715,7 +1240,9 @@
 
               <div class="list-card">
 
-                <b>${escSafe(x.name)}</b>
+                <b>
+                  ${escSafe(x.name)}
+                </b>
 
                 <div class="amount">
                   ${moneySafe(x.amount)}
@@ -723,10 +1250,14 @@
 
                 <div class="meta">
                   Due:
-                  ${escSafe(x.due || "-")}
+                  ${escSafe(
+                    x.due || "-"
+                  )}
                 </div>
 
-                <div style="margin-top:7px">
+                <div
+                  style="margin-top:7px"
+                >
 
                   <span class="${
                     x.status === "settled"
@@ -735,7 +1266,8 @@
                   }">
 
                     ${
-                      x.status === "settled"
+                      x.status ===
+                      "settled"
                       ? "Paid"
                       : "Pending"
                     }
@@ -744,11 +1276,14 @@
 
                 </div>
 
-                <div class="action-row"
-                  style="margin-top:9px">
+                <div
+                  class="action-row"
+                  style="margin-top:9px"
+                >
 
                   ${
-                    x.status !== "settled"
+                    x.status !==
+                    "settled"
                     ? `
                       <button
                         type="button"
@@ -795,18 +1330,23 @@
             ? loans.map(x => {
 
               const amount =
-                Number(x.amount || 0);
+                Number(
+                  x.amount || 0
+                );
 
               const paid =
-                Number(x.paid || 0);
+                Number(
+                  x.paid || 0
+                );
 
               const remaining =
                 Math.max(
                   0,
                   Number(
-                    x.remaining !== undefined
-                    ? x.remaining
-                    : amount - paid
+                    x.remaining !==
+                    undefined
+                      ? x.remaining
+                      : amount - paid
                   )
                 );
 
@@ -815,7 +1355,9 @@
                 ? Math.min(
                     100,
                     Math.round(
-                      paid / amount * 100
+                      paid /
+                      amount *
+                      100
                     )
                   )
                 : 0;
@@ -824,7 +1366,9 @@
 
                 <div class="list-card">
 
-                  <b>${escSafe(x.name)}</b>
+                  <b>
+                    ${escSafe(x.name)}
+                  </b>
 
                   <div class="amount">
                     ${moneySafe(amount)}
@@ -832,15 +1376,21 @@
 
                   <div class="meta">
                     Interest:
-                    ${escSafe(x.rate || 0)}%
+                    ${escSafe(
+                      x.rate || 0
+                    )}%
                     •
-                    ${escSafe(x.months || 0)}
+                    ${escSafe(
+                      x.months || 0
+                    )}
                     months
                   </div>
 
                   <div class="meta">
                     Loan Date:
-                    ${escSafe(x.date || "-")}
+                    ${escSafe(
+                      x.date || "-"
+                    )}
                   </div>
 
                   <div class="meta">
@@ -850,7 +1400,9 @@
 
                   <div class="meta">
                     Remaining:
-                    ${moneySafe(remaining)}
+                    ${moneySafe(
+                      remaining
+                    )}
                   </div>
 
                   <div
@@ -874,11 +1426,14 @@
                   </div>
 
                   <div class="meta">
-                    ${percent}% completed
+                    ${percent}%
+                    completed
                   </div>
 
-                  <div class="action-row"
-                    style="margin-top:9px">
+                  <div
+                    class="action-row"
+                    style="margin-top:9px"
+                  >
 
                     ${
                       remaining > 0
@@ -887,6 +1442,19 @@
                           type="button"
                           onclick="addLoanPayment('${x.id}')">
                           💵 Payment
+                        </button>
+                      `
+                      : ""
+                    }
+
+                    ${
+                      x.history &&
+                      x.history.length
+                      ? `
+                        <button
+                          type="button"
+                          onclick="viewLoanHistory('${x.id}')">
+                          History
                         </button>
                       `
                       : ""
@@ -926,26 +1494,35 @@
               <div class="list-card">
 
                 <b>
-                  EMI ${moneySafe(x.emi)}
+                  EMI
+                  ${moneySafe(x.emi)}
                 </b>
 
                 <div class="meta">
                   Principal:
-                  ${moneySafe(x.principal)}
+                  ${moneySafe(
+                    x.principal
+                  )}
                 </div>
 
                 <div class="meta">
                   Tenure:
-                  ${escSafe(x.months || 0)}
+                  ${escSafe(
+                    x.months || 0
+                  )}
                   months
                 </div>
 
                 <div class="meta">
                   Date:
-                  ${escSafe(x.date || "-")}
+                  ${escSafe(
+                    x.date || "-"
+                  )}
                 </div>
 
-                <div style="margin-top:7px">
+                <div
+                  style="margin-top:7px"
+                >
 
                   <span class="${
                     x.status === "paid"
@@ -963,8 +1540,10 @@
 
                 </div>
 
-                <div class="action-row"
-                  style="margin-top:9px">
+                <div
+                  class="action-row"
+                  style="margin-top:9px"
+                >
 
                   ${
                     x.status !== "paid"
@@ -982,6 +1561,19 @@
                         ↩ Pending
                       </button>
                     `
+                  }
+
+                  ${
+                    x.history &&
+                    x.history.length
+                    ? `
+                      <button
+                        type="button"
+                        onclick="viewEMIHistory('${x.id}')">
+                        History
+                      </button>
+                    `
+                    : ""
                   }
 
                   <button
@@ -1003,7 +1595,9 @@
           }
 
         </div>
+
       `;
+
     };
 
   /* =======================================================
@@ -1013,329 +1607,474 @@
   function escSafe(v) {
 
     try {
-      if (typeof esc === "function") {
+
+      if (
+        typeof esc ===
+        "function"
+      ) {
         return esc(v);
       }
+
     } catch (e) {}
 
     return String(v ?? "")
-      .replace(/[&<>"']/g, function (m) {
-        return {
-          "&":"&amp;",
-          "<":"&lt;",
-          ">":"&gt;",
-          '"':"&quot;",
-          "'":"&#039;"
-        }[m];
-      });
+      .replace(
+        /[&<>"']/g,
+        function (m) {
+
+          return {
+            "&":"&amp;",
+            "<":"&lt;",
+            ">":"&gt;",
+            '"':"&quot;",
+            "'":"&#039;"
+          }[m];
+
+        }
+      );
+
   }
 
   function moneySafe(v) {
 
     try {
-      if (typeof money === "function") {
+
+      if (
+        typeof money ===
+        "function"
+      ) {
         return money(v);
       }
+
     } catch (e) {}
 
     const d = data();
 
     return (
       (d?.currency || "₹") +
-      Number(v || 0).toLocaleString(
-        "en-IN",
-        { maximumFractionDigits: 2 }
-      )
+      Number(v || 0)
+        .toLocaleString(
+          "en-IN",
+          {
+            maximumFractionDigits:2
+          }
+        )
     );
+
+  }
+
+  function shareTextSafe(
+    text,
+    title
+  ) {
+
+    try {
+
+      if (
+        typeof shareText ===
+        "function"
+      ) {
+        shareText(
+          text,
+          title
+        );
+        return;
+      }
+
+    } catch (e) {}
+
+    try {
+
+      if (
+        navigator.clipboard
+      ) {
+
+        navigator.clipboard
+          .writeText(text)
+          .then(
+            () =>
+              alert("Copied")
+          );
+
+        return;
+
+      }
+
+    } catch (e) {}
+
+    alert(text);
+
   }
 
   /* =======================================================
-     BUDGET — SIMPLE VIEW / CHANGE
+     BUDGET
      ======================================================= */
 
-  window.viewBudget = function () {
-
-    const d = data();
-
-    if (!d) return;
-
-    alert(
-      "Monthly Budget\n\n" +
-      "Budget: " +
-      moneySafe(d.budget || 0) +
-      "\nSpent: " +
-      moneySafe(
-        typeof totalExpense === "function"
-        ? totalExpense()
-        : 0
-      ) +
-      "\nRemaining: " +
-      moneySafe(
-        Number(d.budget || 0) -
-        (
-          typeof totalExpense === "function"
-          ? totalExpense()
-          : 0
-        )
-      )
-    );
-  };
-
-  window.changeBudget = function () {
-
-    const d = data();
-
-    if (!d) return;
-
-    const amount =
-      Number(
-        prompt(
-          "Enter new monthly budget",
-          d.budget || 0
-        ) || 0
-      );
-
-    if (amount < 0) {
-      alert("Invalid budget");
-      return;
-    }
-
-    d.budget = amount;
-
-    saveSafe();
-
-    if (typeof renderPlanning === "function") {
-      renderPlanning();
-    }
-  };
-
-  /* =======================================================
-     SAVINGS / GOAL UPDATE
-     ======================================================= */
-
-  window.updateSavings = function (id) {
-
-    const d = data();
-
-    if (!d) return;
-
-    const g =
-      d.goals.find(x => x.id === id);
-
-    if (!g) return;
-
-    const amount =
-      Number(
-        prompt(
-          "Add saved amount",
-          0
-        ) || 0
-      );
-
-    if (amount <= 0) {
-      alert("Enter valid amount");
-      return;
-    }
-
-    g.saved =
-      Number(g.saved || 0) +
-      amount;
-
-    saveSafe();
-
-    if (typeof renderPlanning === "function") {
-      renderPlanning();
-    }
-  };
-
-  window.deleteGoal = function (id) {
-
-    const d = data();
-
-    if (!d) return;
-
-    if (!confirm("Delete this savings goal?")) {
-      return;
-    }
-
-    d.goals =
-      d.goals.filter(x => x.id !== id);
-
-    saveSafe();
-
-    if (typeof renderPlanning === "function") {
-      renderPlanning();
-    }
-  };
-
-  /* =======================================================
-     FAMILY DELETE FIX
-     ======================================================= */
-
-  if (typeof window.deleteFamily !== "function") {
-
-    window.deleteFamily = function (id) {
+  window.viewBudget =
+    function () {
 
       const d = data();
 
       if (!d) return;
 
-      d.family =
-        (d.family || [])
-          .filter(x => x.id !== id);
+      const spent =
+        typeof totalExpense ===
+        "function"
+          ? totalExpense()
+          : 0;
+
+      const remaining =
+        Number(d.budget || 0) -
+        spent;
+
+      alert(
+        "Monthly Budget\n\n" +
+        "Budget: " +
+        moneySafe(
+          d.budget || 0
+        ) +
+        "\nSpent: " +
+        moneySafe(spent) +
+        "\nRemaining: " +
+        moneySafe(remaining)
+      );
+
+    };
+
+  window.changeBudget =
+    function () {
+
+      const d = data();
+
+      if (!d) return;
+
+      const amount =
+        Number(
+          prompt(
+            "Enter new monthly budget",
+            d.budget || 0
+          ) || 0
+        );
+
+      if (amount < 0) {
+
+        alert(
+          "Invalid budget"
+        );
+
+        return;
+
+      }
+
+      d.budget = amount;
 
       saveSafe();
 
       if (
-        typeof renderFamily === "function"
+        typeof renderPlanning ===
+        "function"
       ) {
-        renderFamily();
+        renderPlanning();
       }
+
     };
+
+  /* =======================================================
+     SAVINGS / GOAL UPDATE
+     ======================================================= */
+
+  window.updateSavings =
+    function (id) {
+
+      const d = data();
+
+      if (!d) return;
+
+      const g =
+        d.goals.find(
+          x => x.id === id
+        );
+
+      if (!g) return;
+
+      const amount =
+        Number(
+          prompt(
+            "Add saved amount",
+            0
+          ) || 0
+        );
+
+      if (amount <= 0) {
+
+        alert(
+          "Enter valid amount"
+        );
+
+        return;
+
+      }
+
+      g.saved =
+        Number(g.saved || 0) +
+        amount;
+
+      saveSafe();
+
+      if (
+        typeof renderPlanning ===
+        "function"
+      ) {
+        renderPlanning();
+      }
+
+    };
+
+  window.deleteGoal =
+    function (id) {
+
+      const d = data();
+
+      if (!d) return;
+
+      if (
+        !confirm(
+          "Delete this savings goal?"
+        )
+      ) {
+        return;
+      }
+
+      d.goals =
+        d.goals.filter(
+          x => x.id !== id
+        );
+
+      saveSafe();
+
+      if (
+        typeof renderPlanning ===
+        "function"
+      ) {
+        renderPlanning();
+      }
+
+    };
+
+  /* =======================================================
+     FAMILY DELETE FIX
+     ======================================================= */
+
+  if (
+    typeof window.deleteFamily !==
+    "function"
+  ) {
+
+    window.deleteFamily =
+      function (id) {
+
+        const d = data();
+
+        if (!d) return;
+
+        d.family =
+          (d.family || [])
+            .filter(
+              x => x.id !== id
+            );
+
+        saveSafe();
+
+        if (
+          typeof renderFamily ===
+          "function"
+        ) {
+          renderFamily();
+        }
+
+      };
+
   }
 
   /* =======================================================
-     IMPROVE PLANNING DISPLAY WITHOUT CHANGING HTML
+     PLANNING DISPLAY
      ======================================================= */
 
   const originalRenderPlanning =
     window.renderPlanning;
 
-  window.renderPlanning = function () {
+  window.renderPlanning =
+    function () {
 
-    if (
-      typeof originalRenderPlanning ===
-      "function"
-    ) {
-      originalRenderPlanning();
-    }
+      if (
+        typeof originalRenderPlanning ===
+        "function"
+      ) {
+        originalRenderPlanning();
+      }
 
-    setTimeout(() => {
+      setTimeout(
+        function () {
 
-      const list =
-        $("goalList");
+          const list =
+            $("goalList");
 
-      const d = data();
+          const d = data();
 
-      if (!list || !d) return;
+          if (!list || !d) {
+            return;
+          }
 
-      const goals =
-        Array.isArray(d.goals)
-        ? d.goals
-        : [];
+          const goals =
+            Array.isArray(d.goals)
+              ? d.goals
+              : [];
 
-      if (!goals.length) return;
+          if (!goals.length) {
+            return;
+          }
 
-      const existing =
-        list.querySelectorAll(
-          ".hisab-goal-actions"
-        );
+          const existing =
+            list.querySelectorAll(
+              ".hisab-goal-actions"
+            );
 
-      if (existing.length) return;
+          if (existing.length) {
+            return;
+          }
 
-      const cards =
-        list.querySelectorAll(
-          ".list-card"
-        );
+          const cards =
+            list.querySelectorAll(
+              ".list-card"
+            );
 
-      goals.forEach((g,i) => {
+          goals.forEach(
+            function (g,i) {
 
-        const card = cards[i + 1];
+              const card =
+                cards[i + 1];
 
-        if (!card) return;
+              if (!card) return;
 
-        const actions =
-          document.createElement("div");
+              const actions =
+                document.createElement(
+                  "div"
+                );
 
-        actions.className =
-          "hisab-goal-actions action-row";
+              actions.className =
+                "hisab-goal-actions action-row";
 
-        actions.style.marginTop = "9px";
+              actions.style.marginTop =
+                "9px";
 
-        actions.innerHTML = `
+              actions.innerHTML = `
 
-          <button
-            type="button"
-            onclick="updateSavings('${g.id}')">
-            + Save
-          </button>
+                <button
+                  type="button"
+                  onclick="updateSavings('${g.id}')">
+                  + Save
+                </button>
 
-          <button
-            type="button"
-            onclick="deleteGoal('${g.id}')">
-            Delete
-          </button>
+                <button
+                  type="button"
+                  onclick="deleteGoal('${g.id}')">
+                  Delete
+                </button>
 
-        `;
+              `;
 
-        card.appendChild(actions);
-      });
+              card.appendChild(
+                actions
+              );
 
-    }, 20);
-  };
+            }
+          );
+
+        },
+        20
+      );
+
+    };
 
   /* =======================================================
-     PDF / SHARE SAFE CONNECTION
+     PDF / SHARE CONNECTION
      ======================================================= */
 
-  window.shareCurrentKhata = function () {
+  window.shareCurrentKhata =
+    function () {
 
-    if (
-      typeof shareKhata === "function"
-    ) {
-      shareKhata();
-      return;
-    }
+      if (
+        typeof shareKhata ===
+        "function"
+      ) {
 
-    alert("Share function unavailable");
-  };
+        shareKhata();
+        return;
 
-  window.pdfCurrentKhata = function () {
+      }
 
-    if (
-      typeof exportKhataPDF === "function"
-    ) {
-      exportKhataPDF();
-      return;
-    }
+      alert(
+        "Share function unavailable"
+      );
 
-    alert("PDF function unavailable");
-  };
+    };
+
+  window.pdfCurrentKhata =
+    function () {
+
+      if (
+        typeof exportKhataPDF ===
+        "function"
+      ) {
+
+        exportKhataPDF();
+        return;
+
+      }
+
+      alert(
+        "PDF function unavailable"
+      );
+
+    };
 
   /* =======================================================
-     STARTUP REPAIR
+     STARTUP
      ======================================================= */
 
   function startupRepair() {
 
     try {
       ensureBillData();
+    } catch (e) {}
+
+    try {
       ensureLoanData();
     } catch (e) {}
 
     connectContactButton();
 
-    /*
-      Keep existing app startup.
-      Only refresh payments after app is ready.
-    */
+    setTimeout(
+      function () {
 
-    setTimeout(() => {
+        try {
+          renderEnhancedPayments();
+        } catch (e) {}
 
-      try {
-        renderEnhancedPayments();
-      } catch (e) {}
+        try {
+          if (
+            typeof ensureModeSwitch ===
+            "function"
+          ) {
+            ensureModeSwitch();
+          }
+        } catch (e) {}
 
-      try {
-        if (
-          typeof ensureModeSwitch ===
-          "function"
-        ) {
-          ensureModeSwitch();
-        }
-      } catch (e) {}
+        addVisibleBackButton();
 
-    }, 150);
+      },
+      150
+    );
 
   }
 
