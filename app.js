@@ -1,121 +1,117 @@
 /* =========================================================
-   HISAB V7 — COMPLETE APP CONTROLLER
-   Personal + Business | Udhaar | Bills | Loans | Goals
-   Reports | PDF | Backup | PIN | Settings | Tools
+   HISAB V7 — FINAL COMPATIBLE APP CONTROLLER
+   Compatible with current index.html
+   Personal + Business
+   Udhaar | Transactions | Goals | Bills | EMI
+   Reports | Reminders | Backup | PIN | Tools
    ========================================================= */
 
 (function () {
   "use strict";
 
-  /* ---------- STORAGE ---------- */
+  const KEY = "hisab_v7_data";
 
-  const STORAGE_KEY = "hisab_v7_data";
-
-  const DEFAULT_DATA = {
+  const DEFAULT = {
     mode: "personal",
     currency: "₹",
     language: "en",
-
     transactions: [],
     khata: [],
     business: [],
-
     goals: [],
     savings: [],
     budget: [],
-
     bills: [],
     loans: [],
-    emis: [],
     reminders: [],
-
-    cards: [],
     family: [],
     tools: [],
-
     pin: "",
-    locked: false,
-
-    filters: {
-      transaction: "",
-      khata: "",
-      business: ""
-    }
+    locked: false
   };
 
-  let D = loadData();
+  let D = load();
 
-  /* ---------- BASIC HELPERS ---------- */
+  /* ================= BASIC ================= */
 
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-
-  function loadData() {
+  function load() {
     try {
       const raw =
-        localStorage.getItem(STORAGE_KEY) ||
+        localStorage.getItem(KEY) ||
         localStorage.getItem("hisab_v7_complete") ||
         localStorage.getItem("hisabData");
 
-      if (!raw) return clone(DEFAULT_DATA);
+      if (!raw) return clone(DEFAULT);
 
-      const parsed = JSON.parse(raw);
+      const x = JSON.parse(raw);
 
       return {
-        ...clone(DEFAULT_DATA),
-        ...parsed,
-        filters: {
-          ...DEFAULT_DATA.filters,
-          ...(parsed.filters || {})
-        }
+        ...clone(DEFAULT),
+        ...x,
+        transactions: Array.isArray(x.transactions) ? x.transactions : [],
+        khata: Array.isArray(x.khata) ? x.khata : [],
+        business: Array.isArray(x.business) ? x.business : [],
+        goals: Array.isArray(x.goals) ? x.goals : [],
+        savings: Array.isArray(x.savings) ? x.savings : [],
+        budget: Array.isArray(x.budget) ? x.budget : [],
+        bills: Array.isArray(x.bills) ? x.bills : [],
+        loans: Array.isArray(x.loans) ? x.loans : [],
+        reminders: Array.isArray(x.reminders) ? x.reminders : [],
+        family: Array.isArray(x.family) ? x.family : [],
+        tools: Array.isArray(x.tools) ? x.tools : []
       };
     } catch (e) {
-      return clone(DEFAULT_DATA);
+      return clone(DEFAULT);
     }
   }
 
-  function saveData() {
+  function clone(x) {
+    return JSON.parse(JSON.stringify(x));
+  }
+
+  function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(D));
-      localStorage.setItem("hisab_v7_complete", JSON.stringify(D));
-      localStorage.setItem("hisabData", JSON.stringify(D));
+      const raw = JSON.stringify(D);
+      localStorage.setItem(KEY, raw);
+      localStorage.setItem("hisab_v7_complete", raw);
+      localStorage.setItem("hisabData", raw);
     } catch (e) {
-      console.error("HISAB save error:", e);
+      console.error("HISAB save:", e);
     }
   }
 
-  function uid(prefix) {
-    return (
-      prefix +
-      "_" +
-      Date.now().toString(36) +
-      "_" +
-      Math.random().toString(36).slice(2, 7)
-    );
+  function id(prefix) {
+    return prefix + "_" +
+      Date.now().toString(36) + "_" +
+      Math.random().toString(36).slice(2, 7);
+  }
+
+  function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
   }
 
   function today() {
     return new Date().toISOString().slice(0, 10);
   }
 
-  function money(n) {
-    n = Number(n || 0);
+  function money(v) {
+    const n = num(v);
 
-    const symbol =
-      D.currency === "INR" ? "₹" :
-      D.currency === "USD" ? "$" :
-      D.currency === "EUR" ? "€" :
-      D.currency === "GBP" ? "£" :
-      D.currency;
+    let s = D.currency;
 
-    return symbol + n.toLocaleString("en-IN", {
+    if (s === "INR") s = "₹";
+    if (s === "USD") s = "$";
+    if (s === "EUR") s = "€";
+    if (s === "GBP") s = "£";
+
+    return s + n.toLocaleString("en-IN", {
       maximumFractionDigits: 2
     });
   }
 
-  function esc(value) {
-    return String(value ?? "")
+  function esc(v) {
+    return String(v ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -123,74 +119,45 @@
       .replace(/'/g, "&#039;");
   }
 
-  function num(v) {
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  function findIndex(arr, id) {
-    return arr.findIndex(x => String(x.id) === String(id));
-  }
-
-  function removeItem(arr, id) {
-    const i = findIndex(arr, id);
-    if (i >= 0) arr.splice(i, 1);
-    return i >= 0;
-  }
-
-  function notify(message) {
+  function notify(msg) {
     if (typeof window.showToast === "function") {
-      window.showToast(message);
-      return;
+      window.showToast(msg);
+    } else {
+      alert(msg);
     }
-
-    if (typeof window.toast === "function") {
-      window.toast(message);
-      return;
-    }
-
-    alert(message);
   }
 
-  /* ---------- DOM HELPERS ---------- */
+  function remove(arr, itemId) {
+    const i = arr.findIndex(
+      x => String(x.id) === String(itemId)
+    );
 
-  function page(id) {
+    if (i >= 0) {
+      arr.splice(i, 1);
+      return true;
+    }
+
+    return false;
+  }
+
+  function get(id) {
     return document.getElementById(id);
   }
 
-  function clearDynamic(id) {
-    const el = page(id);
-    if (!el) return null;
-
-    el.querySelectorAll(".hisab-dynamic").forEach(x => x.remove());
-
-    return el;
-  }
-
-  function addDynamic(id, html) {
-    const el = page(id);
-    if (!el) return null;
-
-    const box = document.createElement("div");
-    box.className = "hisab-dynamic";
-    box.innerHTML = html;
-    el.appendChild(box);
-
-    return box;
-  }
+  /* ================= MODAL ================= */
 
   function modal(title, body, buttons) {
-    document.getElementById("hisabModal")?.remove();
+    get("hisabModal")?.remove();
 
-    const div = document.createElement("div");
-    div.id = "hisabModal";
+    const m = document.createElement("div");
+    m.id = "hisabModal";
 
-    div.innerHTML = `
+    m.innerHTML = `
       <div style="
         position:fixed;
         inset:0;
-        background:rgba(0,0,0,.55);
         z-index:99999;
+        background:rgba(0,0,0,.55);
         display:flex;
         align-items:flex-end;
         justify-content:center;
@@ -199,19 +166,18 @@
         <div style="
           width:100%;
           max-width:520px;
-          max-height:92vh;
+          max-height:90vh;
           overflow:auto;
-          background:#fff;
+          background:white;
           border-radius:22px;
           padding:18px;
-          box-shadow:0 15px 50px rgba(0,0,0,.3);
+          box-sizing:border-box;
         ">
           <div style="
             display:flex;
             justify-content:space-between;
             align-items:center;
-            gap:10px;
-            margin-bottom:15px;
+            margin-bottom:12px;
           ">
             <h3 style="margin:0">${esc(title)}</h3>
             <button
@@ -219,11 +185,9 @@
               onclick="closeModal()"
               style="
                 border:0;
-                background:#eee;
+                border-radius:50%;
                 width:38px;
                 height:38px;
-                border-radius:50%;
-                font-size:20px;
               "
             >×</button>
           </div>
@@ -234,7 +198,7 @@
             display:flex;
             gap:8px;
             flex-wrap:wrap;
-            margin-top:16px;
+            margin-top:15px;
           ">
             ${buttons || ""}
           </div>
@@ -242,65 +206,69 @@
       </div>
     `;
 
-    document.body.appendChild(div);
-    return div;
+    document.body.appendChild(m);
   }
 
-  function input(label, value = "", type = "text", id = "") {
+  window.closeModal = function () {
+    get("hisabModal")?.remove();
+  };
+
+  function field(label, value, type, id) {
     return `
       <label style="display:block;margin:10px 0">
-        <span style="display:block;font-size:13px;margin-bottom:5px">
+        <span style="display:block;margin-bottom:5px">
           ${esc(label)}
         </span>
         <input
           id="${esc(id)}"
-          type="${type}"
-          value="${esc(value)}"
+          type="${type || "text"}"
+          value="${esc(value || "")}"
           style="
             width:100%;
             box-sizing:border-box;
             padding:12px;
             border:1px solid #ddd;
             border-radius:12px;
-            font-size:15px;
           "
         >
       </label>
     `;
   }
 
-  function selectBox(label, value, options, id) {
+  function select(label, value, options, id) {
     return `
       <label style="display:block;margin:10px 0">
-        <span style="display:block;font-size:13px;margin-bottom:5px">
+        <span style="display:block;margin-bottom:5px">
           ${esc(label)}
         </span>
         <select
           id="${esc(id)}"
           style="
             width:100%;
+            box-sizing:border-box;
             padding:12px;
             border:1px solid #ddd;
             border-radius:12px;
-            background:#fff;
-            font-size:15px;
+            background:white;
           "
         >
           ${options.map(o => `
             <option
               value="${esc(o.value)}"
               ${String(o.value) === String(value) ? "selected" : ""}
-            >${esc(o.label)}</option>
+            >
+              ${esc(o.label)}
+            </option>
           `).join("")}
         </select>
       </label>
     `;
   }
 
-  function actionButton(text, action, type = "button") {
+  function button(text, action) {
     return `
       <button
-        type="${type}"
+        type="button"
         onclick="${action}"
         style="
           flex:1;
@@ -308,342 +276,396 @@
           border:0;
           border-radius:12px;
           padding:12px;
-          font-weight:600;
           background:#0b6b68;
           color:white;
+          font-weight:700;
         "
       >${esc(text)}</button>
     `;
   }
 
-  window.closeModal = function () {
-    document.getElementById("hisabModal")?.remove();
-  };
+  /* ================= NAVIGATION ================= */
 
-  /* ---------- NAVIGATION ---------- */
-
-  window.show = function (id) {
-    const pages = document.querySelectorAll(".page, .screen");
-
-    pages.forEach(p => {
+  window.show = function (name) {
+    document.querySelectorAll(".page").forEach(p => {
       p.classList.remove("active");
       p.style.display = "none";
     });
 
-    const target = page(id);
+    const p = get(name);
 
-    if (target) {
-      target.classList.add("active");
-      target.style.display = "";
-    }
+    if (!p) return;
 
-    if (id === "home") renderHome();
-    if (id === "personal") renderPersonal();
-    if (id === "business") renderBusiness();
-    if (id === "transactions") renderTransactions();
-    if (id === "planning") renderPlanning();
-    if (id === "credit") renderCredit();
-    if (id === "reports") renderReports();
-    if (id === "reminders") renderReminders();
-    if (id === "privacy") renderPrivacy();
-    if (id === "family") renderFamily();
-    if (id === "familytools") renderFamilyTools();
-    if (id === "tools13") renderTools();
-    if (id === "final") renderSettings();
+    p.classList.add("active");
+    p.style.display = "";
+
+    if (name === "home") renderHome();
+    if (name === "personal") renderPersonal();
+    if (name === "business") renderBusiness();
+    if (name === "transactions") renderTransactions();
+    if (name === "planning") renderPlanning();
+    if (name === "credit") renderCredit();
+    if (name === "reports") renderReports();
+    if (name === "reminders") renderReminders();
+    if (name === "privacy") renderPrivacy();
+    if (name === "family") renderFamily();
+    if (name === "familytools") renderFamilyTools();
+    if (name === "tools13") renderTools();
+    if (name === "final") renderSettings();
 
     setTimeout(() => {
       if (typeof window.repairBackButtons === "function") {
         window.repairBackButtons();
       }
-    }, 0);
+    }, 50);
   };
 
   window.goBack = function () {
-    const active =
-      document.querySelector(".page.active, .screen.active");
-
-    const id = active ? active.id : "";
+    const p = document.querySelector(".page.active");
+    const current = p ? p.id : "";
 
     if (
-      id === "khataDetail" ||
-      id === "khataEntry" ||
-      id === "transactions" ||
-      id === "planning" ||
-      id === "credit" ||
-      id === "reports" ||
-      id === "reminders" ||
-      id === "privacy" ||
-      id === "family" ||
-      id === "familytools" ||
-      id === "tools13" ||
-      id === "final"
+      current === "khataEntry" ||
+      current === "khataDetail" ||
+      current === "transactions" ||
+      current === "planning" ||
+      current === "credit" ||
+      current === "reports" ||
+      current === "reminders" ||
+      current === "privacy" ||
+      current === "family" ||
+      current === "familytools" ||
+      current === "tools13" ||
+      current === "final"
     ) {
       show(D.mode === "business" ? "business" : "personal");
       return;
     }
 
-    if (id === "business" || id === "personal") {
+    if (current === "personal" || current === "business") {
       show("home");
       return;
     }
 
+    if (current === "home") return;
+
     show("home");
   };
 
-  /* IMPORTANT:
-     Existing index.html has onclick="closeKhataDetail()".
-  */
   window.closeKhataDetail = function () {
     show(D.mode === "business" ? "business" : "personal");
   };
 
+  window.closeKhataForm = function () {
+    show(D.mode === "business" ? "business" : "personal");
+  };
+
+  /* ================= MODE ================= */
+
   window.setMode = function (mode) {
     D.mode = mode === "business" ? "business" : "personal";
-    saveData();
+    save();
     show(D.mode);
   };
 
-  /* ---------- HOME ---------- */
+  /* ================= GUEST ================= */
 
-  function totalIncome() {
+  window.enterGuestMode = function () {
+    const gate = get("guestGate");
+    if (gate) gate.style.display = "none";
+
+    const shell = get("appShell");
+    if (shell) shell.style.display = "";
+
+    show("welcome");
+  };
+
+  window.showGuestGate = function () {
+    const gate = get("guestGate");
+    const shell = get("appShell");
+
+    if (gate) gate.style.display = "";
+    if (shell) shell.style.display = "none";
+  };
+
+  /* ================= HOME ================= */
+
+  function personalTransactions() {
+    return D.transactions.filter(x => x.mode === "personal");
+  }
+
+  function personalKhata() {
+    return D.khata.filter(x => x.mode === "personal");
+  }
+
+  function businessKhata() {
+    return D.khata.filter(x => x.mode === "business");
+  }
+
+  function sumTransactions(type, mode) {
     return D.transactions
-      .filter(x => x.type === "income" && x.mode === "personal")
+      .filter(x => x.type === type && x.mode === mode)
       .reduce((a, x) => a + num(x.amount), 0);
   }
 
-  function totalExpense() {
-    return D.transactions
-      .filter(x => x.type === "expense" && x.mode === "personal")
-      .reduce((a, x) => a + num(x.amount), 0);
-  }
-
-  function totalGive() {
+  function sumKhata(type, mode, pendingOnly) {
     return D.khata
-      .filter(x => x.mode === "personal" && x.type === "give" && x.status !== "settled")
-      .reduce((a, x) => a + num(x.amount), 0);
-  }
-
-  function totalReceive() {
-    return D.khata
-      .filter(x => x.mode === "personal" && x.type === "receive" && x.status !== "settled")
+      .filter(x =>
+        x.mode === mode &&
+        x.type === type &&
+        (!pendingOnly || x.status !== "settled")
+      )
       .reduce((a, x) => a + num(x.amount), 0);
   }
 
   function renderHome() {
-    const el = clearDynamic("home");
-    if (!el) return;
+    const income = sumTransactions("income", "personal");
+    const expense = sumTransactions("expense", "personal");
+    const give = sumKhata("give", "personal", true);
+    const receive = sumKhata("receive", "personal", true);
 
-    const income = totalIncome();
-    const expense = totalExpense();
+    const r = get("receivable");
+    const p = get("payable");
+    const b = get("homeBalance");
+    const mode = get("modeLabel");
 
-    addDynamic("home", `
-      <div class="hisab-dashboard" style="padding:12px">
+    if (r) r.textContent = money(receive);
+    if (p) p.textContent = money(give);
+    if (b) b.textContent = money(income - expense);
+    if (mode) mode.textContent = "Personal";
 
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-        ">
-          <div style="padding:15px;border-radius:16px;background:#eefaf4">
-            <small>Income</small>
-            <h3>${money(income)}</h3>
-          </div>
+    const old = get("homeExtra");
+    if (old) old.remove();
 
-          <div style="padding:15px;border-radius:16px;background:#fff2f2">
-            <small>Expense</small>
-            <h3>${money(expense)}</h3>
-          </div>
+    const home = get("home");
 
-          <div style="padding:15px;border-radius:16px;background:#f0f7ff">
-            <small>Give</small>
-            <h3>${money(totalGive())}</h3>
-          </div>
+    if (!home) return;
 
-          <div style="padding:15px;border-radius:16px;background:#fff7ec">
-            <small>Receive</small>
-            <h3>${money(totalReceive())}</h3>
-          </div>
+    const box = document.createElement("div");
+    box.id = "homeExtra";
+    box.style.padding = "12px";
+
+    box.innerHTML = `
+      <div style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+        margin-top:10px;
+      ">
+        <div class="summary-card">
+          <small>Income</small>
+          <strong>${money(income)}</strong>
         </div>
 
-        <div style="
-          margin-top:15px;
-          padding:15px;
-          border-radius:16px;
-          background:#f6f7f8;
-        ">
-          <b>Balance</b>
-          <div style="font-size:25px;margin-top:6px">
-            ${money(income - expense)}
-          </div>
+        <div class="summary-card">
+          <small>Expense</small>
+          <strong>${money(expense)}</strong>
         </div>
 
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-          margin-top:15px;
-        ">
-          <button onclick="quickIncome()">＋ Income</button>
-          <button onclick="quickExpense()">－ Expense</button>
-          <button onclick="openKhataForm('give')">Give Udhaar</button>
-          <button onclick="openKhataForm('receive')">Receive Udhaar</button>
+        <div class="summary-card">
+          <small>Give</small>
+          <strong>${money(give)}</strong>
         </div>
 
+        <div class="summary-card">
+          <small>Receive</small>
+          <strong>${money(receive)}</strong>
+        </div>
       </div>
-    `);
+    `;
 
-    renderNavState();
+    home.appendChild(box);
   }
 
-  function renderNavState() {}
+  /* ================= TRANSACTIONS ================= */
 
-  /* ---------- TRANSACTIONS ---------- */
+  window.addTransaction = function () {
+    const type = get("transactionType")?.value || "expense";
+    const amount = num(get("transactionAmount")?.value);
+    const category = get("transactionCategory")?.value.trim() || "General";
+    const note = get("transactionNote")?.value.trim() || "";
+    const date = get("transactionDate")?.value || today();
 
-  window.openTransactionForm = function (id = "") {
-    const old = id
-      ? D.transactions[findIndex(D.transactions, id)]
-      : null;
-
-    modal(
-      id ? "Edit Transaction" : "Add Transaction",
-      `
-        ${selectBox(
-          "Type",
-          old?.type || "income",
-          [
-            { value: "income", label: "Income" },
-            { value: "expense", label: "Expense" }
-          ],
-          "txType"
-        )}
-
-        ${input("Amount", old?.amount || "", "number", "txAmount")}
-        ${input("Category", old?.category || "", "text", "txCategory")}
-        ${input("Date", old?.date || today(), "date", "txDate")}
-        ${input("Note", old?.note || "", "text", "txNote")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveTransaction('${id}')`
-      )
-    );
-  };
-
-  window.saveTransaction = function (id = "") {
-    const item = {
-      id: id || uid("tx"),
-      mode: "personal",
-      type: document.getElementById("txType")?.value || "expense",
-      amount: num(document.getElementById("txAmount")?.value),
-      category: document.getElementById("txCategory")?.value.trim() || "General",
-      date: document.getElementById("txDate")?.value || today(),
-      note: document.getElementById("txNote")?.value.trim() || ""
-    };
-
-    if (item.amount <= 0) {
+    if (amount <= 0) {
       notify("Amount enter karein");
       return;
     }
 
-    const i = findIndex(D.transactions, item.id);
+    D.transactions.unshift({
+      id: id("tx"),
+      mode: D.mode,
+      type,
+      amount,
+      category,
+      note,
+      date
+    });
 
-    if (i >= 0) D.transactions[i] = item;
-    else D.transactions.unshift(item);
+    save();
 
-    saveData();
+    if (get("transactionAmount")) get("transactionAmount").value = "";
+    if (get("transactionCategory")) get("transactionCategory").value = "";
+    if (get("transactionNote")) get("transactionNote").value = "";
+
+    renderTransactions();
+    notify("Transaction save ho gaya");
+  };
+
+  function renderTransactions() {
+    const box = get("transactionList");
+    if (!box) return;
+
+    const list = D.transactions
+      .filter(x => x.mode === D.mode)
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+    box.innerHTML = list.length
+      ? list.map(x => `
+        <div style="
+          padding:14px;
+          margin:8px 0;
+          border:1px solid #ddd;
+          border-radius:15px;
+        ">
+          <div style="
+            display:flex;
+            justify-content:space-between;
+          ">
+            <b>${esc(x.category)}</b>
+            <b>${money(x.amount)}</b>
+          </div>
+
+          <small>
+            ${esc(x.type)} • ${esc(x.date)}
+          </small>
+
+          <div>${esc(x.note)}</div>
+
+          <div style="margin-top:8px">
+            <button onclick="editTransaction('${x.id}')">
+              Edit
+            </button>
+
+            <button onclick="deleteTransaction('${x.id}')">
+              Delete
+            </button>
+          </div>
+        </div>
+      `).join("")
+      : `<p style="text-align:center;padding:25px">
+          No transactions yet.
+        </p>`;
+  }
+
+  window.editTransaction = function (itemId) {
+    const x = D.transactions.find(a => a.id === itemId);
+    if (!x) return;
+
+    modal(
+      "Edit Transaction",
+      `
+        ${select(
+          "Type",
+          x.type,
+          [
+            { value: "income", label: "Income" },
+            { value: "expense", label: "Expense" }
+          ],
+          "eType"
+        )}
+
+        ${field("Amount", x.amount, "number", "eAmount")}
+        ${field("Category", x.category, "text", "eCategory")}
+        ${field("Date", x.date, "date", "eDate")}
+        ${field("Note", x.note, "text", "eNote")}
+      `,
+      button("Update", `updateTransaction('${x.id}')`)
+    );
+  };
+
+  window.updateTransaction = function (itemId) {
+    const x = D.transactions.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.type = get("eType")?.value || x.type;
+    x.amount = num(get("eAmount")?.value);
+    x.category = get("eCategory")?.value.trim() || "General";
+    x.date = get("eDate")?.value || today();
+    x.note = get("eNote")?.value.trim() || "";
+
+    if (x.amount <= 0) {
+      notify("Amount enter karein");
+      return;
+    }
+
+    save();
     closeModal();
     renderTransactions();
   };
 
-  window.deleteTransaction = function (id) {
+  window.deleteTransaction = function (itemId) {
     if (!confirm("Transaction delete karein?")) return;
 
-    removeItem(D.transactions, id);
-    saveData();
+    remove(D.transactions, itemId);
+    save();
     renderTransactions();
   };
 
-  function renderTransactions() {
-    const el = clearDynamic("transactions");
-    if (!el) return;
-
-    const list = D.transactions
-      .filter(x => x.mode === "personal")
-      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-
-    addDynamic("transactions", `
-      <div class="hisab-list" style="padding:12px">
-
-        <button onclick="openTransactionForm()">
-          ＋ Add Transaction
-        </button>
-
-        ${list.length ? list.map(x => `
-          <div style="
-            margin-top:10px;
-            padding:14px;
-            border:1px solid #eee;
-            border-radius:16px;
-          ">
-            <div style="display:flex;justify-content:space-between">
-              <b>${esc(x.category)}</b>
-              <b>${money(x.amount)}</b>
-            </div>
-
-            <small>${esc(x.date)} • ${esc(x.note)}</small>
-
-            <div style="display:flex;gap:7px;margin-top:10px">
-              <button onclick="openTransactionForm('${x.id}')">Edit</button>
-              <button onclick="deleteTransaction('${x.id}')">Delete</button>
-            </div>
-          </div>
-        `).join("") : `
-          <p style="text-align:center;padding:30px">
-            No transactions yet.
-          </p>
-        `}
-      </div>
-    `);
-  }
-
-  /* ---------- QUICK ADD ---------- */
+  /* ================= QUICK ADD ================= */
 
   window.openQuickAdd = function () {
     modal(
       "Quick Add",
       `
-        <button onclick="quickIncome();closeModal()">＋ Income</button>
-        <button onclick="quickExpense();closeModal()">－ Expense</button>
-        <button onclick="openKhataForm('give')">Give Udhaar</button>
-        <button onclick="openKhataForm('receive')">Receive Udhaar</button>
-        <button onclick="openBillForm()">＋ Bill</button>
-        <button onclick="openLoanForm()">＋ Loan</button>
+        <button onclick="quickIncome();closeModal()">
+          ＋ Income
+        </button>
+
+        <button onclick="quickExpense();closeModal()">
+          － Expense
+        </button>
+
+        <button onclick="openKhataForm('give')">
+          Give Udhar
+        </button>
+
+        <button onclick="openKhataForm('receive')">
+          Receive Udhar
+        </button>
+
+        <button onclick="show('credit');closeModal()">
+          Payments
+        </button>
       `,
       ""
     );
   };
 
   window.quickIncome = function () {
-    closeModal();
-    openTransactionForm("");
+    const e = get("transactionType");
+    if (e) e.value = "income";
+
+    show("transactions");
+
     setTimeout(() => {
-      const e = document.getElementById("txType");
-      if (e) e.value = "income";
-    }, 20);
+      get("transactionAmount")?.focus();
+    }, 100);
   };
 
   window.quickExpense = function () {
-    closeModal();
-    openTransactionForm("");
+    const e = get("transactionType");
+    if (e) e.value = "expense";
+
+    show("transactions");
+
     setTimeout(() => {
-      const e = document.getElementById("txType");
-      if (e) e.value = "expense";
-    }, 20);
+      get("transactionAmount")?.focus();
+    }, 100);
   };
 
-  /* ---------- UDHAR / KHATA ---------- */
+  /* ================= UDHAR ================= */
 
-  const PAYMENT_METHODS = [
+  const METHODS = [
     { value: "Cash", label: "Cash" },
     { value: "UPI", label: "UPI" },
     { value: "Bank Transfer", label: "Bank Transfer" },
@@ -654,1596 +676,1281 @@
     { value: "Other", label: "Other" }
   ];
 
-  window.openKhataForm = function (type = "give", id = "") {
-    const old = id
-      ? D.khata[findIndex(D.khata, id)]
-      : null;
+  window.openKhataForm = function (type = "give", itemId = "") {
+    let x = null;
+
+    if (itemId) {
+      x = D.khata.find(a => a.id === itemId);
+    }
+
+    if (type === "personal" || type === "business") {
+      D.mode = type;
+      type = "give";
+    }
 
     modal(
-      id ? "Edit Udhaar" : "Add Udhaar",
+      itemId ? "Edit Udhar" : "Add Udhar",
       `
-        ${input("Person Name", old?.person || "", "text", "khPerson")}
-        ${selectBox(
-          "Type",
-          old?.type || type,
+        ${field(
+          "Person / Customer",
+          x?.person || "",
+          "text",
+          "kPerson"
+        )}
+
+        ${select(
+          "Entry Type",
+          x?.type || type,
           [
             { value: "give", label: "Give" },
             { value: "receive", label: "Receive" }
           ],
-          "khType"
+          "kType"
         )}
-        ${input("Amount", old?.amount || "", "number", "khAmount")}
-        ${input("Date", old?.date || today(), "date", "khDate")}
-        ${selectBox(
+
+        ${field(
+          "Amount",
+          x?.amount || "",
+          "number",
+          "kAmount"
+        )}
+
+        ${field(
+          "Date",
+          x?.date || today(),
+          "date",
+          "kDate"
+        )}
+
+        ${select(
           "Payment Method",
-          old?.paymentMethod || "Cash",
-          PAYMENT_METHODS,
-          "khMethod"
+          x?.paymentMethod || "Cash",
+          METHODS,
+          "kMethod"
         )}
-        ${selectBox(
+
+        ${select(
           "Status",
-          old?.status || "pending",
+          x?.status || "pending",
           [
             { value: "pending", label: "Pending" },
             { value: "settled", label: "Settled" }
           ],
-          "khStatus"
-        )}
-        ${input("Note", old?.note || "", "text", "khNote")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveKhata('${id}')`
-      )
-    );
-  };
-
-  window.saveKhata = function (id = "") {
-    const item = {
-      id: id || uid("kh"),
-      mode: D.mode === "business" ? "business" : "personal",
-      person: document.getElementById("khPerson")?.value.trim() || "",
-      type: document.getElementById("khType")?.value || "give",
-      amount: num(document.getElementById("khAmount")?.value),
-      date: document.getElementById("khDate")?.value || today(),
-      paymentMethod: document.getElementById("khMethod")?.value || "Cash",
-      status: document.getElementById("khStatus")?.value || "pending",
-      note: document.getElementById("khNote")?.value.trim() || "",
-      history: id
-        ? (D.khata[findIndex(D.khata, id)]?.history || [])
-        : []
-    };
-
-    if (!item.person) {
-      notify("Person name enter karein");
-      return;
-    }
-
-    if (item.amount <= 0) {
-      notify("Amount enter karein");
-      return;
-    }
-
-    const i = findIndex(D.khata, item.id);
-
-    if (i >= 0) D.khata[i] = item;
-    else D.khata.unshift(item);
-
-    saveData();
-    closeModal();
-
-    if (D.mode === "business") renderBusiness();
-    else renderPersonal();
-  };
-
-  window.deleteKhata = function (id) {
-    if (!confirm("Udhaar entry delete karein?")) return;
-
-    removeItem(D.khata, id);
-    saveData();
-
-    if (D.mode === "business") renderBusiness();
-    else renderPersonal();
-  };
-
-  window.settleKhata = function (id) {
-    const i = findIndex(D.khata, id);
-    if (i < 0) return;
-
-    const x = D.khata[i];
-
-    if (!Array.isArray(x.history)) x.history = [];
-
-    x.history.unshift({
-      id: uid("khp"),
-      date: today(),
-      amount: x.amount,
-      method: x.paymentMethod || "Cash"
-    });
-
-    x.status = "settled";
-
-    saveData();
-    renderPersonal();
-  };
-
-  window.openKhataDetail = function (person, mode = "personal") {
-    D.detailMode = mode;
-
-    const items = D.khata.filter(
-      x =>
-        x.person === person &&
-        x.mode === mode
-    );
-
-    const give = items
-      .filter(x => x.type === "give" && x.status !== "settled")
-      .reduce((a, x) => a + num(x.amount), 0);
-
-    const receive = items
-      .filter(x => x.type === "receive" && x.status !== "settled")
-      .reduce((a, x) => a + num(x.amount), 0);
-
-    const el = page("khataDetail");
-
-    if (el) {
-      const name = page("detailPersonName");
-      if (name) name.textContent = person;
-
-      const old = el.querySelector(".hisab-khata-detail");
-      if (old) old.remove();
-
-      const box = document.createElement("div");
-      box.className = "hisab-khata-detail hisab-dynamic";
-      box.style.padding = "12px";
-
-      box.innerHTML = `
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-        ">
-          <div style="padding:14px;border-radius:15px;background:#fff0f0">
-            <small>Give</small>
-            <h3>${money(give)}</h3>
-          </div>
-
-          <div style="padding:14px;border-radius:15px;background:#eefaf4">
-            <small>Receive</small>
-            <h3>${money(receive)}</h3>
-          </div>
-        </div>
-
-        <h3 style="margin-top:18px">Complete History</h3>
-
-        ${items.length ? items.map(x => `
-          <div style="
-            padding:13px;
-            margin-top:9px;
-            border:1px solid #eee;
-            border-radius:15px;
-          ">
-            <b style="color:${x.type === "give" ? "#d33" : "#14804a"}">
-              ${x.type === "give" ? "Give" : "Receive"}
-              ${money(x.amount)}
-            </b>
-
-            <div>
-              ${esc(x.date)} • ${esc(x.paymentMethod)}
-            </div>
-
-            <small>
-              ${esc(x.note)}
-              • ${esc(x.status)}
-            </small>
-          </div>
-        `).join("") : `
-          <p>No history.</p>
-        `}
-      `;
-
-      el.appendChild(box);
-    }
-
-    show("khataDetail");
-  };
-
-  function renderPersonal() {
-    const el = clearDynamic("personal");
-    if (!el) return;
-
-    const people = {};
-
-    D.khata
-      .filter(x => x.mode === "personal")
-      .forEach(x => {
-        people[x.person] = true;
-      });
-
-    addDynamic("personal", `
-      <div style="padding:12px">
-
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-        ">
-          <button onclick="openKhataForm('give')">
-            + Give
-          </button>
-
-          <button onclick="openKhataForm('receive')">
-            + Receive
-          </button>
-        </div>
-
-        <div style="
-          margin-top:14px;
-          padding:15px;
-          border-radius:16px;
-          background:#f6f7f8;
-        ">
-          <b>Udhaar Summary</b>
-          <div style="margin-top:7px">
-            Give: ${money(totalGive())}
-          </div>
-          <div>
-            Receive: ${money(totalReceive())}
-          </div>
-          <div>
-            Net: ${money(totalGive() - totalReceive())}
-          </div>
-        </div>
-
-        <h3 style="margin-top:18px">People</h3>
-
-        ${Object.keys(people).length
-          ? Object.keys(people).map(name => `
-            <div style="
-              padding:14px;
-              border:1px solid #eee;
-              border-radius:15px;
-              margin-top:9px;
-              display:flex;
-              justify-content:space-between;
-              align-items:center;
-              gap:8px;
-            ">
-              <b>${esc(name)}</b>
-
-              <button
-                onclick="openKhataDetail('${esc(name)}','personal')"
-              >
-                History
-              </button>
-            </div>
-          `).join("")
-          : `
-            <p style="text-align:center;padding:25px">
-              No Udhaar entries.
-            </p>
-          `
-        }
-
-      </div>
-    `);
-  }
-
-  /* ---------- PLANNING ---------- */
-
-  window.openGoalForm = function (id = "") {
-    const old = id
-      ? D.goals[findIndex(D.goals, id)]
-      : null;
-
-    modal(
-      id ? "Edit Goal" : "Add Goal",
-      `
-        ${input("Goal Name", old?.name || "", "text", "goalName")}
-        ${input("Target Amount", old?.target || "", "number", "goalTarget")}
-        ${input("Saved Amount", old?.saved || 0, "number", "goalSaved")}
-        ${input("Target Date", old?.date || "", "date", "goalDate")}
-        ${input("Note", old?.note || "", "text", "goalNote")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveGoal('${id}')`
-      )
-    );
-  };
-
-  window.saveGoal = function (id = "") {
-    const item = {
-      id: id || uid("goal"),
-      name: document.getElementById("goalName")?.value.trim() || "",
-      target: num(document.getElementById("goalTarget")?.value),
-      saved: num(document.getElementById("goalSaved")?.value),
-      date: document.getElementById("goalDate")?.value || "",
-      note: document.getElementById("goalNote")?.value.trim() || ""
-    };
-
-    if (!item.name || item.target <= 0) {
-      notify("Goal name aur target amount enter karein");
-      return;
-    }
-
-    const i = findIndex(D.goals, item.id);
-
-    if (i >= 0) D.goals[i] = item;
-    else D.goals.unshift(item);
-
-    saveData();
-    closeModal();
-    renderPlanning();
-  };
-
-  window.deleteGoal = function (id) {
-    if (!confirm("Goal delete karein?")) return;
-
-    removeItem(D.goals, id);
-    saveData();
-    renderPlanning();
-  };
-
-  window.addGoalSaving = function (id) {
-    const i = findIndex(D.goals, id);
-    if (i < 0) return;
-
-    modal(
-      "Add Saving",
-      input("Amount", "", "number", "saveAmount"),
-      actionButton(
-        "Add",
-        `saveGoalAmount('${id}')`
-      )
-    );
-  };
-
-  window.saveGoalAmount = function (id) {
-    const amount = num(
-      document.getElementById("saveAmount")?.value
-    );
-
-    if (amount <= 0) {
-      notify("Amount enter karein");
-      return;
-    }
-
-    const i = findIndex(D.goals, id);
-    if (i < 0) return;
-
-    D.goals[i].saved = num(D.goals[i].saved) + amount;
-
-    D.savings.unshift({
-      id: uid("sav"),
-      goalId: id,
-      amount,
-      date: today()
-    });
-
-    saveData();
-    closeModal();
-    renderPlanning();
-  };
-
-  function renderPlanning() {
-    const el = clearDynamic("planning");
-    if (!el) return;
-
-    addDynamic("planning", `
-      <div style="padding:12px">
-
-        <button onclick="openGoalForm()">
-          ＋ Add Goal
-        </button>
-
-        <h3>Goals & Savings</h3>
-
-        ${D.goals.length
-          ? D.goals.map(x => {
-            const pct = Math.min(
-              100,
-              Math.round(
-                num(x.saved) /
-                Math.max(1, num(x.target)) *
-                100
-              )
-            );
-
-            return `
-              <div style="
-                margin-top:10px;
-                padding:15px;
-                border:1px solid #eee;
-                border-radius:16px;
-              ">
-                <b>${esc(x.name)}</b>
-
-                <div style="margin-top:6px">
-                  ${money(x.saved)} / ${money(x.target)}
-                </div>
-
-                <div style="
-                  margin-top:8px;
-                  height:8px;
-                  background:#e8e8e8;
-                  border-radius:20px;
-                  overflow:hidden;
-                ">
-                  <div style="
-                    width:${pct}%;
-                    height:100%;
-                    background:#0b6b68;
-                  "></div>
-                </div>
-
-                <small>${pct}% complete</small>
-
-                <div style="
-                  display:flex;
-                  gap:7px;
-                  margin-top:10px;
-                  flex-wrap:wrap;
-                ">
-                  <button onclick="addGoalSaving('${x.id}')">
-                    + Saving
-                  </button>
-
-                  <button onclick="openGoalForm('${x.id}')">
-                    Edit
-                  </button>
-
-                  <button onclick="deleteGoal('${x.id}')">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join("")
-          : `<p>No goals yet.</p>`
-        }
-
-      </div>
-    `);
-  }
-
-  /* ---------- BILLS ---------- */
-
-  window.openBillForm = function (id = "") {
-    const old = id
-      ? D.bills[findIndex(D.bills, id)]
-      : null;
-
-    modal(
-      id ? "Edit Bill" : "Add Bill",
-      `
-        ${input("Bill Name", old?.name || "", "text", "billName")}
-        ${input("Amount", old?.amount || "", "number", "billAmount")}
-        ${input("Due Date", old?.dueDate || today(), "date", "billDue")}
-        ${input("Reminder Date", old?.reminderDate || "", "date", "billReminder")}
-
-        ${selectBox(
-          "Status",
-          old?.status || "pending",
-          [
-            { value: "pending", label: "Pending" },
-            { value: "paid", label: "Paid" }
-          ],
-          "billStatus"
+          "kStatus"
         )}
 
-        ${selectBox(
-          "Repeat",
-          old?.repeat || "none",
-          [
-            { value: "none", label: "One Time" },
-            { value: "monthly", label: "Monthly" },
-            { value: "yearly", label: "Yearly" }
-          ],
-          "billRepeat"
+        ${field(
+          "Note",
+          x?.note || "",
+          "text",
+          "kNote"
         )}
-
-        ${input("Note", old?.note || "", "text", "billNote")}
       `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveBill('${id}')`
+      button(
+        itemId ? "Update" : "Save",
+        `saveKhataEntry('${itemId}')`
       )
     );
   };
 
-  window.saveBill = function (id = "") {
-    const old = id
-      ? D.bills[findIndex(D.bills, id)]
-      : null;
-
-    const item = {
-      id: id || uid("bill"),
-      name: document.getElementById("billName")?.value.trim() || "",
-      amount: num(document.getElementById("billAmount")?.value),
-      dueDate: document.getElementById("billDue")?.value || today(),
-      reminderDate: document.getElementById("billReminder")?.value || "",
-      status: document.getElementById("billStatus")?.value || "pending",
-      repeat: document.getElementById("billRepeat")?.value || "none",
-      note: document.getElementById("billNote")?.value.trim() || "",
-      history: old?.history || []
-    };
-
-    if (!item.name || item.amount <= 0) {
-      notify("Bill name aur amount enter karein");
-      return;
-    }
-
-    const i = findIndex(D.bills, item.id);
-
-    if (i >= 0) D.bills[i] = item;
-    else D.bills.unshift(item);
-
-    saveData();
-    closeModal();
-    renderCredit();
-  };
-
-  window.deleteBill = function (id) {
-    if (!confirm("Bill delete karein?")) return;
-
-    removeItem(D.bills, id);
-    saveData();
-    renderCredit();
-  };
-
-  window.markBillPaid = function (id) {
-    const i = findIndex(D.bills, id);
-    if (i < 0) return;
-
-    const bill = D.bills[i];
-
-    if (!Array.isArray(bill.history)) bill.history = [];
-
-    bill.history.unshift({
-      id: uid("bh"),
-      date: today(),
-      amount: bill.amount,
-      status: "paid"
-    });
-
-    bill.status = "paid";
-    bill.paidDate = today();
-
-    saveData();
-    renderCredit();
-  };
-
-  window.billHistory = function (id) {
-    const bill = D.bills[findIndex(D.bills, id)];
-    if (!bill) return;
-
-    modal(
-      "Bill Payment History",
-      `
-        <b>${esc(bill.name)}</b>
-        <p>Total: ${money(bill.amount)}</p>
-
-        ${
-          bill.history?.length
-            ? bill.history.map(h => `
-              <div style="
-                padding:10px;
-                border-bottom:1px solid #eee;
-              ">
-                ${esc(h.date)} —
-                ${money(h.amount)}
-              </div>
-            `).join("")
-            : "<p>No payment history.</p>"
-        }
-      `,
-      ""
-    );
-  };
-
-  /* ---------- LOANS / EMI ---------- */
-
-  function calculateEMI(principal, annualRate, months) {
-    principal = num(principal);
-    annualRate = num(annualRate);
-    months = Math.max(1, Math.floor(num(months)));
-
-    if (!principal) return 0;
-
-    if (!annualRate) {
-      return principal / months;
-    }
-
-    const r = annualRate / 12 / 100;
-
-    return (
-      principal *
-      r *
-      Math.pow(1 + r, months) /
-      (Math.pow(1 + r, months) - 1)
-    );
-  }
-
-  window.openLoanForm = function (id = "") {
-    const old = id
-      ? D.loans[findIndex(D.loans, id)]
-      : null;
-
-    modal(
-      id ? "Edit Loan / EMI" : "Add Loan / EMI",
-      `
-        ${input("Loan Name", old?.name || "", "text", "loanName")}
-        ${input("Principal Amount", old?.amount || "", "number", "loanAmount")}
-        ${input("Interest %", old?.rate || 0, "number", "loanRate")}
-        ${input("Tenure (Months)", old?.months || "", "number", "loanMonths")}
-        ${input("Due Date", old?.dueDate || today(), "date", "loanDue")}
-        ${input("Note", old?.note || "", "text", "loanNote")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveLoan('${id}')`
-      )
-    );
-  };
-
-  window.saveLoan = function (id = "") {
-    const old = id
-      ? D.loans[findIndex(D.loans, id)]
-      : null;
-
-    const amount = num(
-      document.getElementById("loanAmount")?.value
-    );
-
-    const rate = num(
-      document.getElementById("loanRate")?.value
-    );
-
-    const months = Math.max(
-      1,
-      Math.floor(
-        num(document.getElementById("loanMonths")?.value)
-      )
-    );
-
-    const item = {
-      id: id || uid("loan"),
-      name: document.getElementById("loanName")?.value.trim() || "",
-      amount,
-      rate,
-      months,
-      emi: calculateEMI(amount, rate, months),
-      dueDate: document.getElementById("loanDue")?.value || today(),
-      note: document.getElementById("loanNote")?.value.trim() || "",
-      paid: num(old?.paid),
-      history: old?.history || []
-    };
-
-    if (!item.name || item.amount <= 0) {
-      notify("Loan name aur amount enter karein");
-      return;
-    }
-
-    const i = findIndex(D.loans, item.id);
-
-    if (i >= 0) D.loans[i] = item;
-    else D.loans.unshift(item);
-
-    saveData();
-    closeModal();
-    renderCredit();
-  };
-
-  window.deleteLoan = function (id) {
-    if (!confirm("Loan delete karein?")) return;
-
-    removeItem(D.loans, id);
-    saveData();
-    renderCredit();
-  };
-
-  window.payLoan = function (id) {
-    const i = findIndex(D.loans, id);
-    if (i < 0) return;
-
-    modal(
-      "Loan Payment",
-      `
-        ${input("Payment Amount", D.loans[i].emi || "", "number", "loanPay")}
-        ${input("Payment Date", today(), "date", "loanPayDate")}
-        ${input("Note", "", "text", "loanPayNote")}
-      `,
-      actionButton(
-        "Save Payment",
-        `saveLoanPayment('${id}')`
-      )
-    );
-  };
-
-  window.saveLoanPayment = function (id) {
-    const i = findIndex(D.loans, id);
-    if (i < 0) return;
-
-    const amount = num(
-      document.getElementById("loanPay")?.value
-    );
-
-    if (amount <= 0) {
-      notify("Payment amount enter karein");
-      return;
-    }
-
-    const loan = D.loans[i];
-
-    if (!Array.isArray(loan.history)) loan.history = [];
-
-    loan.paid = num(loan.paid) + amount;
-
-    loan.history.unshift({
-      id: uid("lp"),
-      amount,
-      date:
-        document.getElementById("loanPayDate")?.value ||
-        today(),
-      note:
-        document.getElementById("loanPayNote")?.value.trim() ||
-        ""
-    });
-
-    saveData();
-    closeModal();
-    renderCredit();
-  };
-
-  window.loanHistory = function (id) {
-    const loan = D.loans[findIndex(D.loans, id)];
-    if (!loan) return;
-
-    modal(
-      "Loan Payment History",
-      `
-        <b>${esc(loan.name)}</b>
-
-        <p>
-          Principal: ${money(loan.amount)}
-        </p>
-
-        <p>
-          Paid: ${money(loan.paid)}
-        </p>
-
-        <p>
-          Remaining:
-          ${money(Math.max(0, num(loan.amount) - num(loan.paid)))}
-        </p>
-
-        ${
-          loan.history?.length
-            ? loan.history.map(h => `
-              <div style="
-                padding:10px;
-                border-bottom:1px solid #eee;
-              ">
-                ${esc(h.date)} —
-                ${money(h.amount)}
-                ${h.note ? " • " + esc(h.note) : ""}
-              </div>
-            `).join("")
-            : "<p>No payment history.</p>"
-        }
-      `,
-      ""
-    );
-  };
-
-  function renderCredit() {
-    const el = clearDynamic("credit");
-    if (!el) return;
-
-    addDynamic("credit", `
-      <div style="padding:12px">
-
-        <h3>Bills</h3>
-
-        <button onclick="openBillForm()">
-          ＋ Add Bill
-        </button>
-
-        ${
-          D.bills.length
-            ? D.bills.map(b => `
-              <div style="
-                margin-top:10px;
-                padding:14px;
-                border:1px solid #eee;
-                border-radius:15px;
-              ">
-                <b>${esc(b.name)}</b>
-                <div>${money(b.amount)}</div>
-                <small>
-                  Due: ${esc(b.dueDate)}
-                  • ${esc(b.status)}
-                </small>
-
-                <div style="
-                  display:flex;
-                  gap:7px;
-                  flex-wrap:wrap;
-                  margin-top:9px;
-                ">
-                  ${
-                    b.status !== "paid"
-                      ? `<button onclick="markBillPaid('${b.id}')">
-                           Mark Paid
-                         </button>`
-                      : ""
-                  }
-
-                  <button onclick="billHistory('${b.id}')">
-                    History
-                  </button>
-
-                  <button onclick="openBillForm('${b.id}')">
-                    Edit
-                  </button>
-
-                  <button onclick="deleteBill('${b.id}')">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            `).join("")
-            : "<p>No bills yet.</p>"
-        }
-
-        <h3 style="margin-top:25px">Loans / EMI</h3>
-
-        <button onclick="openLoanForm()">
-          ＋ Add Loan / EMI
-        </button>
-
-        ${
-          D.loans.length
-            ? D.loans.map(l => {
-              const remaining = Math.max(
-                0,
-                num(l.amount) - num(l.paid)
-              );
-
-              const pct = Math.min(
-                100,
-                Math.round(
-                  num(l.paid) /
-                  Math.max(1, num(l.amount)) *
-                  100
-                )
-              );
-
-              return `
-                <div style="
-                  margin-top:10px;
-                  padding:14px;
-                  border:1px solid #eee;
-                  border-radius:15px;
-                ">
-                  <b>${esc(l.name)}</b>
-
-                  <div>
-                    Loan: ${money(l.amount)}
-                  </div>
-
-                  <div>
-                    Monthly EMI: ${money(l.emi)}
-                  </div>
-
-                  <div>
-                    Paid: ${money(l.paid)}
-                  </div>
-
-                  <div>
-                    Remaining: ${money(remaining)}
-                  </div>
-
-                  <div style="
-                    margin-top:8px;
-                    height:8px;
-                    background:#eee;
-                    border-radius:20px;
-                    overflow:hidden;
-                  ">
-                    <div style="
-                      width:${pct}%;
-                      height:100%;
-                      background:#0b6b68;
-                    "></div>
-                  </div>
-
-                  <small>${pct}% paid</small>
-
-                  <div style="
-                    display:flex;
-                    gap:7px;
-                    flex-wrap:wrap;
-                    margin-top:9px;
-                  ">
-                    <button onclick="payLoan('${l.id}')">
-                      + Payment
-                    </button>
-
-                    <button onclick="loanHistory('${l.id}')">
-                      History
-                    </button>
-
-                    <button onclick="openLoanForm('${l.id}')">
-                      Edit
-                    </button>
-
-                    <button onclick="deleteLoan('${l.id}')">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join("")
-            : "<p>No loans yet.</p>"
-        }
-
-      </div>
-    `);
-  }
-
-  /* ---------- REMINDERS ---------- */
-
-  window.openReminderForm = function (id = "") {
-    const old = id
-      ? D.reminders[findIndex(D.reminders, id)]
-      : null;
-
-    modal(
-      id ? "Edit Reminder" : "Add Reminder",
-      `
-        ${input("Reminder Title", old?.title || "", "text", "remTitle")}
-        ${input("Date", old?.date || today(), "date", "remDate")}
-        ${input("Time", old?.time || "", "time", "remTime")}
-
-        ${selectBox(
-          "Repeat",
-          old?.repeat || "none",
-          [
-            { value: "none", label: "One Time" },
-            { value: "daily", label: "Daily" },
-            { value: "weekly", label: "Weekly" },
-            { value: "monthly", label: "Monthly" },
-            { value: "yearly", label: "Yearly" }
-          ],
-          "remRepeat"
-        )}
-
-        ${input("Note", old?.note || "", "text", "remNote")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveReminder('${id}')`
-      )
-    );
-  };
-
-  window.saveReminder = function (id = "") {
-    const item = {
-      id: id || uid("rem"),
-      title: document.getElementById("remTitle")?.value.trim() || "",
-      date: document.getElementById("remDate")?.value || today(),
-      time: document.getElementById("remTime")?.value || "",
-      repeat: document.getElementById("remRepeat")?.value || "none",
-      note: document.getElementById("remNote")?.value.trim() || "",
-      done: false
-    };
-
-    if (!item.title) {
-      notify("Reminder title enter karein");
-      return;
-    }
-
-    const i = findIndex(D.reminders, item.id);
-
-    if (i >= 0) {
-      item.done = D.reminders[i].done;
-      D.reminders[i] = item;
-    } else {
-      D.reminders.unshift(item);
-    }
-
-    saveData();
-    closeModal();
-    renderReminders();
-  };
-
-  window.deleteReminder = function (id) {
-    if (!confirm("Reminder delete karein?")) return;
-
-    removeItem(D.reminders, id);
-    saveData();
-    renderReminders();
-  };
-
-  window.toggleReminder = function (id) {
-    const i = findIndex(D.reminders, id);
-    if (i < 0) return;
-
-    D.reminders[i].done = !D.reminders[i].done;
-
-    saveData();
-    renderReminders();
-  };
-
-  function renderReminders() {
-    const el = clearDynamic("reminders");
-    if (!el) return;
-
-    addDynamic("reminders", `
-      <div style="padding:12px">
-
-        <button onclick="openReminderForm()">
-          ＋ Add Reminder
-        </button>
-
-        ${
-          D.reminders.length
-            ? D.reminders.map(r => `
-              <div style="
-                margin-top:10px;
-                padding:14px;
-                border:1px solid #eee;
-                border-radius:15px;
-              ">
-                <b style="${r.done ? "text-decoration:line-through" : ""}">
-                  ${esc(r.title)}
-                </b>
-
-                <div>
-                  ${esc(r.date)}
-                  ${r.time ? " • " + esc(r.time) : ""}
-                </div>
-
-                <small>
-                  Repeat: ${esc(r.repeat)}
-                  ${r.note ? " • " + esc(r.note) : ""}
-                </small>
-
-                <div style="
-                  display:flex;
-                  gap:7px;
-                  margin-top:9px;
-                  flex-wrap:wrap;
-                ">
-                  <button onclick="toggleReminder('${r.id}')">
-                    ${r.done ? "Undo" : "Done"}
-                  </button>
-
-                  <button onclick="openReminderForm('${r.id}')">
-                    Edit
-                  </button>
-
-                  <button onclick="deleteReminder('${r.id}')">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            `).join("")
-            : "<p>No reminders yet.</p>"
-        }
-
-        <p style="font-size:12px;margin-top:15px">
-          Reminder data is stored locally. Native background notification
-          scheduling requires Android notification integration.
-        </p>
-
-      </div>
-    `);
-  }
-
-  /* ---------- BUSINESS ---------- */
-
-  window.openBusinessPersonForm = function (id = "") {
-    const old = id
-      ? D.business[findIndex(D.business, id)]
-      : null;
-
-    modal(
-      id ? "Edit Customer / Supplier" : "Add Customer / Supplier",
-      `
-        ${selectBox(
-          "Type",
-          old?.personType || "customer",
-          [
-            { value: "customer", label: "Customer" },
-            { value: "supplier", label: "Supplier" }
-          ],
-          "bpType"
-        )}
-
-        ${input("Name", old?.name || "", "text", "bpName")}
-        ${input("Phone", old?.phone || "", "tel", "bpPhone")}
-        ${input("Address", old?.address || "", "text", "bpAddress")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveBusinessPerson('${id}')`
-      )
-    );
-  };
-
-  window.saveBusinessPerson = function (id = "") {
-    const old = id
-      ? D.business[findIndex(D.business, id)]
-      : null;
-
-    const item = {
-      id: id || uid("bp"),
-      recordType: "person",
-      personType:
-        document.getElementById("bpType")?.value || "customer",
-      name:
-        document.getElementById("bpName")?.value.trim() || "",
-      phone:
-        document.getElementById("bpPhone")?.value.trim() || "",
-      address:
-        document.getElementById("bpAddress")?.value.trim() || "",
-      date: old?.date || today()
-    };
-
-    if (!item.name) {
+  window.saveKhataEntry = function (itemId = "") {
+    const person = get("kPerson")?.value.trim() || "";
+    const type = get("kType")?.value || "give";
+    const amount = num(get("kAmount")?.value);
+    const date = get("kDate")?.value || today();
+    const paymentMethod = get("kMethod")?.value || "Cash";
+    const status = get("kStatus")?.value || "pending";
+    const note = get("kNote")?.value.trim() || "";
+
+    if (!person) {
       notify("Name enter karein");
       return;
     }
 
-    const i = findIndex(D.business, item.id);
-
-    if (i >= 0) D.business[i] = item;
-    else D.business.unshift(item);
-
-    saveData();
-    closeModal();
-    renderBusiness();
-  };
-
-  window.deleteBusiness = function (id) {
-    if (!confirm("Record delete karein?")) return;
-
-    removeItem(D.business, id);
-    saveData();
-    renderBusiness();
-  };
-
-  window.openBusinessEntryForm = function (
-    type = "sale",
-    id = ""
-  ) {
-    const old = id
-      ? D.business[findIndex(D.business, id)]
-      : null;
-
-    modal(
-      id ? "Edit Sale / Purchase" : "Add Sale / Purchase",
-      `
-        ${selectBox(
-          "Entry",
-          old?.entryType || type,
-          [
-            { value: "sale", label: "Sale" },
-            { value: "purchase", label: "Purchase" }
-          ],
-          "beType"
-        )}
-
-        ${input("Party / Customer", old?.party || "", "text", "beParty")}
-        ${input("Item", old?.item || "", "text", "beItem")}
-        ${input("Amount", old?.amount || "", "number", "beAmount")}
-        ${input("Date", old?.date || today(), "date", "beDate")}
-
-        ${selectBox(
-          "Payment Status",
-          old?.status || "pending",
-          [
-            { value: "pending", label: "Pending" },
-            { value: "paid", label: "Paid" }
-          ],
-          "beStatus"
-        )}
-
-        ${input("Note", old?.note || "", "text", "beNote")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveBusinessEntry('${id}')`
-      )
-    );
-  };
-
-  window.saveBusinessEntry = function (id = "") {
-    const item = {
-      id: id || uid("be"),
-      recordType: "entry",
-      entryType:
-        document.getElementById("beType")?.value || "sale",
-      party:
-        document.getElementById("beParty")?.value.trim() || "",
-      item:
-        document.getElementById("beItem")?.value.trim() || "",
-      amount:
-        num(document.getElementById("beAmount")?.value),
-      date:
-        document.getElementById("beDate")?.value || today(),
-      status:
-        document.getElementById("beStatus")?.value || "pending",
-      note:
-        document.getElementById("beNote")?.value.trim() || ""
-    };
-
-    if (!item.party || item.amount <= 0) {
-      notify("Party aur amount enter karein");
+    if (amount <= 0) {
+      notify("Amount enter karein");
       return;
     }
 
-    const i = findIndex(D.business, item.id);
+    if (itemId) {
+      const x = D.khata.find(a => a.id === itemId);
 
-    if (i >= 0) D.business[i] = item;
-    else D.business.unshift(item);
+      if (x) {
+        x.person = person;
+        x.type = type;
+        x.amount = amount;
+        x.date = date;
+        x.paymentMethod = paymentMethod;
+        x.status = status;
+        x.note = note;
+      }
+    } else {
+      D.khata.unshift({
+        id: id("kh"),
+        mode: D.mode,
+        person,
+        type,
+        amount,
+        date,
+        paymentMethod,
+        status,
+        note,
+        history: []
+      });
+    }
 
-    saveData();
+    save();
+    closeModal();
+
+    if (D.mode === "business") {
+      renderBusiness();
+    } else {
+      renderPersonal();
+    }
+
+    notify("Udhar save ho gaya");
+  };
+
+  window.deleteKhata = function (itemId) {
+    if (!confirm("Udhar entry delete karein?")) return;
+
+    remove(D.khata, itemId);
+    save();
+
+    D.mode === "business"
+      ? renderBusiness()
+      : renderPersonal();
+  };
+
+  window.settleKhata = function (itemId) {
+    const x = D.khata.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.status = "settled";
+
+    x.history = x.history || [];
+
+    x.history.push({
+      id: id("pay"),
+      date: today(),
+      amount: x.amount,
+      type: "settled"
+    });
+
+    save();
+
+    D.mode === "business"
+      ? renderBusiness()
+      : renderPersonal();
+  };
+
+  function renderKhataList(list, targetId) {
+    const box = get(targetId);
+    if (!box) return;
+
+    box.innerHTML = list.length
+      ? list.map(x => {
+          const color =
+            x.type === "give" ? "#c62828" : "#168447";
+
+          return `
+            <div style="
+              padding:14px;
+              margin:8px 0;
+              border:1px solid #ddd;
+              border-radius:15px;
+            ">
+              <div style="
+                display:flex;
+                justify-content:space-between;
+              ">
+                <b>${esc(x.person)}</b>
+
+                <strong style="color:${color}">
+                  ${x.type === "give" ? "Give" : "Receive"}
+                  ${money(x.amount)}
+                </strong>
+              </div>
+
+              <small>
+                ${esc(x.date)} •
+                ${esc(x.paymentMethod)} •
+                ${esc(x.status)}
+              </small>
+
+              <div>${esc(x.note)}</div>
+
+              <div style="margin-top:8px">
+                <button
+                  onclick="openKhataForm('${x.type}','${x.id}')">
+                  Edit
+                </button>
+
+                <button
+                  onclick="deleteKhata('${x.id}')">
+                  Delete
+                </button>
+
+                ${
+                  x.status !== "settled"
+                    ? `<button
+                        onclick="settleKhata('${x.id}')">
+                        Settle
+                       </button>`
+                    : ""
+                }
+
+                <button
+                  onclick="openKhataDetail('${x.person}','${x.mode}')">
+                  History
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")
+      : `<p style="text-align:center;padding:25px">
+          No Udhar entries.
+        </p>`;
+  }
+
+  window.openKhataDetail = function (person, mode) {
+    D.mode = mode === "business" ? "business" : "personal";
+
+    show("khataDetail");
+
+    const title = get("detailPersonName");
+    if (title) title.textContent = person;
+
+    renderDetail(person);
+  };
+
+  function renderDetail(person) {
+    const list = D.khata.filter(
+      x => x.mode === D.mode && x.person === person
+    );
+
+    const give = list
+      .filter(x => x.type === "give")
+      .reduce((a, x) => a + num(x.amount), 0);
+
+    const receive = list
+      .filter(x => x.type === "receive")
+      .reduce((a, x) => a + num(x.amount), 0);
+
+    const dg = get("detailGive");
+    const dr = get("detailReceive");
+    const db = get("detailBalance");
+
+    if (dg) dg.textContent = money(give);
+    if (dr) dr.textContent = money(receive);
+    if (db) db.textContent = money(give - receive);
+
+    const box = get("khataHistory");
+    if (!box) return;
+
+    box.innerHTML = list.length
+      ? list.map(x => `
+        <div style="
+          padding:12px;
+          border-bottom:1px solid #ddd;
+        ">
+          <b style="
+            color:${x.type === "give" ? "#c62828" : "#168447"};
+          ">
+            ${x.type === "give" ? "Give" : "Receive"}
+            ${money(x.amount)}
+          </b>
+
+          <div>
+            ${esc(x.date)} •
+            ${esc(x.paymentMethod)}
+          </div>
+
+          <small>
+            ${esc(x.status)} • ${esc(x.note)}
+          </small>
+        </div>
+      `).join("")
+      : "<p>No history.</p>";
+  }
+
+  window.detailFilter = function () {
+    const person = get("detailPersonName")?.textContent || "";
+    renderDetail(person);
+  };
+
+  window.openPaymentEntry = function () {
+    const person = get("detailPersonName")?.textContent || "";
+
+    openKhataForm("receive");
+
+    setTimeout(() => {
+      if (get("kPerson")) {
+        get("kPerson").value = person;
+      }
+    }, 50);
+  };
+
+  window.shareKhata = function () {
+    const person = get("detailPersonName")?.textContent || "Khata";
+
+    const text =
+      "HISAB Udhar\n" +
+      person + "\n\n" +
+      "Give: " + get("detailGive")?.textContent + "\n" +
+      "Receive: " + get("detailReceive")?.textContent + "\n" +
+      "Balance: " + get("detailBalance")?.textContent;
+
+    if (navigator.share) {
+      navigator.share({
+        title: "HISAB Udhar",
+        text
+      }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(text);
+      notify("Summary copy ho gaya");
+    }
+  };
+
+  window.exportKhataPDF = function () {
+    exportSummaryPDF();
+  };
+
+  /* ================= PERSONAL ================= */
+
+  function renderPersonal() {
+    const list = personalKhata();
+
+    const give = list
+      .filter(x => x.type === "give" && x.status !== "settled")
+      .reduce((a, x) => a + num(x.amount), 0);
+
+    const receive = list
+      .filter(x => x.type === "receive" && x.status !== "settled")
+      .reduce((a, x) => a + num(x.amount), 0);
+
+    if (get("ledgerGiven"))
+      get("ledgerGiven").textContent = money(give);
+
+    if (get("ledgerReceived"))
+      get("ledgerReceived").textContent = money(receive);
+
+    if (get("ledgerNet"))
+      get("ledgerNet").textContent = money(give - receive);
+
+    renderKhataList(list, "personalList");
+  }
+
+  window.searchKhata = function (mode) {
+    const value =
+      get(mode === "business"
+        ? "businessSearch"
+        : "personalSearch")?.value
+        .trim()
+        .toLowerCase() || "";
+
+    const list = D.khata.filter(x =>
+      x.mode === mode &&
+      (
+        !value ||
+        String(x.person).toLowerCase().includes(value) ||
+        String(x.note).toLowerCase().includes(value)
+      )
+    );
+
+    renderKhataList(
+      list,
+      mode === "business"
+        ? "businessList"
+        : "personalList"
+    );
+  };
+
+  window.filterKhata = function (mode, filter) {
+    let list = D.khata.filter(x => x.mode === mode);
+
+    if (filter === "give" || filter === "receive") {
+      list = list.filter(x => x.type === filter);
+    }
+
+    if (filter === "pending") {
+      list = list.filter(x => x.status !== "settled");
+    }
+
+    renderKhataList(
+      list,
+      mode === "business"
+        ? "businessList"
+        : "personalList"
+    );
+  };
+
+  /* ================= BUSINESS ================= */
+
+  window.addBusinessCustomer = function () {
+    openBusinessForm("customer");
+  };
+
+  window.addBusinessSupplier = function () {
+    openBusinessForm("supplier");
+  };
+
+  function openBusinessForm(type) {
+    modal(
+      type === "customer"
+        ? "Add Customer"
+        : "Add Supplier",
+      `
+        ${field("Name", "", "text", "bName")}
+        ${field("Phone", "", "tel", "bPhone")}
+        ${field("Note", "", "text", "bNote")}
+      `,
+      button(
+        "Save",
+        `saveBusiness('${type}')`
+      )
+    );
+  }
+
+  window.saveBusiness = function (type) {
+    const name = get("bName")?.value.trim() || "";
+    const phone = get("bPhone")?.value.trim() || "";
+    const note = get("bNote")?.value.trim() || "";
+
+    if (!name) {
+      notify("Name enter karein");
+      return;
+    }
+
+    D.business.unshift({
+      id: id("biz"),
+      mode: "business",
+      type,
+      name,
+      phone,
+      note
+    });
+
+    save();
     closeModal();
     renderBusiness();
   };
 
-  window.toggleBusinessStatus = function (id) {
-    const i = findIndex(D.business, id);
-    if (i < 0) return;
+  window.businessFilter = function (type) {
+    const box = get("businessList");
+    if (!box) return;
 
-    D.business[i].status =
-      D.business[i].status === "paid"
-        ? "pending"
-        : "paid";
+    if (type === "customer" || type === "supplier") {
+      const list = D.business.filter(
+        x => x.mode === "business" && x.type === type
+      );
 
-    saveData();
+      box.innerHTML = list.length
+        ? list.map(x => `
+          <div style="
+            padding:14px;
+            margin:8px 0;
+            border:1px solid #ddd;
+            border-radius:15px;
+          ">
+            <b>${esc(x.name)}</b>
+            <div>${esc(x.phone)}</div>
+            <small>${esc(x.note)}</small>
+
+            <div style="margin-top:8px">
+              <button onclick="editBusiness('${x.id}')">
+                Edit
+              </button>
+              <button onclick="deleteBusiness('${x.id}')">
+                Delete
+              </button>
+            </div>
+          </div>
+        `).join("")
+        : "<p>No records.</p>";
+
+      return;
+    }
+
+    if (type === "sales") {
+      renderKhataList(
+        D.khata.filter(
+          x => x.mode === "business" && x.type === "receive"
+        ),
+        "businessList"
+      );
+      return;
+    }
+
+    if (type === "purchase") {
+      renderKhataList(
+        D.khata.filter(
+          x => x.mode === "business" && x.type === "give"
+        ),
+        "businessList"
+      );
+    }
+  };
+
+  window.editBusiness = function (itemId) {
+    const x = D.business.find(a => a.id === itemId);
+    if (!x) return;
+
+    modal(
+      "Edit " + x.type,
+      `
+        ${field("Name", x.name, "text", "ebName")}
+        ${field("Phone", x.phone, "tel", "ebPhone")}
+        ${field("Note", x.note, "text", "ebNote")}
+      `,
+      button("Update", `updateBusiness('${x.id}')`)
+    );
+  };
+
+  window.updateBusiness = function (itemId) {
+    const x = D.business.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.name = get("ebName")?.value.trim() || "";
+    x.phone = get("ebPhone")?.value.trim() || "";
+    x.note = get("ebNote")?.value.trim() || "";
+
+    save();
+    closeModal();
+    renderBusiness();
+  };
+
+  window.deleteBusiness = function (itemId) {
+    if (!confirm("Record delete karein?")) return;
+
+    remove(D.business, itemId);
+    save();
     renderBusiness();
   };
 
   function renderBusiness() {
-    const el = clearDynamic("business");
-    if (!el) return;
+    const list = businessKhata();
 
-    const people = D.business.filter(
-      x => x.recordType === "person"
-    );
-
-    const entries = D.business.filter(
-      x => x.recordType === "entry"
-    );
-
-    const sales = entries
-      .filter(x => x.entryType === "sale")
+    const give = list
+      .filter(x => x.type === "give" && x.status !== "settled")
       .reduce((a, x) => a + num(x.amount), 0);
 
-    const purchases = entries
-      .filter(x => x.entryType === "purchase")
+    const receive = list
+      .filter(x => x.type === "receive" && x.status !== "settled")
       .reduce((a, x) => a + num(x.amount), 0);
 
-    addDynamic("business", `
-      <div style="padding:12px">
+    if (get("businessGiven"))
+      get("businessGiven").textContent = money(give);
 
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-        ">
-          <div style="padding:14px;border-radius:15px;background:#eefaf4">
-            <small>Sales</small>
-            <h3>${money(sales)}</h3>
-          </div>
+    if (get("businessReceived"))
+      get("businessReceived").textContent = money(receive);
 
-          <div style="padding:14px;border-radius:15px;background:#fff2f2">
-            <small>Purchase</small>
-            <h3>${money(purchases)}</h3>
-          </div>
-        </div>
+    if (get("businessNet"))
+      get("businessNet").textContent = money(give - receive);
 
-        <h3>Customers & Suppliers</h3>
-
-        <button onclick="openBusinessPersonForm()">
-          ＋ Add Customer / Supplier
-        </button>
-
-        ${
-          people.length
-            ? people.map(p => `
-              <div style="
-                margin-top:9px;
-                padding:13px;
-                border:1px solid #eee;
-                border-radius:15px;
-              ">
-                <b>${esc(p.name)}</b>
-                <div>${esc(p.personType)}</div>
-                <small>${esc(p.phone)}</small>
-
-                <div style="margin-top:8px">
-                  <button onclick="openBusinessPersonForm('${p.id}')">
-                    Edit
-                  </button>
-                  <button onclick="deleteBusiness('${p.id}')">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            `).join("")
-            : "<p>No customers/suppliers.</p>"
-        }
-
-        <h3 style="margin-top:22px">Sales & Purchase</h3>
-
-        <button onclick="openBusinessEntryForm('sale')">
-          ＋ Sale
-        </button>
-
-        <button onclick="openBusinessEntryForm('purchase')">
-          ＋ Purchase
-        </button>
-
-        ${
-          entries.length
-            ? entries.map(x => `
-              <div style="
-                margin-top:9px;
-                padding:13px;
-                border:1px solid #eee;
-                border-radius:15px;
-              ">
-                <b>
-                  ${x.entryType === "sale" ? "Sale" : "Purchase"}
-                </b>
-
-                <div>
-                  ${esc(x.party)}
-                  ${x.item ? " • " + esc(x.item) : ""}
-                </div>
-
-                <div>${money(x.amount)}</div>
-
-                <small>
-                  ${esc(x.date)} • ${esc(x.status)}
-                </small>
-
-                <div style="
-                  display:flex;
-                  gap:7px;
-                  flex-wrap:wrap;
-                  margin-top:8px;
-                ">
-                  <button onclick="toggleBusinessStatus('${x.id}')">
-                    ${x.status === "paid" ? "Mark Pending" : "Mark Paid"}
-                  </button>
-
-                  <button onclick="openBusinessEntryForm('${x.entryType}','${x.id}')">
-                    Edit
-                  </button>
-
-                  <button onclick="deleteBusiness('${x.id}')">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            `).join("")
-            : "<p>No sales/purchase entries.</p>"
-        }
-
-      </div>
-    `);
+    renderKhataList(list, "businessList");
   }
 
-  /* ---------- REPORTS ---------- */
+  /* ================= PLANNING ================= */
+
+  window.calcBudget = function () {
+    const amount = num(get("budgetAmount")?.value);
+
+    if (amount <= 0) {
+      notify("Budget amount enter karein");
+      return;
+    }
+
+    D.budget.unshift({
+      id: id("budget"),
+      mode: D.mode,
+      amount,
+      date: today()
+    });
+
+    save();
+    renderPlanning();
+    notify("Budget save ho gaya");
+  };
+
+  window.calcGoal = function () {
+    const name = get("goalName")?.value.trim() || "";
+    const target = num(get("goalTarget")?.value);
+    const saved = num(get("goalSaved")?.value);
+    const date = get("goalDate")?.value || "";
+
+    if (!name || target <= 0) {
+      notify("Goal details enter karein");
+      return;
+    }
+
+    D.goals.unshift({
+      id: id("goal"),
+      mode: D.mode,
+      name,
+      target,
+      saved,
+      date
+    });
+
+    save();
+    renderPlanning();
+    notify("Goal save ho gaya");
+  };
+
+  window.deleteGoal = function (itemId) {
+    if (!confirm("Goal delete karein?")) return;
+
+    remove(D.goals, itemId);
+    save();
+    renderPlanning();
+  };
+
+  function renderPlanning() {
+    const box = get("goalList");
+    if (!box) return;
+
+    const goals = D.goals.filter(x => x.mode === D.mode);
+
+    box.innerHTML = `
+      <div style="padding:10px">
+        ${
+          D.budget
+            .filter(x => x.mode === D.mode)
+            .slice(0, 1)
+            .map(x => `
+              <div class="summary-card">
+                <small>Monthly Budget</small>
+                <strong>${money(x.amount)}</strong>
+              </div>
+            `).join("")
+        }
+
+        ${
+          goals.length
+            ? goals.map(x => {
+                const percent =
+                  x.target > 0
+                    ? Math.min(
+                        100,
+                        Math.round(x.saved / x.target * 100)
+                      )
+                    : 0;
+
+                return `
+                  <div style="
+                    padding:14px;
+                    margin:8px 0;
+                    border:1px solid #ddd;
+                    border-radius:15px;
+                  ">
+                    <b>${esc(x.name)}</b>
+
+                    <div>
+                      ${money(x.saved)}
+                      / ${money(x.target)}
+                    </div>
+
+                    <div style="
+                      height:8px;
+                      background:#eee;
+                      border-radius:8px;
+                      margin:8px 0;
+                    ">
+                      <div style="
+                        width:${percent}%;
+                        height:100%;
+                        background:#0b6b68;
+                        border-radius:8px;
+                      "></div>
+                    </div>
+
+                    <small>${percent}%</small>
+
+                    <button
+                      onclick="deleteGoal('${x.id}')">
+                      Delete
+                    </button>
+                  </div>
+                `;
+              }).join("")
+            : "<p>No goals yet.</p>"
+        }
+      </div>
+    `;
+  }
+
+  /* ================= BILLS ================= */
+
+  window.addBill = function (kind) {
+    let name = "";
+    let amount = 0;
+    let due = "";
+
+    if (kind === "Credit Card") {
+      name = "Credit Card";
+      amount = num(get("cardBill")?.value);
+      due = get("cardDue")?.value || "";
+    } else {
+      name = get("billName")?.value.trim() || "";
+      amount = num(get("billAmount")?.value);
+      due = get("billDue")?.value || "";
+    }
+
+    if (!name || amount <= 0) {
+      notify("Bill details enter karein");
+      return;
+    }
+
+    D.bills.unshift({
+      id: id("bill"),
+      mode: D.mode,
+      name,
+      kind,
+      amount,
+      due,
+      status: "pending",
+      history: []
+    });
+
+    save();
+    renderCredit();
+    notify("Bill save ho gaya");
+  };
+
+  window.editBill = function (itemId) {
+    const x = D.bills.find(a => a.id === itemId);
+    if (!x) return;
+
+    modal(
+      "Edit Bill",
+      `
+        ${field("Name", x.name, "text", "ebillName")}
+        ${field("Amount", x.amount, "number", "ebillAmount")}
+        ${field("Due Date", x.due, "date", "ebillDue")}
+
+        ${select(
+          "Status",
+          x.status,
+          [
+            { value: "pending", label: "Pending" },
+            { value: "paid", label: "Paid" }
+          ],
+          "ebillStatus"
+        )}
+      `,
+      button("Update", `updateBill('${x.id}')`)
+    );
+  };
+
+  window.updateBill = function (itemId) {
+    const x = D.bills.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.name = get("ebillName")?.value.trim() || "";
+    x.amount = num(get("ebillAmount")?.value);
+    x.due = get("ebillDue")?.value || "";
+    x.status = get("ebillStatus")?.value || "pending";
+
+    save();
+    closeModal();
+    renderCredit();
+  };
+
+  window.payBill = function (itemId) {
+    const x = D.bills.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.status = "paid";
+    x.history = x.history || [];
+
+    x.history.push({
+      date: today(),
+      amount: x.amount,
+      status: "paid"
+    });
+
+    save();
+    renderCredit();
+  };
+
+  window.deleteBill = function (itemId) {
+    if (!confirm("Bill delete karein?")) return;
+
+    remove(D.bills, itemId);
+    save();
+    renderCredit();
+  };
+
+  function renderCredit() {
+    const box = get("billList");
+    if (!box) return;
+
+    const list = D.bills.filter(x => x.mode === D.mode);
+
+    box.innerHTML = list.length
+      ? list.map(x => `
+        <div style="
+          padding:14px;
+          margin:8px 0;
+          border:1px solid #ddd;
+          border-radius:15px;
+        ">
+          <div style="
+            display:flex;
+            justify-content:space-between;
+          ">
+            <b>${esc(x.name)}</b>
+            <strong>${money(x.amount)}</strong>
+          </div>
+
+          <small>
+            ${esc(x.kind)} • Due ${esc(x.due)}
+          </small>
+
+          <div>
+            Status:
+            <b>${esc(x.status)}</b>
+          </div>
+
+          <div style="margin-top:8px">
+            <button onclick="editBill('${x.id}')">
+              Edit
+            </button>
+
+            ${
+              x.status !== "paid"
+                ? `<button onclick="payBill('${x.id}')">
+                    Mark Paid
+                   </button>`
+                : ""
+            }
+
+            <button onclick="deleteBill('${x.id}')">
+              Delete
+            </button>
+          </div>
+        </div>
+      `).join("")
+      : "<p>No bills yet.</p>";
+  }
+
+  /* ================= EMI ================= */
+
+  window.calcEMI = function () {
+    const principal = num(get("emiPrincipal")?.value);
+    const rate = num(get("emiRate")?.value);
+    const months = Math.floor(num(get("emiMonths")?.value));
+
+    if (principal <= 0 || months <= 0) {
+      notify("Loan amount aur tenure enter karein");
+      return;
+    }
+
+    const monthlyRate = rate / 12 / 100;
+
+    let emi;
+
+    if (monthlyRate === 0) {
+      emi = principal / months;
+    } else {
+      emi =
+        principal *
+        monthlyRate *
+        Math.pow(1 + monthlyRate, months) /
+        (Math.pow(1 + monthlyRate, months) - 1);
+    }
+
+    const result = get("emiResult");
+
+    if (result) {
+      result.innerHTML = `
+        <div style="
+          padding:14px;
+          margin-top:10px;
+          border-radius:14px;
+          background:#eef8f4;
+        ">
+          <b>Monthly EMI</b>
+          <div style="font-size:24px">
+            ${money(emi)}
+          </div>
+
+          <button onclick="
+            saveLoan(${principal},${rate},${months},${emi})
+          ">
+            Save Loan
+          </button>
+        </div>
+      `;
+    }
+  };
+
+  window.saveLoan = function (
+    principal,
+    rate,
+    months,
+    emi
+  ) {
+    D.loans.unshift({
+      id: id("loan"),
+      mode: D.mode,
+      name: "Loan / EMI",
+      principal,
+      rate,
+      months,
+      emi,
+      paid: 0,
+      paidHistory: [],
+      due: "",
+      status: "pending",
+      created: today()
+    });
+
+    save();
+    renderCredit();
+    notify("Loan save ho gaya");
+  };
+
+  window.deleteLoan = function (itemId) {
+    if (!confirm("Loan delete karein?")) return;
+
+    remove(D.loans, itemId);
+    save();
+    renderCredit();
+  };
+
+  window.payLoan = function (itemId) {
+    const x = D.loans.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.paid = Math.min(
+      num(x.principal),
+      num(x.paid) + num(x.emi)
+    );
+
+    x.paidHistory = x.paidHistory || [];
+
+    x.paidHistory.push({
+      date: today(),
+      amount: x.emi
+    });
+
+    if (x.paid >= x.principal) {
+      x.status = "paid";
+    }
+
+    save();
+    renderCredit();
+  };
+
+  /* ================= REMINDERS ================= */
+
+  window.addReminder = function () {
+    const name = get("reminderName")?.value.trim() || "";
+    const date = get("reminderDate")?.value || "";
+
+    if (!name || !date) {
+      notify("Reminder details enter karein");
+      return;
+    }
+
+    D.reminders.unshift({
+      id: id("rem"),
+      mode: D.mode,
+      name,
+      date,
+      done: false
+    });
+
+    save();
+    renderReminders();
+    notify("Reminder save ho gaya");
+  };
+
+  window.openReminderForm = function (itemId = "") {
+    const x = D.reminders.find(a => a.id === itemId);
+
+    modal(
+      itemId ? "Edit Reminder" : "Add Reminder",
+      `
+        ${field(
+          "Reminder",
+          x?.name || "",
+          "text",
+          "rName"
+        )}
+
+        ${field(
+          "Date",
+          x?.date || today(),
+          "date",
+          "rDate"
+        )}
+      `,
+      button(
+        itemId ? "Update" : "Save",
+        `saveReminder('${itemId}')`
+      )
+    );
+  };
+
+  window.saveReminder = function (itemId = "") {
+    const name = get("rName")?.value.trim() || "";
+    const date = get("rDate")?.value || today();
+
+    if (!name) {
+      notify("Reminder name enter karein");
+      return;
+    }
+
+    if (itemId) {
+      const x = D.reminders.find(a => a.id === itemId);
+
+      if (x) {
+        x.name = name;
+        x.date = date;
+      }
+    } else {
+      D.reminders.unshift({
+        id: id("rem"),
+        mode: D.mode,
+        name,
+        date,
+        done: false
+      });
+    }
+
+    save();
+    closeModal();
+    renderReminders();
+  };
+
+  window.doneReminder = function (itemId) {
+    const x = D.reminders.find(a => a.id === itemId);
+    if (!x) return;
+
+    x.done = !x.done;
+    save();
+    renderReminders();
+  };
+
+  window.deleteReminder = function (itemId) {
+    if (!confirm("Reminder delete karein?")) return;
+
+    remove(D.reminders, itemId);
+    save();
+    renderReminders();
+  };
+
+  function renderReminders() {
+    const box = get("reminderList");
+    if (!box) return;
+
+    const list = D.reminders.filter(x => x.mode === D.mode);
+
+    box.innerHTML = list.length
+      ? list.map(x => `
+        <div style="
+          padding:14px;
+          margin:8px 0;
+          border:1px solid #ddd;
+          border-radius:15px;
+        ">
+          <b style="
+            text-decoration:${x.done ? "line-through" : "none"};
+          ">
+            ${esc(x.name)}
+          </b>
+
+          <div>${esc(x.date)}</div>
+
+          <button onclick="doneReminder('${x.id}')">
+            ${x.done ? "Undo" : "Done"}
+          </button>
+
+          <button onclick="openReminderForm('${x.id}')">
+            Edit
+          </button>
+
+          <button onclick="deleteReminder('${x.id}')">
+            Delete
+          </button>
+        </div>
+      `).join("")
+      : "<p>No reminders.</p>";
+  }
+
+  /* ================= REPORTS ================= */
 
   function renderReports() {
-    const el = clearDynamic("reports");
-    if (!el) return;
+    let income = 0;
+    let expense = 0;
+    let give = 0;
+    let receive = 0;
 
-    const income = D.transactions
-      .filter(x => x.type === "income")
-      .reduce((a, x) => a + num(x.amount), 0);
+    D.transactions
+      .filter(x => x.mode === D.mode)
+      .forEach(x => {
+        if (x.type === "income") income += num(x.amount);
+        if (x.type === "expense") expense += num(x.amount);
+      });
 
-    const expense = D.transactions
-      .filter(x => x.type === "expense")
-      .reduce((a, x) => a + num(x.amount), 0);
+    D.khata
+      .filter(x => x.mode === D.mode)
+      .forEach(x => {
+        if (x.type === "give") give += num(x.amount);
+        if (x.type === "receive") receive += num(x.amount);
+      });
 
-    const categories = {};
+    if (get("reportIncome"))
+      get("reportIncome").textContent = money(income);
 
-    D.transactions.forEach(x => {
-      const key = x.category || "General";
+    if (get("reportExpense"))
+      get("reportExpense").textContent = money(expense);
 
-      if (!categories[key]) {
-        categories[key] = {
-          income: 0,
-          expense: 0
-        };
-      }
+    if (get("reportGive"))
+      get("reportGive").textContent = money(give);
 
-      categories[key][x.type] += num(x.amount);
-    });
+    if (get("reportReceive"))
+      get("reportReceive").textContent = money(receive);
 
-    const months = {};
+    const box = get("reportContent");
 
-    D.transactions.forEach(x => {
-      const month = String(x.date || "").slice(0, 7);
-
-      if (!month) return;
-
-      if (!months[month]) {
-        months[month] = {
-          income: 0,
-          expense: 0
-        };
-      }
-
-      months[month][x.type] += num(x.amount);
-    });
-
-    addDynamic("reports", `
-      <div style="padding:12px">
-
-        <div style="
-          padding:16px;
-          border-radius:16px;
-          background:#f6f7f8;
-        ">
-          <b>Financial Summary</b>
-
-          <div>Income: ${money(income)}</div>
-          <div>Expense: ${money(expense)}</div>
-          <div>
-            Net: ${money(income - expense)}
+    if (box) {
+      box.innerHTML = `
+        <div style="padding:12px">
+          <div class="summary-card">
+            <b>Net Cashflow</b>
+            <h2>${money(income - expense)}</h2>
           </div>
+
+          <div class="summary-card">
+            <b>Udhar Balance</b>
+            <h2>${money(give - receive)}</h2>
+          </div>
+
+          <p>
+            Transactions:
+            ${D.transactions.filter(x => x.mode === D.mode).length}
+          </p>
+
+          <p>
+            Udhar Entries:
+            ${D.khata.filter(x => x.mode === D.mode).length}
+          </p>
+
+          <p>
+            Bills:
+            ${D.bills.filter(x => x.mode === D.mode).length}
+          </p>
+
+          <p>
+            Loans:
+            ${D.loans.filter(x => x.mode === D.mode).length}
+          </p>
         </div>
-
-        <h3>Category Report</h3>
-
-        ${
-          Object.keys(categories).length
-            ? Object.entries(categories).map(([name, v]) => `
-              <div style="
-                padding:12px;
-                border-bottom:1px solid #eee;
-              ">
-                <b>${esc(name)}</b>
-                <div>Income: ${money(v.income)}</div>
-                <div>Expense: ${money(v.expense)}</div>
-              </div>
-            `).join("")
-            : "<p>No report data.</p>"
-        }
-
-        <h3>Monthly Report</h3>
-
-        ${
-          Object.keys(months).length
-            ? Object.entries(months)
-                .sort((a, b) => b[0].localeCompare(a[0]))
-                .map(([month, v]) => `
-                  <div style="
-                    padding:12px;
-                    border-bottom:1px solid #eee;
-                  ">
-                    <b>${esc(month)}</b>
-                    <div>
-                      Income: ${money(v.income)}
-                    </div>
-                    <div>
-                      Expense: ${money(v.expense)}
-                    </div>
-                    <div>
-                      Net: ${money(v.income - v.expense)}
-                    </div>
-                  </div>
-                `).join("")
-            : "<p>No monthly data.</p>"
-        }
-
-        <div style="
-          display:flex;
-          gap:8px;
-          flex-wrap:wrap;
-          margin-top:18px;
-        ">
-          <button onclick="exportPDF()">
-            Export PDF
-          </button>
-
-          <button onclick="sharePDF()">
-            Share PDF
-          </button>
-        </div>
-
-      </div>
-    `);
+      `;
+    }
   }
 
-  /* ---------- PDF ---------- */
+  /* ================= PDF / SHARE ================= */
 
-  function pdfSafe(text) {
-    return String(text)
-      .replace(/₹/g, "INR ")
-      .replace(/[^\x20-\x7E]/g, "");
-  }
-
-  function makePDF() {
-    const lines = [];
-
-    lines.push("HISAB - MONEY MANAGER");
-    lines.push("Financial Report");
-    lines.push("--------------------------------");
+  function reportText() {
+    let text = "HISAB MONEY MANAGER\n";
+    text += "========================\n\n";
 
     let income = 0;
     let expense = 0;
 
-    D.transactions.forEach(x => {
-      if (x.type === "income") income += num(x.amount);
-      if (x.type === "expense") expense += num(x.amount);
-    });
+    D.transactions
+      .filter(x => x.mode === D.mode)
+      .forEach(x => {
+        if (x.type === "income") income += num(x.amount);
+        if (x.type === "expense") expense += num(x.amount);
+      });
 
-    lines.push("Income: " + pdfSafe(money(income)));
-    lines.push("Expense: " + pdfSafe(money(expense)));
-    lines.push("Net: " + pdfSafe(money(income - expense)));
-    lines.push("");
+    text += "Income: " + money(income) + "\n";
+    text += "Expense: " + money(expense) + "\n";
+    text += "Balance: " + money(income - expense) + "\n\n";
 
-    lines.push("TRANSACTIONS");
-    lines.push("--------------------------------");
+    text += "UDHAR\n";
+    text += "========================\n";
 
-    D.transactions.slice(0, 100).forEach(x => {
-      lines.push(
-        `${x.date} | ${x.type} | ${x.category} | ${money(x.amount)}`
+    D.khata
+      .filter(x => x.mode === D.mode)
+      .slice(0, 100)
+      .forEach(x => {
+        text +=
+          x.date + " | " +
+          x.person + " | " +
+          x.type + " | " +
+          money(x.amount) + " | " +
+          x.status + "\n";
+      });
+
+    text += "\nTRANSACTIONS\n";
+    text += "========================\n";
+
+    D.transactions
+      .filter(x => x.mode === D.mode)
+      .slice(0, 100)
+      .forEach(x => {
+        text +=
+          x.date + " | " +
+          x.type + " | " +
+          x.category + " | " +
+          money(x.amount) + "\n";
+      });
+
+    return text;
+  }
+
+  window.exportSummary = function () {
+    const text = reportText();
+
+    if (navigator.share) {
+      navigator.share({
+        title: "HISAB Summary",
+        text
+      }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(text);
+      notify("Summary copy ho gaya");
+    }
+  };
+
+  window.exportSummaryPDF = function () {
+    const text = reportText()
+      .replace(/₹/g, "INR ");
+
+    const lines = text
+      .split("\n")
+      .map(x =>
+        x.replace(/[^\x20-\x7E]/g, "")
       );
-    });
-
-    lines.push("");
-    lines.push("UDHAAR");
-    lines.push("--------------------------------");
-
-    D.khata.slice(0, 100).forEach(x => {
-      lines.push(
-        `${x.date} | ${x.person} | ${x.type} | ${money(x.amount)} | ${x.status}`
-      );
-    });
-
-    const body = lines
-      .map(pdfSafe)
-      .map(x => x.slice(0, 100))
-      .join("\n");
 
     const stream =
-      `BT
-/F1 10 Tf
-40 800 Td
-12 TL
-${body
-  .split("\n")
-  .map(line => `(${line.replace(/[()\\]/g, "\\$&")}) Tj T*`)
-  .join("\n")}
-ET`;
+      "BT\n" +
+      "/F1 9 Tf\n" +
+      "40 800 Td\n" +
+      "12 TL\n" +
+      lines.map(x =>
+        "(" +
+        x.replace(/[()\\]/g, "\\$&") +
+        ") Tj T*\n"
+      ).join("") +
+      "ET";
 
-    const objects = [];
-
-    objects.push(
+    const objects = [
       `1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
-endobj`
-    );
+endobj`,
 
-    objects.push(
       `2 0 obj
 << /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj`
-    );
+endobj`,
 
-    objects.push(
       `3 0 obj
 <<
 /Type /Page
@@ -2252,116 +1959,78 @@ endobj`
 /Resources << /Font << /F1 5 0 R >> >>
 /Contents 4 0 R
 >>
-endobj`
-    );
+endobj`,
 
-    objects.push(
       `4 0 obj
 << /Length ${stream.length} >>
 stream
 ${stream}
 endstream
-endobj`
-    );
+endobj`,
 
-    objects.push(
       `5 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj`
-    );
+    ];
 
     let pdf = "%PDF-1.4\n";
     const offsets = [0];
 
-    objects.forEach(obj => {
+    objects.forEach(o => {
       offsets.push(pdf.length);
-      pdf += obj + "\n";
+      pdf += o + "\n";
     });
 
-    const xref = pdf.length;
+    const start = pdf.length;
 
-    pdf += `xref
-0 ${objects.length + 1}
-0000000000 65535 f 
-`;
+    pdf +=
+      `xref\n0 6\n` +
+      `0000000000 65535 f \n`;
 
     for (let i = 1; i < offsets.length; i++) {
-      pdf += String(offsets[i]).padStart(10, "0") +
+      pdf +=
+        String(offsets[i]).padStart(10, "0") +
         " 00000 n \n";
     }
 
-    pdf += `trailer
-<< /Size ${objects.length + 1} /Root 1 0 R >>
+    pdf +=
+      `trailer
+<< /Size 6 /Root 1 0 R >>
 startxref
-${xref}
+${start}
 %%EOF`;
 
-    return new Blob([pdf], {
-      type: "application/pdf"
-    });
-  }
+    const blob = new Blob(
+      [pdf],
+      { type: "application/pdf" }
+    );
 
-  window.exportPDF = function () {
-    try {
-      const blob = makePDF();
+    const url = URL.createObjectURL(blob);
 
-      const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      "HISAB-Report-" + today() + ".pdf";
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download =
-        "HISAB-Report-" +
-        today() +
-        ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    setTimeout(
+      () => URL.revokeObjectURL(url),
+      2000
+    );
 
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-
-      notify("PDF ready hai");
-    } catch (e) {
-      console.error(e);
-      notify("PDF create nahi ho paya");
-    }
+    notify("PDF ready hai");
   };
 
-  window.sharePDF = async function () {
-    try {
-      const blob = makePDF();
-
-      const file = new File(
-        [blob],
-        "HISAB-Report-" + today() + ".pdf",
-        { type: "application/pdf" }
-      );
-
-      if (
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
-      ) {
-        await navigator.share({
-          title: "HISAB Report",
-          text: "HISAB Financial Report",
-          files: [file]
-        });
-
-        return;
-      }
-
-      exportPDF();
-    } catch (e) {
-      if (e?.name !== "AbortError") {
-        exportPDF();
-      }
-    }
+  window.sharePDF = function () {
+    exportSummary();
   };
 
-  /* ---------- BACKUP / RESTORE ---------- */
+  /* ================= BACKUP ================= */
 
-  window.backupData = function () {
+  window.exportBackup = function () {
     const blob = new Blob(
       [JSON.stringify(D, null, 2)],
       { type: "application/json" }
@@ -2371,118 +2040,83 @@ ${xref}
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = "HISAB-Backup-" + today() + ".json";
+    a.download =
+      "HISAB-Backup-" + today() + ".json";
 
     document.body.appendChild(a);
     a.click();
     a.remove();
 
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setTimeout(
+      () => URL.revokeObjectURL(url),
+      2000
+    );
+
+    notify("Backup ready hai");
   };
 
-  window.restoreData = function () {
-    const inputEl = document.createElement("input");
+  window.importBackup = function (event) {
+    const file = event?.target?.files?.[0];
 
-    inputEl.type = "file";
-    inputEl.accept = ".json,application/json";
+    if (!file) return;
 
-    inputEl.onchange = async function () {
-      const file = inputEl.files?.[0];
-      if (!file) return;
+    const reader = new FileReader();
 
+    reader.onload = function () {
       try {
-        const textData = await file.text();
-        const imported = JSON.parse(textData);
+        const x = JSON.parse(reader.result);
 
         D = {
-          ...clone(DEFAULT_DATA),
-          ...imported,
-          filters: {
-            ...DEFAULT_DATA.filters,
-            ...(imported.filters || {})
-          }
+          ...clone(DEFAULT),
+          ...x
         };
 
-        saveData();
+        save();
 
         notify("Backup restore ho gaya");
-
         show("home");
       } catch (e) {
         notify("Backup file valid nahi hai");
       }
     };
 
-    inputEl.click();
+    reader.readAsText(file);
   };
 
-  /* ---------- SECURITY ---------- */
+  /* ================= SECURITY ================= */
 
-  window.setPIN = function () {
-    modal(
-      "Security PIN",
-      `
-        ${input("New PIN", "", "password", "newPin")}
-        ${input("Confirm PIN", "", "password", "confirmPin")}
-      `,
-      actionButton("Save PIN", "savePIN()")
-    );
-  };
+  window.setPin = function () {
+    const p = get("pinInput")?.value || "";
 
-  window.savePIN = function () {
-    const a =
-      document.getElementById("newPin")?.value || "";
-
-    const b =
-      document.getElementById("confirmPin")?.value || "";
-
-    if (!a || a.length < 4) {
-      notify("PIN kam se kam 4 digit ka ho");
+    if (!/^\d{4,6}$/.test(p)) {
+      notify("PIN 4 se 6 digit ka hona chahiye");
       return;
     }
 
-    if (a !== b) {
-      notify("PIN match nahi hai");
-      return;
+    D.pin = p;
+    D.locked = false;
+
+    save();
+
+    if (get("pinInput")) {
+      get("pinInput").value = "";
     }
-
-    D.pin = a;
-    saveData();
-
-    closeModal();
 
     notify("PIN save ho gaya");
   };
 
-  window.removePIN = function () {
+  window.setPIN = window.setPin;
+
+  window.lockApp = function () {
     if (!D.pin) {
-      notify("PIN set nahi hai");
+      notify("Pehle PIN set karein");
       return;
     }
 
-    modal(
-      "Remove PIN",
-      input("Current PIN", "", "password", "removePin"),
-      actionButton("Remove", "confirmRemovePIN()")
-    );
-  };
+    D.locked = true;
+    save();
 
-  window.confirmRemovePIN = function () {
-    const p =
-      document.getElementById("removePin")?.value || "";
-
-    if (p !== D.pin) {
-      notify("Wrong PIN");
-      return;
-    }
-
-    D.pin = "";
-    D.locked = false;
-
-    saveData();
-    closeModal();
-
-    notify("PIN remove ho gaya");
+    alert("HISAB locked hai. App dobara kholkar PIN enter karein.");
   };
 
   window.unlockApp = function () {
@@ -2492,6 +2126,7 @@ ${xref}
 
     if (p === D.pin) {
       D.locked = false;
+      save();
       return true;
     }
 
@@ -2499,348 +2134,228 @@ ${xref}
     return false;
   };
 
-  /* ---------- SETTINGS ---------- */
+  /* ================= LANGUAGE / CURRENCY ================= */
 
-  function renderSettings() {
-    const el = clearDynamic("final");
-    if (!el) return;
+  window.toggleLanguage = function () {
+    D.language = D.language === "en" ? "hi" : "en";
+    save();
 
-    addDynamic("final", `
-      <div style="padding:12px">
-
-        <h3>Settings</h3>
-
-        <div style="
-          padding:14px;
-          border:1px solid #eee;
-          border-radius:15px;
-          margin-bottom:10px;
-        ">
-          <b>Language</b>
-
-          <div style="margin-top:8px">
-            <button onclick="setLanguage('en')">
-              English
-            </button>
-
-            <button onclick="setLanguage('hi')">
-              Hindi
-            </button>
-          </div>
-
-          <p>
-            Current:
-            ${D.language === "hi" ? "Hindi" : "English"}
-          </p>
-        </div>
-
-        <div style="
-          padding:14px;
-          border:1px solid #eee;
-          border-radius:15px;
-          margin-bottom:10px;
-        ">
-          <b>Currency</b>
-
-          <div style="margin-top:8px">
-            <button onclick="setCurrency('₹')">₹ INR</button>
-            <button onclick="setCurrency('$')">$ USD</button>
-            <button onclick="setCurrency('€')">€ EUR</button>
-            <button onclick="setCurrency('£')">£ GBP</button>
-          </div>
-        </div>
-
-        <h3>Security</h3>
-
-        <button onclick="setPIN()">
-          Set / Change PIN
-        </button>
-
-        <button onclick="removePIN()">
-          Remove PIN
-        </button>
-
-        <h3>Backup</h3>
-
-        <button onclick="backupData()">
-          Export Backup
-        </button>
-
-        <button onclick="restoreData()">
-          Restore Backup
-        </button>
-
-        <h3>About</h3>
-
-        <p>
-          HISAB Money Manager<br>
-          Track • Plan • Grow
-        </p>
-
-      </div>
-    `);
-  }
-
-  window.setLanguage = function (lang) {
-    D.language = lang === "hi" ? "hi" : "en";
-    saveData();
-    renderSettings();
-  };
-
-  window.setCurrency = function (currency) {
-    D.currency = currency;
-    saveData();
-    renderSettings();
-  };
-
-  /* ---------- PRIVACY ---------- */
-
-  function renderPrivacy() {
-    const el = clearDynamic("privacy");
-    if (!el) return;
-
-    addDynamic("privacy", `
-      <div style="padding:15px">
-        <h3>Privacy</h3>
-
-        <p>
-          HISAB stores app data locally on the device.
-        </p>
-
-        <p>
-          No account/login is required for the local data flow.
-        </p>
-
-        <p>
-          Backup files are created only when you choose
-          to export them.
-        </p>
-      </div>
-    `);
-  }
-
-  /* ---------- FAMILY ---------- */
-
-  window.openFamilyForm = function (id = "") {
-    const old = id
-      ? D.family[findIndex(D.family, id)]
-      : null;
-
-    modal(
-      id ? "Edit Family Member" : "Add Family Member",
-      `
-        ${input("Name", old?.name || "", "text", "famName")}
-        ${input("Relation", old?.relation || "", "text", "famRelation")}
-        ${input("Phone", old?.phone || "", "tel", "famPhone")}
-      `,
-      actionButton(
-        id ? "Update" : "Save",
-        `saveFamily('${id}')`
-      )
+    notify(
+      D.language === "hi"
+        ? "Hindi selected"
+        : "English selected"
     );
   };
 
-  window.saveFamily = function (id = "") {
-    const item = {
-      id: id || uid("fam"),
-      name: document.getElementById("famName")?.value.trim() || "",
-      relation:
-        document.getElementById("famRelation")?.value.trim() || "",
-      phone:
-        document.getElementById("famPhone")?.value.trim() || ""
-    };
+  window.toggleCurrency = function () {
+    const list = ["₹", "$", "€", "£"];
+    const i = list.indexOf(D.currency);
 
-    if (!item.name) {
+    D.currency =
+      list[(i + 1) % list.length];
+
+    save();
+
+    show(
+      document.querySelector(".page.active")?.id ||
+      "home"
+    );
+  };
+
+  window.setLanguage = function (x) {
+    D.language = x === "hi" ? "hi" : "en";
+    save();
+    renderSettings();
+  };
+
+  window.setCurrency = function (x) {
+    D.currency = x;
+    save();
+    renderSettings();
+  };
+
+  /* ================= PRIVACY ================= */
+
+  function renderPrivacy() {
+    const box = get("privacy");
+    if (!box) return;
+
+    const old = get("privacyInfo");
+    if (old) old.remove();
+
+    const div = document.createElement("div");
+    div.id = "privacyInfo";
+    div.style.padding = "12px";
+
+    div.innerHTML = `
+      <div class="form-card">
+        <h3>Privacy</h3>
+        <p>
+          HISAB app data device ke local storage
+          mein save hota hai.
+        </p>
+        <p>
+          Login required nahi hai.
+        </p>
+        <p>
+          Backup tabhi create hota hai jab aap
+          manually Backup choose karte hain.
+        </p>
+      </div>
+    `;
+
+    box.appendChild(div);
+  }
+
+  /* ================= FAMILY ================= */
+
+  window.addFamilyMember = function () {
+    const name = get("familyName")?.value.trim() || "";
+
+    if (!name) {
       notify("Name enter karein");
       return;
     }
 
-    const i = findIndex(D.family, item.id);
+    D.family.unshift({
+      id: id("family"),
+      name,
+      relation: "",
+      phone: ""
+    });
 
-    if (i >= 0) D.family[i] = item;
-    else D.family.unshift(item);
+    save();
 
-    saveData();
+    if (get("familyName"))
+      get("familyName").value = "";
+
+    renderFamily();
+  };
+
+  window.openFamilyForm = function (itemId = "") {
+    const x = D.family.find(a => a.id === itemId);
+
+    modal(
+      itemId ? "Edit Family Member" : "Add Family Member",
+      `
+        ${field("Name", x?.name || "", "text", "fName")}
+        ${field("Relation", x?.relation || "", "text", "fRelation")}
+        ${field("Phone", x?.phone || "", "tel", "fPhone")}
+      `,
+      button(
+        itemId ? "Update" : "Save",
+        `saveFamily('${itemId}')`
+      )
+    );
+  };
+
+  window.saveFamily = function (itemId = "") {
+    const name = get("fName")?.value.trim() || "";
+
+    if (!name) {
+      notify("Name enter karein");
+      return;
+    }
+
+    if (itemId) {
+      const x = D.family.find(a => a.id === itemId);
+
+      if (x) {
+        x.name = name;
+        x.relation = get("fRelation")?.value.trim() || "";
+        x.phone = get("fPhone")?.value.trim() || "";
+      }
+    } else {
+      D.family.unshift({
+        id: id("family"),
+        name,
+        relation: get("fRelation")?.value.trim() || "",
+        phone: get("fPhone")?.value.trim() || ""
+      });
+    }
+
+    save();
     closeModal();
     renderFamily();
   };
 
-  window.deleteFamily = function (id) {
+  window.deleteFamily = function (itemId) {
     if (!confirm("Family member delete karein?")) return;
 
-    removeItem(D.family, id);
-    saveData();
+    remove(D.family, itemId);
+    save();
     renderFamily();
   };
 
   function renderFamily() {
-    const el = clearDynamic("family");
-    if (!el) return;
+    const box = get("familyList");
+    if (!box) return;
 
-    addDynamic("family", `
-      <div style="padding:12px">
+    box.innerHTML = D.family.length
+      ? D.family.map(x => `
+        <div style="
+          padding:14px;
+          margin:8px 0;
+          border:1px solid #ddd;
+          border-radius:15px;
+        ">
+          <b>${esc(x.name)}</b>
+          <div>${esc(x.relation)}</div>
+          <small>${esc(x.phone)}</small>
 
-        <button onclick="openFamilyForm()">
-          ＋ Add Family Member
-        </button>
+          <div>
+            <button onclick="openFamilyForm('${x.id}')">
+              Edit
+            </button>
 
-        ${
-          D.family.length
-            ? D.family.map(f => `
-              <div style="
-                margin-top:10px;
-                padding:14px;
-                border:1px solid #eee;
-                border-radius:15px;
-              ">
-                <b>${esc(f.name)}</b>
-                <div>${esc(f.relation)}</div>
-                <small>${esc(f.phone)}</small>
-
-                <div style="margin-top:8px">
-                  <button onclick="openFamilyForm('${f.id}')">
-                    Edit
-                  </button>
-
-                  <button onclick="deleteFamily('${f.id}')">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            `).join("")
-            : "<p>No family members.</p>"
-        }
-
-      </div>
-    `);
+            <button onclick="deleteFamily('${x.id}')">
+              Delete
+            </button>
+          </div>
+        </div>
+      `).join("")
+      : "<p>No family members.</p>";
   }
 
-  /* ---------- FAMILY TOOLS ---------- */
+  /* ================= FAMILY TOOLS ================= */
 
   function renderFamilyTools() {
-    const el = clearDynamic("familytools");
-    if (!el) return;
-
-    addDynamic("familytools", `
-      <div style="padding:12px">
-
-        <h3>Family Tools</h3>
-
-        <button onclick="openCalculator('emergency')">
-          Emergency Fund
-        </button>
-
-        <button onclick="openCalculator('fd')">
-          FD Calculator
-        </button>
-
-        <button onclick="openCalculator('annual')">
-          Annual Expense
-        </button>
-
-      </div>
-    `);
+    /* Static HTML already exists.
+       No destructive rewrite needed. */
   }
 
-  /* ---------- TOOLS ---------- */
+  /* ================= TOOLS ================= */
 
-  function renderTools() {
-    const el = clearDynamic("tools13");
-    if (!el) return;
+  window.calcFD = function () {
+    const p = num(get("fdPrincipal")?.value);
+    const rate = num(get("fdRate")?.value);
+    const months = num(get("fdN")?.value);
 
-    addDynamic("tools13", `
-      <div style="padding:12px">
+    if (p <= 0 || months <= 0) {
+      notify("FD details enter karein");
+      return;
+    }
 
-        <h3>Money Tools</h3>
+    const result =
+      p * Math.pow(
+        1 + rate / 100,
+        months / 12
+      );
 
-        <button onclick="openCalculator('emergency')">
-          Emergency Fund Calculator
-        </button>
+    const box = get("fdResult");
 
-        <button onclick="openCalculator('fd')">
-          FD Calculator
-        </button>
+    if (box) {
+      box.innerHTML =
+        "<b>Maturity Amount: </b>" +
+        money(result);
+    }
 
-        <button onclick="openCalculator('annual')">
-          Annual Expense Calculator
-        </button>
-
-        <button onclick="openCalculator('budget')">
-          Budget Calculator
-        </button>
-
-        <h3>Other Records</h3>
-
-        <button onclick="openSimpleTool('insurance')">
-          Insurance
-        </button>
-
-        <button onclick="openSimpleTool('school')">
-          School
-        </button>
-
-        <button onclick="openSimpleTool('vehicle')">
-          Vehicle
-        </button>
-
-        <button onclick="openSimpleTool('shopping')">
-          Shopping
-        </button>
-
-        <button onclick="openSimpleTool('utility')">
-          Utility
-        </button>
-
-        <button onclick="openSimpleTool('document')">
-          Documents
-        </button>
-
-      </div>
-    `);
-  }
-
-  window.openSimpleTool = function (type) {
-    const old = D.tools.find(x => x.type === type);
-
-    modal(
-      type.charAt(0).toUpperCase() + type.slice(1),
-      `
-        ${input("Title", old?.title || "", "text", "toolTitle")}
-        ${input("Amount", old?.amount || "", "number", "toolAmount")}
-        ${input("Date", old?.date || today(), "date", "toolDate")}
-        ${input("Note", old?.note || "", "text", "toolNote")}
-      `,
-      actionButton("Save", `saveSimpleTool('${type}')`)
-    );
+    return result;
   };
 
-  window.saveSimpleTool = function (type) {
-    const old = D.tools.find(x => x.type === type);
-
-    const item = {
-      id: old?.id || uid("tool"),
-      type,
-      title:
-        document.getElementById("toolTitle")?.value.trim() || "",
-      amount:
-        num(document.getElementById("toolAmount")?.value),
-      date:
-        document.getElementById("toolDate")?.value || today(),
-      note:
-        document.getElementById("toolNote")?.value.trim() || ""
-    };
-
-    const i = findIndex(D.tools, item.id);
-
-    if (i >= 0) D.tools[i] = item;
-    else D.tools.unshift(item);
-
-    saveData();
-    closeModal();
-    renderTools();
+  window.calcEmergency = function () {
+    openCalculator("emergency");
   };
-
-  /* ---------- CALCULATORS ---------- */
 
   window.openCalculator = function (type) {
     let title = "Calculator";
@@ -2849,66 +2364,50 @@ ${xref}
     if (type === "emergency") {
       title = "Emergency Fund";
 
-      body = `
-        ${input("Monthly Expense", "", "number", "c1")}
-        ${input("Months", "6", "number", "c2")}
-
-        <div id="calcResult" style="margin-top:12px"></div>
-      `;
+      body =
+        field("Monthly Expense", "", "number", "c1") +
+        field("Months", "6", "number", "c2") +
+        `<div id="calcResult"></div>`;
     }
 
     if (type === "fd") {
       title = "FD Calculator";
 
-      body = `
-        ${input("Principal", "", "number", "c1")}
-        ${input("Annual Interest %", "", "number", "c2")}
-        ${input("Years", "1", "number", "c3")}
-
-        <div id="calcResult" style="margin-top:12px"></div>
-      `;
+      body =
+        field("Principal", "", "number", "c1") +
+        field("Interest %", "", "number", "c2") +
+        field("Years", "1", "number", "c3") +
+        `<div id="calcResult"></div>`;
     }
 
     if (type === "annual") {
       title = "Annual Expense";
 
-      body = `
-        ${input("Monthly Expense", "", "number", "c1")}
-
-        <div id="calcResult" style="margin-top:12px"></div>
-      `;
+      body =
+        field("Monthly Expense", "", "number", "c1") +
+        `<div id="calcResult"></div>`;
     }
 
     if (type === "budget") {
       title = "Budget Calculator";
 
-      body = `
-        ${input("Monthly Income", "", "number", "c1")}
-        ${input("Monthly Expense", "", "number", "c2")}
-
-        <div id="calcResult" style="margin-top:12px"></div>
-      `;
+      body =
+        field("Income", "", "number", "c1") +
+        field("Expense", "", "number", "c2") +
+        `<div id="calcResult"></div>`;
     }
 
     modal(
       title,
       body,
-      actionButton("Calculate", `calculate('${type}')`)
+      button("Calculate", `calculate('${type}')`)
     );
   };
 
   window.calculate = function (type) {
-    const a = num(
-      document.getElementById("c1")?.value
-    );
-
-    const b = num(
-      document.getElementById("c2")?.value
-    );
-
-    const c = num(
-      document.getElementById("c3")?.value
-    );
+    const a = num(get("c1")?.value);
+    const b = num(get("c2")?.value);
+    const c = num(get("c3")?.value);
 
     let result = 0;
 
@@ -2925,23 +2424,25 @@ ${xref}
     }
 
     if (type === "fd") {
-      result = a * Math.pow(
-        1 + b / 100,
-        Math.max(1, c)
-      );
+      result =
+        a * Math.pow(
+          1 + b / 100,
+          Math.max(1, c)
+        );
     }
 
-    const el = document.getElementById("calcResult");
+    const box = get("calcResult");
 
-    if (el) {
-      el.innerHTML = `
+    if (box) {
+      box.innerHTML = `
         <div style="
           padding:14px;
+          margin-top:10px;
           border-radius:14px;
-          background:#f0f7f4;
+          background:#eef8f4;
         ">
           <b>Result</b>
-          <div style="font-size:22px;margin-top:6px">
+          <div style="font-size:22px">
             ${money(result)}
           </div>
         </div>
@@ -2949,39 +2450,148 @@ ${xref}
     }
   };
 
-  /* ---------- GUEST GATE ---------- */
-
-  window.showGuestGate = function () {
-    /* Existing app can call this safely.
-       PIN is handled separately and is never forced
-       unless the user explicitly uses the security flow.
-    */
-    return true;
+  window.addInsurance = function () {
+    openSimpleTool("insurance");
   };
 
-  /* ---------- STARTUP ---------- */
+  window.addSchool = function () {
+    openSimpleTool("school");
+  };
 
-  function startup() {
-    saveData();
+  window.addVehicle = function () {
+    openSimpleTool("vehicle");
+  };
 
-    const active =
-      document.querySelector(".page.active, .screen.active");
+  window.addShopping = function () {
+    openSimpleTool("shopping");
+  };
 
-    if (!active) {
-      if (page("home")) show("home");
-    }
+  window.addUtility = function () {
+    openSimpleTool("utility");
+  };
 
-    setTimeout(() => {
-      if (typeof window.repairBackButtons === "function") {
-        window.repairBackButtons();
-      }
-    }, 50);
+  window.addDoc = function () {
+    openSimpleTool("document");
+  };
+
+  window.addAnnual = function () {
+    openCalculator("annual");
+  };
+
+  window.openSimpleTool = function (type) {
+    modal(
+      type.charAt(0).toUpperCase() + type.slice(1),
+      `
+        ${field("Title", "", "text", "tTitle")}
+        ${field("Amount", "", "number", "tAmount")}
+        ${field("Date", today(), "date", "tDate")}
+        ${field("Note", "", "text", "tNote")}
+      `,
+      button(
+        "Save",
+        `saveSimpleTool('${type}')`
+      )
+    );
+  };
+
+  window.saveSimpleTool = function (type) {
+    D.tools.unshift({
+      id: id("tool"),
+      type,
+      title: get("tTitle")?.value.trim() || type,
+      amount: num(get("tAmount")?.value),
+      date: get("tDate")?.value || today(),
+      note: get("tNote")?.value.trim() || ""
+    });
+
+    save();
+    closeModal();
+
+    notify("Record save ho gaya");
+  };
+
+  function renderTools() {
+    /* Current static Tools HTML remains intact. */
   }
 
-  /* ---------- GLOBAL COMPATIBILITY ---------- */
+  /* ================= SEARCH ================= */
+
+  window.searchAllData = function (value) {
+    const q = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    const box = get("searchResults");
+
+    if (!box) return;
+
+    if (!q) {
+      box.innerHTML = "";
+      return;
+    }
+
+    const results = [];
+
+    D.transactions.forEach(x => {
+      if (
+        String(x.category).toLowerCase().includes(q) ||
+        String(x.note).toLowerCase().includes(q)
+      ) {
+        results.push(
+          `Transaction: ${x.category} — ${money(x.amount)}`
+        );
+      }
+    });
+
+    D.khata.forEach(x => {
+      if (
+        String(x.person).toLowerCase().includes(q) ||
+        String(x.note).toLowerCase().includes(q)
+      ) {
+        results.push(
+          `Udhar: ${x.person} — ${money(x.amount)}`
+        );
+      }
+    });
+
+    D.bills.forEach(x => {
+      if (String(x.name).toLowerCase().includes(q)) {
+        results.push(
+          `Bill: ${x.name} — ${money(x.amount)}`
+        );
+      }
+    });
+
+    D.goals.forEach(x => {
+      if (String(x.name).toLowerCase().includes(q)) {
+        results.push(
+          `Goal: ${x.name} — ${money(x.target)}`
+        );
+      }
+    });
+
+    box.innerHTML = results.length
+      ? results.map(x => `
+          <div style="
+            padding:10px;
+            border-bottom:1px solid #ddd;
+          ">
+            ${esc(x)}
+          </div>
+        `).join("")
+      : "<p>No result found.</p>";
+  };
+
+  /* ================= SETTINGS ================= */
+
+  function renderSettings() {
+    /* Static Settings HTML remains intact. */
+  }
+
+  /* ================= STARTUP ================= */
 
   window.D = D;
-  window.save = saveData;
+  window.save = save;
 
   window.renderHome = renderHome;
   window.renderPersonal = renderPersonal;
@@ -2997,26 +2607,29 @@ ${xref}
   window.renderTools = renderTools;
   window.renderSettings = renderSettings;
 
-  window.openTransactionForm = openTransactionForm;
-  window.openKhataForm = openKhataForm;
-  window.openGoalForm = openGoalForm;
-  window.openBillForm = openBillForm;
-  window.openLoanForm = openLoanForm;
-  window.openReminderForm = openReminderForm;
+  function startup() {
+    save();
 
-  window.backup = backupData;
-  window.restore = restoreData;
+    const shell = get("appShell");
+    const gate = get("guestGate");
 
-  /* Keep state reference usable after load. */
-  Object.defineProperty(window, "HISAB_DATA", {
-    configurable: true,
-    get: function () {
-      return D;
+    if (shell && gate) {
+      shell.style.display = "none";
+      gate.style.display = "";
     }
-  });
+
+    /*
+      Existing HTML calls showGuestGate()
+      after both JS files load.
+    */
+  }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startup);
+    document.addEventListener(
+      "DOMContentLoaded",
+      startup,
+      { once: true }
+    );
   } else {
     startup();
   }
