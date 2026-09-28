@@ -27,6 +27,7 @@ jobs:
 
           test -f index.html
           test -f app.js
+          test -f repair.js
           test -f style.css
           test -f package.json
 
@@ -82,6 +83,7 @@ jobs:
 
           test -f www/index.html
           test -f www/app.js
+          test -f www/repair.js
           test -f www/style.css
 
           echo "Web assets built successfully."
@@ -179,6 +181,7 @@ jobs:
         run: |
           test -f www/index.html
           test -f www/app.js
+          test -f www/repair.js
           test -f www/style.css
 
           echo "=== Web assets ==="
@@ -335,6 +338,9 @@ jobs:
           echo "com.hisab.moneymanager"
           echo ""
           echo "AdMob App ID configured:"
+          echo "YES"
+          echo ""
+          echo "repair.js included:"
           echo "YES"
           echo ""
           echo "Debug APK:"
