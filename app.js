@@ -283,27 +283,33 @@
     showPage("welcome", false);
   };
 
-
   /* =========================================================
      MODE
      ========================================================= */
 
   window.setMode = function (mode) {
+    // Only two valid modes are allowed.
     if (mode !== "personal" && mode !== "business") {
       mode = "personal";
     }
 
+    // Save selected mode.
     D.mode = mode;
     save();
 
-    showPage("home", false);
-    notify(
-      mode === "personal"
-        ? "Personal mode selected"
-        : "Business mode selected"
-    );
-  };
+    // Clear old navigation history so Back does not
+    // jump into the previous mode/page.
+    backHistory = [];
 
+    // Open the selected mode directly.
+    if (mode === "business") {
+      showPage("business", false);
+      notify("Business mode selected");
+    } else {
+      showPage("personal", false);
+      notify("Personal mode selected");
+    }
+  };
 
   /* =========================================================
      HOME
