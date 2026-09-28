@@ -1,4 +1,4 @@
-/* HISAB V7 — BACK BUTTON POSITION FIX ONLY */
+/* HISAB V7 — BACK BUTTON FINAL POSITION FIX */
 
 (function () {
   "use strict";
@@ -26,7 +26,7 @@
     for (const page of pages) {
       if (!page.id) continue;
 
-      const style = window.getComputedStyle(page);
+      const style = getComputedStyle(page);
 
       if (
         style.display !== "none" &&
@@ -53,7 +53,6 @@
 
       const raw = localStorage.getItem("hisab_v7_data");
       return raw ? JSON.parse(raw) : null;
-
     } catch (e) {
       return null;
     }
@@ -72,7 +71,6 @@
       if (typeof window.show === "function") {
         window.show(mode);
       }
-
       return;
     }
 
@@ -102,54 +100,49 @@
     btn.textContent = "← Back";
     btn.setAttribute("aria-label", "Back");
 
-    /* POSITION */
-    btn.style.position = "fixed";
-
     /*
-      Status bar ke neeche aur
-      page header ke andar/paas
+      HEADER-FRIENDLY POSITION
+      Status bar ke neeche,
+      lekin screen ke bilkul top par nahi.
     */
+    btn.style.position = "fixed";
     btn.style.top =
-      "calc(env(safe-area-inset-top, 0px) + 52px)";
+      "calc(env(safe-area-inset-top, 0px) + 16px)";
+    btn.style.left = "10px";
 
-    btn.style.left = "12px";
     btn.style.right = "auto";
     btn.style.bottom = "auto";
 
-    /* SIZE */
-    btn.style.height = "40px";
-    btn.style.minHeight = "40px";
-    btn.style.minWidth = "78px";
-    btn.style.maxWidth = "100px";
+    /* COMPACT SIZE */
+    btn.style.width = "68px";
+    btn.style.height = "34px";
+    btn.style.minWidth = "68px";
+    btn.style.minHeight = "34px";
+    btn.style.maxWidth = "68px";
+    btn.style.padding = "0";
 
-    btn.style.padding = "0 12px";
-
-    /* ALIGNMENT */
+    /* PERFECT CENTER */
     btn.style.display = "none";
     btn.style.alignItems = "center";
     btn.style.justifyContent = "center";
 
-    /* LOOK */
+    /* STYLE */
+    btn.style.boxSizing = "border-box";
     btn.style.border = "0";
-    btn.style.borderRadius = "12px";
+    btn.style.borderRadius = "9px";
     btn.style.background = "#082b45";
     btn.style.color = "#ffffff";
 
-    btn.style.fontSize = "14px";
+    btn.style.fontFamily = "inherit";
+    btn.style.fontSize = "12px";
     btn.style.fontWeight = "700";
     btn.style.lineHeight = "1";
-    btn.style.fontFamily = "inherit";
+    btn.style.whiteSpace = "nowrap";
 
     btn.style.boxShadow =
-      "0 3px 10px rgba(0,0,0,.18)";
+      "0 2px 8px rgba(0,0,0,.16)";
 
-    /* LAYER */
     btn.style.zIndex = "2147483647";
-
-    /* MOBILE */
-    btn.style.boxSizing = "border-box";
-    btn.style.whiteSpace = "nowrap";
-    btn.style.overflow = "hidden";
 
     btn.style.visibility = "visible";
     btn.style.opacity = "1";
@@ -175,8 +168,6 @@
 
     if (BACK_PAGES.includes(id)) {
       btn.style.display = "flex";
-      btn.style.visibility = "visible";
-      btn.style.opacity = "1";
       btn.style.pointerEvents = "auto";
     } else {
       btn.style.display = "none";
@@ -184,7 +175,7 @@
     }
   }
 
-  /* Keep original show() working */
+  /* Keep original HISAB navigation intact */
   const originalShow = window.show;
 
   if (
@@ -201,13 +192,13 @@
 
       setTimeout(updateBackButton, 0);
       setTimeout(updateBackButton, 100);
-      setTimeout(updateBackButton, 300);
+      setTimeout(updateBackButton, 250);
 
       return result;
     };
   }
 
-  /* Android / Capacitor Back */
+  /* Android Back */
   function handleDeviceBack() {
     const id = getPageId();
 
@@ -230,6 +221,7 @@
     handleDeviceBack
   );
 
+  /* Capacitor Android Back */
   function connectCapacitorBack() {
     try {
       const App =
@@ -257,7 +249,7 @@
     }
   }
 
-  /* Existing page Back buttons */
+  /* Existing header Back buttons */
   function fixExistingBackButtons() {
     document
       .querySelectorAll(".page-title button")
@@ -298,7 +290,6 @@
     createBackButton();
     connectCapacitorBack();
     fixExistingBackButtons();
-
     updateBackButton();
 
     setTimeout(updateBackButton, 100);
@@ -318,7 +309,6 @@
   const observer = new MutationObserver(
     function () {
       fixExistingBackButtons();
-      updateBackButton();
     }
   );
 
