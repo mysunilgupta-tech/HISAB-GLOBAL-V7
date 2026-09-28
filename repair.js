@@ -1,6 +1,7 @@
 /* =========================================================
-   HISAB V7 — BACK BUTTON FIX
-   Only navigation/back system
+   HISAB V7 — SAFE BACK BUTTON FIX
+   Navigation only
+   White-screen safe
    Does NOT replace app.js
    ========================================================= */
 
@@ -10,6 +11,7 @@
   var historyStack = [];
   var currentPage = "home";
   var busy = false;
+  var installed = false;
 
   var pages = [
     "home",
@@ -35,17 +37,19 @@
   }
 
   function hasExistingBack(page) {
-    if (!page) return true;
+    if (!page) return false;
 
     var buttons = page.querySelectorAll("button");
 
     for (var i = 0; i < buttons.length; i++) {
-      var t = (buttons[i].textContent || "").trim();
+      var text = (buttons[i].textContent || "")
+        .trim()
+        .toLowerCase();
 
       if (
-        t.indexOf("←") === 0 ||
-        t.indexOf("✕") === 0 ||
-        t.toLowerCase().indexOf("back") !== -1
+        text.indexOf("←") === 0 ||
+        text.indexOf("✕") === 0 ||
+        text.indexOf("back") !== -1
       ) {
         return true;
       }
@@ -57,10 +61,9 @@
   function addBackButton(page) {
     if (!page || page.id === "home") return;
 
-    /* Existing back option है तो नया button नहीं */
-    if (hasExistingBack(page)) return;
-
     if (page.querySelector(".hisab-auto-back")) return;
+
+    if (hasExistingBack(page)) return;
 
     var title = page.querySelector(".page-title");
 
@@ -70,121 +73,242 @@
 
     btn.type = "button";
     btn.className = "hisab-auto-back";
+    btn.setAttribute("aria-label", "Back");
     btn.innerHTML = "← Back";
 
     btn.onclick = function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
       goBack();
+      return false;
     };
 
     title.insertBefore(btn, title.firstChild);
   }
 
   function prepareButtons() {
-    pages.forEach(function (id) {
-      addBackButton(getPage(id));
-    });
+    try {
+      for (var i = 0; i < pages.length; i++) {
+        addBackButton(getPage(pages[i]));
+      }
+    } catch (e) {
+      /* Back button error must never stop the app */
+    }
+  }
+
+  function originalShow(id) {
+    try {
+      if (typeof window.__HISAB_ORIGINAL_SHOW === "function") {
+        window.__HISAB_ORIGINAL_SHOW(id);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   function realShow(id, remember) {
-    if (!getPage(id)) return;
+    var target = getPage(id);
+
+    /*
+      IMPORTANT:
+      Target page nahi mila to current screen ko hide nahi karna.
+      Isse white screen prevent hoti hai.
+    */
+    if (!target) {
+      return false;
+    }
 
     if (remember && currentPage !== id) {
-      historyStack.push(currentPage);
+      if (currentPage && getPage(currentPage)) {
+        historyStack.push(currentPage);
+      }
+    }
+
+    var ok = originalShow(id);
+
+    if (!ok) {
+      return false;
     }
 
     currentPage = id;
 
-    if (typeof window.__HISAB_ORIGINAL_SHOW === "function") {
-      window.__HISAB_ORIGINAL_SHOW(id);
-    }
-
     setTimeout(function () {
       prepareButtons();
-      window.scrollTo(0, 0);
-    }, 20);
+
+      try {
+        window.scrollTo(0, 0);
+      } catch (e) {}
+    }, 30);
+
+    return true;
   }
 
   function goBack() {
     if (busy) return;
+
     busy = true;
 
-    var previous = historyStack.pop();
+    try {
+      var previous = historyStack.pop();
 
-    if (previous && getPage(previous)) {
-      realShow(previous, false);
-    } else {
-      realShow("home", false);
-      historyStack = [];
+      while (previous && !getPage(previous)) {
+        previous = historyStack.pop();
+      }
+
+      if (previous) {
+        realShow(previous, false);
+      } else {
+        historyStack = [];
+
+        if (getPage("home")) {
+          realShow("home", false);
+        }
+      }
+    } catch (e) {
+      /* Never allow Back to crash the app */
     }
 
     setTimeout(function () {
       busy = false;
-    }, 80);
+    }, 120);
   }
 
   function install() {
+    if (installed) return;
+
+    /*
+      app.js ka show function load hone ka wait.
+      Infinite aggressive loop nahi.
+    */
     if (typeof window.show !== "function") {
-      setTimeout(install, 100);
+      setTimeout(install, 200);
       return;
     }
 
+    /*
+      Agar kisi aur system ne already original show save
+      kiya hai to usko dobara wrap nahi karna.
+    */
     if (!window.__HISAB_ORIGINAL_SHOW) {
       window.__HISAB_ORIGINAL_SHOW = window.show;
+    }
+
+    if (!window.__HISAB_BACK_WRAPPED) {
+      var baseShow = window.__HISAB_ORIGINAL_SHOW;
 
       window.show = function (id) {
-        realShow(id, true);
+        if (!getPage(id)) {
+          return false;
+        }
+
+        return realShow(id, true);
       };
+
+      /*
+        Safety reference:
+        original app.js show kabhi overwrite nahi hoga.
+      */
+      window.__HISAB_ORIGINAL_SHOW = baseShow;
+      window.__HISAB_BACK_WRAPPED = true;
     }
+
+    installed = true;
 
     prepareButtons();
 
     window.HISAB_REPAIR = {
       back: goBack,
+
       home: function () {
         historyStack = [];
-        realShow("home", false);
+
+        if (getPage("home")) {
+          realShow("home", false);
+        }
+      },
+
+      refreshBackButtons: function () {
+        prepareButtons();
       }
     };
   }
 
-  /* Screen fit styling */
-  var style = document.createElement("style");
+  /* =========================================================
+     SAFE STYLE
+     ========================================================= */
 
-  style.textContent = `
-    .hisab-auto-back{
-      flex:0 0 auto !important;
-      width:auto !important;
-      min-width:72px !important;
-      height:40px !important;
-      padding:8px 12px !important;
-      margin:0 10px 0 0 !important;
-      border-radius:11px !important;
-      background:#fff !important;
-      color:#2457d6 !important;
-      border:1px solid #dfe5ef !important;
-      font-size:13px !important;
-      font-weight:700 !important;
-      box-shadow:0 3px 10px rgba(30,55,90,.06) !important;
-      white-space:nowrap !important;
+  function addStyle() {
+    if (document.getElementById("hisab-back-style")) return;
+
+    var style = document.createElement("style");
+    style.id = "hisab-back-style";
+
+    style.textContent = `
+      .hisab-auto-back{
+        display:inline-flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        flex:0 0 auto !important;
+        width:auto !important;
+        min-width:72px !important;
+        max-width:90px !important;
+        height:40px !important;
+        padding:8px 12px !important;
+        margin:0 10px 0 0 !important;
+        border-radius:11px !important;
+        background:#fff !important;
+        color:#2457d6 !important;
+        border:1px solid #dfe5ef !important;
+        font-size:13px !important;
+        font-weight:700 !important;
+        line-height:1 !important;
+        box-shadow:0 3px 10px rgba(30,55,90,.06) !important;
+        white-space:nowrap !important;
+        box-sizing:border-box !important;
+      }
+
+      .hisab-auto-back:active{
+        transform:scale(.96) !important;
+      }
+
+      .page-title{
+        gap:8px !important;
+        display:flex !important;
+        align-items:center !important;
+      }
+    `;
+
+    try {
+      document.head.appendChild(style);
+    } catch (e) {}
+  }
+
+  /* =========================================================
+     START
+     ========================================================= */
+
+  function start() {
+    try {
+      addStyle();
+      install();
+    } catch (e) {
+      /*
+        Repair system fail ho bhi jaye,
+        main HISAB app ko stop nahi karega.
+      */
     }
-
-    .hisab-auto-back:active{
-      transform:scale(.96) !important;
-    }
-
-    .page-title{
-      gap:8px;
-    }
-  `;
-
-  document.head.appendChild(style);
+  }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", install);
+    document.addEventListener("DOMContentLoaded", start);
   } else {
-    install();
+    start();
   }
 
 })();
