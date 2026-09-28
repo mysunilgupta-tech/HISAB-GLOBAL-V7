@@ -287,30 +287,28 @@
      MODE
      ========================================================= */
 
-  window.setMode = function (mode) {
-    // Only two valid modes are allowed.
-    if (mode !== "personal" && mode !== "business") {
-      mode = "personal";
-    }
+window.setMode = function (mode) {
+  if (mode !== "personal" && mode !== "business") {
+    mode = "personal";
+  }
 
-    // Save selected mode.
-    D.mode = mode;
-    save();
+  D.mode = mode;
+  save();
 
-    // Clear old navigation history so Back does not
-    // jump into the previous mode/page.
-    backHistory = [];
+  backHistory = [];
 
-    // Open the selected mode directly.
-    if (mode === "business") {
-      showPage("business", false);
-      notify("Business mode selected");
-    } else {
-      showPage("personal", false);
-      notify("Personal mode selected");
-    }
-  };
+  // Same old Home screen
+  showPage("home", false);
 
+  // Refresh Home according to selected mode
+  renderHome();
+
+  notify(
+    mode === "personal"
+      ? "Personal mode selected"
+      : "Business mode selected"
+  );
+};
   /* =========================================================
      HOME
      ========================================================= */
