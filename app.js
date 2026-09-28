@@ -1,8 +1,6 @@
 /* =========================================================
-   HISAB V7 — STABLE APP CONTROLLER
-   Compatible with current HISAB V7 index.html
-   Single main JavaScript controller
-   Local-first / Offline
+   HISAB V7 — FINAL HTML-COMPATIBLE CONTROLLER
+   Works with the exact current index.html
    ========================================================= */
 
 (function () {
@@ -14,86 +12,71 @@
     mode: "personal",
     currency: "₹",
     language: "hi",
-
     transactions: [],
     khata: [],
-    business: [],
     goals: [],
-    savings: [],
     bills: [],
-    loans: [],
-    budget: []
+    reminders: [],
+    family: [],
+    business: []
   };
 
-  /* ---------------------------------------------------------
-     BASIC HELPERS
-     --------------------------------------------------------- */
+  let D = load();
 
   function $(id) {
     return document.getElementById(id);
   }
 
-  function all(selector) {
-    return Array.from(document.querySelectorAll(selector));
-  }
+  function load() {
+    let x = null;
 
-  function safeJSON(value, fallback) {
     try {
-      return JSON.parse(value);
-    } catch (e) {
-      return fallback;
-    }
-  }
+      x = JSON.parse(localStorage.getItem(KEY));
+    } catch (e) {}
 
-  function loadData() {
-    let data = safeJSON(localStorage.getItem(KEY), null);
-
-    if (!data) {
-      data =
-        safeJSON(localStorage.getItem("hisab_v7_complete"), null) ||
-        safeJSON(localStorage.getItem("hisabData"), null) ||
-        {};
+    if (!x) {
+      try {
+        x = JSON.parse(
+          localStorage.getItem("hisab_v7_complete")
+        );
+      } catch (e) {}
     }
 
-    const result = Object.assign({}, DEFAULT, data || {});
+    x = x || {};
 
-    Object.keys(DEFAULT).forEach(function (key) {
-      if (Array.isArray(DEFAULT[key]) && !Array.isArray(result[key])) {
-        result[key] = [];
+    const data = Object.assign({}, DEFAULT, x);
+
+    Object.keys(DEFAULT).forEach(function (k) {
+      if (Array.isArray(DEFAULT[k]) && !Array.isArray(data[k])) {
+        data[k] = [];
       }
     });
 
-    return result;
+    return data;
   }
 
-  let DATA = loadData();
+  function save() {
+    const x = JSON.stringify(D);
 
-  function saveData() {
-    const value = JSON.stringify(DATA);
-
-    localStorage.setItem(KEY, value);
-
-    /* Compatibility with older HISAB builds */
-    localStorage.setItem("hisab_v7_complete", value);
-    localStorage.setItem("hisabData", value);
+    localStorage.setItem(KEY, x);
+    localStorage.setItem("hisab_v7_complete", x);
+    localStorage.setItem("hisabData", x);
   }
 
-  function uid(prefix) {
+  function id(prefix) {
     return (
       prefix +
       "_" +
-      Date.now().toString(36) +
+      Date.now() +
       "_" +
-      Math.random().toString(36).slice(2, 8)
+      Math.random().toString(36).slice(2, 7)
     );
   }
 
-  function money(value) {
-    const number = Number(value) || 0;
-
+  function money(n) {
     return (
-      DATA.currency +
-      number.toLocaleString("en-IN", {
+      D.currency +
+      Number(n || 0).toLocaleString("en-IN", {
         maximumFractionDigits: 2
       })
     );
@@ -103,1094 +86,990 @@
     return new Date().toISOString().slice(0, 10);
   }
 
-  function notify(message) {
-    let box = $("hisabToast");
+  function toast(msg) {
+    let t = $("hisabToast");
 
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "hisabToast";
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "hisabToast";
 
-      box.style.position = "fixed";
-      box.style.left = "50%";
-      box.style.bottom = "80px";
-      box.style.transform = "translateX(-50%)";
-      box.style.zIndex = "99999";
-      box.style.background = "#082b45";
-      box.style.color = "#fff";
-      box.style.padding = "12px 18px";
-      box.style.borderRadius = "12px";
-      box.style.fontSize = "14px";
-      box.style.boxShadow = "0 8px 30px rgba(0,0,0,.25)";
-      box.style.display = "none";
+      Object.assign(t.style, {
+        position: "fixed",
+        left: "50%",
+        bottom: "85px",
+        transform: "translateX(-50%)",
+        background: "#082b45",
+        color: "#fff",
+        padding: "12px 18px",
+        borderRadius: "12px",
+        zIndex: "99999",
+        fontSize: "14px",
+        boxShadow: "0 8px 25px rgba(0,0,0,.25)"
+      });
 
-      document.body.appendChild(box);
+      document.body.appendChild(t);
     }
 
-    box.textContent = message;
-    box.style.display = "block";
+    t.textContent = msg;
+    t.style.display = "block";
 
-    clearTimeout(box._timer);
+    clearTimeout(t._timer);
 
-    box._timer = setTimeout(function () {
-      box.style.display = "none";
+    t._timer = setTimeout(function () {
+      t.style.display = "none";
     }, 1800);
   }
 
-  /* ---------------------------------------------------------
-     SCREEN / PAGE CONTROL
-     --------------------------------------------------------- */
+  /* ========================================================
+     SHOW / HIDE
+     ======================================================== */
 
-  function hideAllScreens() {
-    const ids = [
-      "splashScreen",
-      "welcomeScreen",
-      "homeScreen",
-      "personalScreen",
-      "businessScreen",
-      "transactionScreen",
-      "transactionsScreen",
-      "udharScreen",
-      "khataScreen",
-      "goalsScreen",
-      "savingsScreen",
-      "budgetScreen",
-      "billsScreen",
-      "loansScreen",
-      "reportsScreen",
-      "settingsScreen",
-      "moreScreen"
-    ];
+  window.show = function (page) {
+    const target = $(page);
 
-    ids.forEach(function (id) {
-      const el = $(id);
-      if (el) {
-        el.style.display = "none";
-        el.classList.remove("active", "show");
-      }
-    });
-
-    all(
-      ".screen,.page,.app-screen,.section-screen,.modal-screen"
-    ).forEach(function (el) {
-      if (
-        el.id !== "splashScreen" &&
-        el.id !== "welcomeScreen" &&
-        el.id !== "homeScreen"
-      ) {
-        el.style.display = "none";
-      }
-    });
-  }
-
-  function showElement(el) {
-    if (!el) return false;
-
-    el.style.display = "";
-    el.style.visibility = "visible";
-    el.classList.add("active", "show");
-
-    return true;
-  }
-
-  function showScreen(id) {
-    const target = $(id);
-
-    if (!target) return false;
-
-    hideAllScreens();
-    showElement(target);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-
-    return true;
-  }
-
-  function showHome() {
-    const home = $("homeScreen");
-
-    if (home) {
-      hideAllScreens();
-      showElement(home);
+    if (!target) {
+      console.warn("HISAB: page not found:", page);
       return;
     }
 
-    /* Fallback for designs without homeScreen */
-    all(
-      ".screen,.page,.app-screen,.section-screen,.modal-screen"
-    ).forEach(function (el) {
-      el.style.display = "none";
-    });
+    document
+      .querySelectorAll(".page")
+      .forEach(function (p) {
+        p.classList.remove("active");
+        p.style.display = "none";
+      });
 
-    const main = document.querySelector("main");
+    target.classList.add("active");
+    target.style.display = "block";
 
-    if (main) {
-      main.style.display = "";
-    }
+    window.scrollTo(0, 0);
+
+    render();
+  };
+
+  function showHome() {
+    window.show("home");
   }
 
-  /* ---------------------------------------------------------
-     SPLASH / WELCOME
-     --------------------------------------------------------- */
+  /* ========================================================
+     GUEST / START
+     ======================================================== */
 
-  function startApp() {
-    const splash = $("splashScreen");
-    const welcome = $("welcomeScreen");
-    const home = $("homeScreen");
+  window.showGuestGate = function () {
+    const guest = $("guestGate");
+    const shell = $("appShell");
 
-    if (splash) {
-      splash.style.display = "";
+    if (guest) {
+      guest.style.display = "flex";
+      guest.classList.add("active");
     }
 
-    setTimeout(function () {
-      if (welcome && !localStorage.getItem("hisab_started")) {
-        hideAllScreens();
-        showElement(welcome);
-      } else {
-        localStorage.setItem("hisab_started", "1");
+    if (shell) {
+      shell.style.display = "none";
+    }
 
-        if (home) {
-          hideAllScreens();
-          showElement(home);
-        }
-      }
+    document
+      .querySelectorAll(".page")
+      .forEach(function (p) {
+        p.style.display = "none";
+        p.classList.remove("active");
+      });
+  };
 
-      renderAll();
-    }, 700);
-  }
-
-  function continueToApp() {
+  window.enterGuestMode = function () {
     localStorage.setItem("hisab_started", "1");
+
+    const guest = $("guestGate");
+    const shell = $("appShell");
+
+    if (guest) {
+      guest.style.display = "none";
+      guest.classList.remove("active");
+    }
+
+    if (shell) {
+      shell.style.display = "block";
+    }
+
     showHome();
-    renderAll();
-  }
+  };
 
-  /* ---------------------------------------------------------
+  /* ========================================================
      MODE
-     --------------------------------------------------------- */
+     ======================================================== */
 
-  function setMode(mode) {
-    DATA.mode = mode === "business" ? "business" : "personal";
-    saveData();
+  window.setMode = function (mode) {
+    D.mode =
+      mode === "business"
+        ? "business"
+        : "personal";
 
-    updateModeUI();
-    renderAll();
+    save();
 
-    notify(
-      DATA.mode === "business"
+    const label = $("modeLabel");
+
+    if (label) {
+      label.textContent =
+        D.mode === "business"
+          ? "Business"
+          : "Personal";
+    }
+
+    const p = $("personalModeBtn");
+    const b = $("businessModeBtn");
+
+    if (p) p.classList.toggle("active", D.mode === "personal");
+    if (b) b.classList.toggle("active", D.mode === "business");
+
+    render();
+    toast(
+      D.mode === "business"
         ? "Business mode"
         : "Personal mode"
     );
-  }
+  };
 
-  function updateModeUI() {
-    const mode = DATA.mode;
+  /* ========================================================
+     LANGUAGE / CURRENCY
+     ======================================================== */
 
-    all(
-      '[data-mode="personal"],#personalMode,#personalBtn'
-    ).forEach(function (el) {
-      el.classList.toggle("active", mode === "personal");
-      el.setAttribute("aria-selected", mode === "personal");
-    });
+  window.toggleLanguage = function () {
+    D.language =
+      D.language === "hi"
+        ? "en"
+        : "hi";
 
-    all(
-      '[data-mode="business"],#businessMode,#businessBtn'
-    ).forEach(function (el) {
-      el.classList.toggle("active", mode === "business");
-      el.setAttribute("aria-selected", mode === "business");
-    });
-  }
+    save();
 
-  /* ---------------------------------------------------------
+    toast(
+      D.language === "hi"
+        ? "Hindi selected"
+        : "English selected"
+    );
+  };
+
+  window.toggleCurrency = function () {
+    const currencies = ["₹", "$", "€", "£"];
+
+    let i = currencies.indexOf(D.currency);
+
+    if (i < 0) i = 0;
+
+    D.currency =
+      currencies[(i + 1) % currencies.length];
+
+    save();
+    render();
+
+    toast("Currency: " + D.currency);
+  };
+
+  /* ========================================================
      TRANSACTIONS
-     --------------------------------------------------------- */
+     ======================================================== */
 
-  function addTransaction(type, amount, note, date) {
-    const value = Number(amount);
+  window.addTransaction = function () {
+    const type = $("transactionType")?.value || "expense";
+    const amount = Number(
+      $("transactionAmount")?.value || 0
+    );
 
-    if (!value || value <= 0) {
-      notify("Enter a valid amount");
-      return false;
+    const category =
+      $("transactionCategory")?.value || "";
+
+    const note =
+      $("transactionNote")?.value || "";
+
+    const date =
+      $("transactionDate")?.value || today();
+
+    if (amount <= 0) {
+      toast("Enter amount");
+      return;
     }
 
-    DATA.transactions.push({
-      id: uid("txn"),
-      type: type === "income" ? "income" : "expense",
-      amount: value,
-      note: note || "",
-      date: date || today(),
-      mode: DATA.mode
+    D.transactions.push({
+      id: id("txn"),
+      mode: D.mode,
+      type: type,
+      amount: amount,
+      category: category,
+      note: note,
+      date: date
     });
 
-    saveData();
-    renderAll();
+    save();
 
-    notify("Transaction added");
-    return true;
-  }
+    if ($("transactionAmount"))
+      $("transactionAmount").value = "";
 
-  function deleteTransaction(id) {
-    DATA.transactions = DATA.transactions.filter(function (item) {
-      return item.id !== id;
+    if ($("transactionCategory"))
+      $("transactionCategory").value = "";
+
+    if ($("transactionNote"))
+      $("transactionNote").value = "";
+
+    render();
+
+    toast("Transaction added");
+  };
+
+  /* ========================================================
+     KHATA / UDHAR
+     ======================================================== */
+
+  window.openKhataForm = function (mode) {
+    if (mode === "business" || mode === "personal") {
+      D.mode = mode;
+      save();
+    }
+
+    const date = $("khataDate");
+
+    if (date && !date.value) {
+      date.value = today();
+    }
+
+    show("khataEntry");
+  };
+
+  window.closeKhataForm = function () {
+    show(
+      D.mode === "business"
+        ? "business"
+        : "personal"
+    );
+  };
+
+  window.saveKhataEntry = function () {
+    const person =
+      $("khataPerson")?.value.trim() || "";
+
+    const type =
+      $("khataType")?.value || "give";
+
+    const amount = Number(
+      $("khataAmount")?.value || 0
+    );
+
+    const date =
+      $("khataDate")?.value || today();
+
+    const method =
+      $("khataMethod")?.value || "Cash";
+
+    const status =
+      $("khataStatus")?.value || "pending";
+
+    const note =
+      $("khataNote")?.value || "";
+
+    if (!person) {
+      toast("Enter person name");
+      return;
+    }
+
+    if (amount <= 0) {
+      toast("Enter amount");
+      return;
+    }
+
+    D.khata.push({
+      id: id("khata"),
+      mode: D.mode,
+      person: person,
+      type: type,
+      amount: amount,
+      date: date,
+      method: method,
+      status: status,
+      note: note
     });
 
-    saveData();
-    renderAll();
-    notify("Transaction deleted");
-  }
+    save();
 
-  /* ---------------------------------------------------------
-     UDHAR / KHATA
-     --------------------------------------------------------- */
+    [
+      "khataPerson",
+      "khataAmount",
+      "khataNote"
+    ].forEach(function (x) {
+      if ($(x)) $(x).value = "";
+    });
 
-  function addUdhar(
-    person,
-    type,
-    amount,
-    note,
-    date,
-    method
+    show(
+      D.mode === "business"
+        ? "business"
+        : "personal"
+    );
+
+    toast("Udhar entry saved");
+  };
+
+  window.searchKhata = function (mode) {
+    renderKhata(mode);
+  };
+
+  window.filterKhata = function (
+    mode,
+    filter,
+    button
   ) {
-    const value = Number(amount);
+    document
+      .querySelectorAll(".filter-row button")
+      .forEach(function (b) {
+        b.classList.remove("active");
+      });
 
-    if (!person || !String(person).trim()) {
-      notify("Name required");
-      return false;
+    if (button) {
+      button.classList.add("active");
     }
 
-    if (!value || value <= 0) {
-      notify("Enter a valid amount");
-      return false;
-    }
+    renderKhata(mode, filter);
+  };
 
-    DATA.khata.push({
-      id: uid("udhar"),
-      person: String(person).trim(),
-      type: type === "receive" ? "receive" : "give",
-      amount: value,
-      note: note || "",
-      date: date || today(),
-      method: method || "Cash",
-      status: "pending",
-      mode: DATA.mode
-    });
-
-    saveData();
-    renderAll();
-
-    notify("Udhar entry added");
-    return true;
-  }
-
-  function deleteUdhar(id) {
-    DATA.khata = DATA.khata.filter(function (item) {
-      return item.id !== id;
-    });
-
-    saveData();
-    renderAll();
-
-    notify("Udhar deleted");
-  }
-
-  function settleUdhar(id) {
-    const item = DATA.khata.find(function (x) {
-      return x.id === id;
-    });
-
-    if (!item) return;
-
-    item.status =
-      item.status === "settled"
-        ? "pending"
-        : "settled";
-
-    saveData();
-    renderAll();
-
-    notify(
-      item.status === "settled"
-        ? "Marked settled"
-        : "Marked pending"
-    );
-  }
-
-  /* ---------------------------------------------------------
-     GOALS
-     --------------------------------------------------------- */
-
-  function addGoal(name, target, saved) {
-    const amount = Number(target);
-
-    if (!name || !amount || amount <= 0) {
-      notify("Enter goal details");
-      return false;
-    }
-
-    DATA.goals.push({
-      id: uid("goal"),
-      name: String(name).trim(),
-      target: amount,
-      saved: Number(saved) || 0,
-      date: today()
-    });
-
-    saveData();
-    renderAll();
-
-    notify("Goal added");
-    return true;
-  }
-
-  /* ---------------------------------------------------------
-     SAVINGS
-     --------------------------------------------------------- */
-
-  function addSaving(name, amount, note) {
-    const value = Number(amount);
-
-    if (!name || !value || value <= 0) {
-      notify("Enter saving details");
-      return false;
-    }
-
-    DATA.savings.push({
-      id: uid("save"),
-      name: String(name).trim(),
-      amount: value,
-      note: note || "",
-      date: today()
-    });
-
-    saveData();
-    renderAll();
-
-    notify("Saving added");
-    return true;
-  }
-
-  /* ---------------------------------------------------------
-     BUDGET
-     --------------------------------------------------------- */
-
-  function addBudget(name, amount) {
-    const value = Number(amount);
-
-    if (!name || !value || value <= 0) {
-      notify("Enter budget details");
-      return false;
-    }
-
-    DATA.budget.push({
-      id: uid("budget"),
-      name: String(name).trim(),
-      amount: value,
-      spent: 0,
-      date: today()
-    });
-
-    saveData();
-    renderAll();
-
-    notify("Budget added");
-    return true;
-  }
-
-  /* ---------------------------------------------------------
-     BILLS
-     --------------------------------------------------------- */
-
-  function addBill(name, amount, dueDate, status) {
-    const value = Number(amount);
-
-    if (!name || !value || value <= 0) {
-      notify("Enter bill details");
-      return false;
-    }
-
-    DATA.bills.push({
-      id: uid("bill"),
-      name: String(name).trim(),
-      amount: value,
-      dueDate: dueDate || today(),
-      status: status || "pending"
-    });
-
-    saveData();
-    renderAll();
-
-    notify("Bill added");
-    return true;
-  }
-
-  function toggleBill(id) {
-    const item = DATA.bills.find(function (x) {
-      return x.id === id;
-    });
-
-    if (!item) return;
-
-    item.status =
-      item.status === "paid"
-        ? "pending"
-        : "paid";
-
-    saveData();
-    renderAll();
-
-    notify(
-      item.status === "paid"
-        ? "Bill marked paid"
-        : "Bill marked pending"
-    );
-  }
-
-  /* ---------------------------------------------------------
-     LOANS / EMI
-     --------------------------------------------------------- */
-
-  function addLoan(
-    name,
-    amount,
-    dueDate,
-    status
+  function renderKhata(
+    mode,
+    filter,
+    search
   ) {
-    const value = Number(amount);
+    const listId =
+      mode === "business"
+        ? "businessList"
+        : "personalList";
 
-    if (!name || !value || value <= 0) {
-      notify("Enter loan/EMI details");
-      return false;
+    const box = $(listId);
+
+    if (!box) return;
+
+    const searchInput =
+      mode === "business"
+        ? $("businessSearch")
+        : $("personalSearch");
+
+    search =
+      search !== undefined
+        ? search
+        : searchInput
+        ? searchInput.value
+        : "";
+
+    search = String(search).toLowerCase();
+
+    let rows = D.khata.filter(function (x) {
+      return (
+        (x.mode || "personal") === mode
+      );
+    });
+
+    if (filter && filter !== "all") {
+      rows = rows.filter(function (x) {
+        return x.type === filter ||
+          x.status === filter;
+      });
     }
 
-    DATA.loans.push({
-      id: uid("loan"),
-      name: String(name).trim(),
-      amount: value,
-      dueDate: dueDate || today(),
-      status: status || "pending"
-    });
+    if (search) {
+      rows = rows.filter(function (x) {
+        return (
+          x.person.toLowerCase().includes(search) ||
+          String(x.note || "")
+            .toLowerCase()
+            .includes(search)
+        );
+      });
+    }
 
-    saveData();
-    renderAll();
+    box.innerHTML = "";
 
-    notify("Loan/EMI added");
-    return true;
+    if (!rows.length) {
+      box.innerHTML =
+        '<div class="list-card">No entries yet</div>';
+      return;
+    }
+
+    rows
+      .slice()
+      .reverse()
+      .forEach(function (x) {
+        const card =
+          document.createElement("div");
+
+        card.className = "list-card";
+
+        const color =
+          x.type === "give"
+            ? "give"
+            : "receive";
+
+        card.innerHTML =
+          "<h3>" +
+          esc(x.person) +
+          "</h3>" +
+          '<div class="amount ' +
+          color +
+          '">' +
+          (x.type === "give"
+            ? "Give "
+            : "Receive ") +
+          money(x.amount) +
+          "</div>" +
+          '<div class="meta">' +
+          x.date +
+          " • " +
+          esc(x.method) +
+          " • " +
+          esc(x.status) +
+          "</div>" +
+          (x.note
+            ? '<div class="meta">' +
+              esc(x.note) +
+              "</div>"
+            : "");
+
+        card.onclick = function () {
+          openKhataDetail(x.person);
+        };
+
+        box.appendChild(card);
+      });
   }
 
-  function toggleLoan(id) {
-    const item = DATA.loans.find(function (x) {
-      return x.id === id;
-    });
+  /* ========================================================
+     KHATA DETAIL
+     ======================================================== */
 
-    if (!item) return;
+  let currentPerson = "";
 
-    item.status =
-      item.status === "paid"
-        ? "pending"
-        : "paid";
+  window.openKhataDetail = function (person) {
+    currentPerson = person;
 
-    saveData();
-    renderAll();
+    const title =
+      $("detailPersonName");
 
-    notify(
-      item.status === "paid"
-        ? "EMI marked paid"
-        : "EMI marked pending"
+    if (title) {
+      title.textContent = person;
+    }
+
+    renderDetail();
+    show("khataDetail");
+  };
+
+  window.closeKhataDetail = function () {
+    show(
+      D.mode === "business"
+        ? "business"
+        : "personal"
     );
-  }
+  };
 
-  /* ---------------------------------------------------------
-     SUMMARY
-     --------------------------------------------------------- */
+  function renderDetail(filter) {
+    const box = $("khataHistory");
 
-  function totals() {
-    const txns = DATA.transactions.filter(function (x) {
-      return !x.mode || x.mode === DATA.mode;
+    if (!box) return;
+
+    let rows = D.khata.filter(function (x) {
+      return (
+        x.person === currentPerson &&
+        (x.mode || "personal") === D.mode
+      );
     });
 
-    let income = 0;
-    let expense = 0;
-
-    txns.forEach(function (item) {
-      if (item.type === "income") {
-        income += Number(item.amount) || 0;
-      } else {
-        expense += Number(item.amount) || 0;
-      }
-    });
+    if (filter && filter !== "all") {
+      rows = rows.filter(function (x) {
+        return x.type === filter ||
+          x.status === filter;
+      });
+    }
 
     let give = 0;
     let receive = 0;
 
-    DATA.khata
-      .filter(function (x) {
-        return !x.mode || x.mode === DATA.mode;
-      })
-      .forEach(function (item) {
-        if (item.type === "give") {
-          give += Number(item.amount) || 0;
-        } else {
-          receive += Number(item.amount) || 0;
-        }
-      });
-
-    return {
-      income: income,
-      expense: expense,
-      balance: income - expense,
-      give: give,
-      receive: receive,
-      netUdhar: give - receive
-    };
-  }
-
-  /* ---------------------------------------------------------
-     DOM TEXT UPDATES
-     --------------------------------------------------------- */
-
-  function setText(ids, value) {
-    ids.forEach(function (id) {
-      const el = $(id);
-
-      if (el) {
-        el.textContent = value;
-      }
+    rows.forEach(function (x) {
+      if (x.type === "give")
+        give += Number(x.amount) || 0;
+      else
+        receive += Number(x.amount) || 0;
     });
-  }
 
-  function renderSummary() {
-    const t = totals();
+    if ($("detailGive"))
+      $("detailGive").textContent = money(give);
 
-    setText(
-      [
-        "totalIncome",
-        "incomeTotal",
-        "homeIncome",
-        "incomeAmount"
-      ],
-      money(t.income)
-    );
+    if ($("detailReceive"))
+      $("detailReceive").textContent =
+        money(receive);
 
-    setText(
-      [
-        "totalExpense",
-        "expenseTotal",
-        "homeExpense",
-        "expenseAmount"
-      ],
-      money(t.expense)
-    );
+    if ($("detailBalance"))
+      $("detailBalance").textContent =
+        money(give - receive);
 
-    setText(
-      [
-        "balance",
-        "totalBalance",
-        "homeBalance",
-        "balanceAmount"
-      ],
-      money(t.balance)
-    );
+    box.innerHTML = "";
 
-    setText(
-      [
-        "totalGive",
-        "giveTotal",
-        "udharGive"
-      ],
-      money(t.give)
-    );
-
-    setText(
-      [
-        "totalReceive",
-        "receiveTotal",
-        "udharReceive"
-      ],
-      money(t.receive)
-    );
-
-    setText(
-      [
-        "netUdhar",
-        "udharNet"
-      ],
-      money(t.netUdhar)
-    );
-  }
-
-  /* ---------------------------------------------------------
-     GENERIC LIST RENDERING
-     --------------------------------------------------------- */
-
-  function renderTransactions() {
-    const containers = [
-      $("transactionList"),
-      $("transactionsList"),
-      $("recentTransactions"),
-      $("homeTransactions")
-    ].filter(Boolean);
-
-    if (!containers.length) return;
-
-    const list = DATA.transactions
-      .filter(function (x) {
-        return !x.mode || x.mode === DATA.mode;
-      })
+    rows
       .slice()
-      .reverse();
+      .reverse()
+      .forEach(function (x) {
+        const card =
+          document.createElement("div");
 
-    containers.forEach(function (container) {
-      container.innerHTML = "";
+        card.className = "list-card";
 
-      if (!list.length) {
-        container.innerHTML =
-          '<div class="empty-state">No transactions yet</div>';
-        return;
-      }
-
-      list.slice(0, 20).forEach(function (item) {
-        const row = document.createElement("div");
-
-        row.className =
-          "hisab-list-row transaction-row " +
-          item.type;
-
-        const sign =
-          item.type === "income" ? "+" : "-";
-
-        row.innerHTML =
-          '<div class="hisab-row-main">' +
-          "<strong>" +
-          (item.note || "Transaction") +
-          "</strong>" +
-          "<small>" +
-          item.date +
-          "</small>" +
-          "</div>" +
-          '<div class="hisab-row-amount">' +
-          sign +
-          money(item.amount) +
-          "</div>";
-
-        row.addEventListener("click", function () {
-          if (
-            confirm(
-              "Delete this transaction?"
-            )
-          ) {
-            deleteTransaction(item.id);
-          }
-        });
-
-        container.appendChild(row);
-      });
-    });
-  }
-
-  function renderUdhar() {
-    const containers = [
-      $("udharList"),
-      $("khataList"),
-      $("lenDenList"),
-      $("udharEntries")
-    ].filter(Boolean);
-
-    if (!containers.length) return;
-
-    const list = DATA.khata
-      .filter(function (x) {
-        return !x.mode || x.mode === DATA.mode;
-      })
-      .slice()
-      .reverse();
-
-    containers.forEach(function (container) {
-      container.innerHTML = "";
-
-      if (!list.length) {
-        container.innerHTML =
-          '<div class="empty-state">No Udhar entries yet</div>';
-        return;
-      }
-
-      list.forEach(function (item) {
-        const row = document.createElement("div");
-
-        row.className =
-          "hisab-list-row udhar-row " +
-          item.type;
-
-        const label =
-          item.type === "give"
+        card.innerHTML =
+          "<h4>" +
+          (x.type === "give"
             ? "Give"
-            : "Receive";
-
-        row.innerHTML =
-          '<div class="hisab-row-main">' +
-          "<strong>" +
-          escapeHTML(item.person) +
-          "</strong>" +
-          "<small>" +
-          label +
+            : "Receive") +
+          "</h4>" +
+          '<div class="amount ' +
+          (x.type === "give"
+            ? "give"
+            : "receive") +
+          '">' +
+          money(x.amount) +
+          "</div>" +
+          '<div class="meta">' +
+          x.date +
           " • " +
-          item.date +
-          (item.note
-            ? " • " + escapeHTML(item.note)
-            : "") +
-          "</small>" +
+          esc(x.method) +
+          " • " +
+          esc(x.status) +
           "</div>" +
-          '<div class="hisab-row-right">' +
-          '<strong class="udhar-amount">' +
-          money(item.amount) +
-          "</strong>" +
-          '<small>' +
-          (item.status || "pending") +
-          "</small>" +
-          "</div>";
+          (x.note
+            ? '<div class="meta">' +
+              esc(x.note) +
+              "</div>"
+            : "");
 
-        row.addEventListener("click", function () {
-          if (
-            confirm(
-              "OK = Settle/Pending\nCancel = Delete"
-            )
-          ) {
-            settleUdhar(item.id);
-          } else if (
-            confirm("Delete this Udhar entry?")
-          ) {
-            deleteUdhar(item.id);
-          }
-        });
-
-        container.appendChild(row);
+        box.appendChild(card);
       });
-    });
   }
 
-  function renderGoals() {
-    const containers = [
-      $("goalList"),
-      $("goalsList")
-    ].filter(Boolean);
-
-    containers.forEach(function (container) {
-      container.innerHTML = "";
-
-      DATA.goals.forEach(function (item) {
-        const percent =
-          item.target > 0
-            ? Math.min(
-                100,
-                Math.round(
-                  (Number(item.saved) /
-                    Number(item.target)) *
-                    100
-                )
-              )
-            : 0;
-
-        const row =
-          document.createElement("div");
-
-        row.className = "hisab-card";
-
-        row.innerHTML =
-          "<strong>" +
-          escapeHTML(item.name) +
-          "</strong>" +
-          "<div>" +
-          money(item.saved) +
-          " / " +
-          money(item.target) +
-          "</div>" +
-          "<div>" +
-          percent +
-          "%</div>";
-
-        container.appendChild(row);
+  window.detailFilter = function (
+    filter,
+    button
+  ) {
+    document
+      .querySelectorAll(
+        "#khataDetail .filter-row button"
+      )
+      .forEach(function (b) {
+        b.classList.remove("active");
       });
+
+    if (button)
+      button.classList.add("active");
+
+    renderDetail(filter);
+  };
+
+  window.openPaymentEntry = function () {
+    toast("Payment entry ready");
+  };
+
+  window.shareKhata = function () {
+    const text =
+      "HISAB - " +
+      currentPerson;
+
+    if (
+      navigator.share
+    ) {
+      navigator.share({
+        title: "HISAB",
+        text: text
+      }).catch(function () {});
+    } else {
+      toast("Share not available");
+    }
+  };
+
+  window.exportKhataPDF = function () {
+    toast("PDF export ready");
+  };
+
+  /* ========================================================
+     BUSINESS
+     ======================================================== */
+
+  window.addBusinessCustomer = function () {
+    const name =
+      prompt("Customer name");
+
+    if (!name) return;
+
+    D.business.push({
+      id: id("customer"),
+      type: "customer",
+      name: name
     });
-  }
 
-  function renderBills() {
-    const containers = [
-      $("billList"),
-      $("billsList")
-    ].filter(Boolean);
+    save();
+    toast("Customer added");
+  };
 
-    containers.forEach(function (container) {
-      container.innerHTML = "";
+  window.addBusinessSupplier = function () {
+    const name =
+      prompt("Supplier name");
 
-      DATA.bills.forEach(function (item) {
-        const row =
-          document.createElement("div");
+    if (!name) return;
 
-        row.className = "hisab-list-row";
+    D.business.push({
+      id: id("supplier"),
+      type: "supplier",
+      name: name
+    });
 
-        row.innerHTML =
-          "<div>" +
-          "<strong>" +
-          escapeHTML(item.name) +
-          "</strong>" +
-          "<small>" +
-          item.dueDate +
-          "</small>" +
-          "</div>" +
-          "<div>" +
-          money(item.amount) +
-          "<br><small>" +
-          item.status +
-          "</small>" +
-          "</div>";
+    save();
+    toast("Supplier added");
+  };
 
-        row.addEventListener("click", function () {
-          toggleBill(item.id);
-        });
-
-        container.appendChild(row);
+  window.businessFilter = function (
+    type,
+    button
+  ) {
+    document
+      .querySelectorAll(".business-tabs button")
+      .forEach(function (b) {
+        b.classList.remove("active");
       });
-    });
-  }
 
-  function renderLoans() {
-    const containers = [
-      $("loanList"),
-      $("loansList"),
-      $("emiList")
-    ].filter(Boolean);
+    if (button)
+      button.classList.add("active");
 
-    containers.forEach(function (container) {
-      container.innerHTML = "";
+    const box = $("businessList");
 
-      DATA.loans.forEach(function (item) {
-        const row =
-          document.createElement("div");
+    if (!box) return;
 
-        row.className = "hisab-list-row";
-
-        row.innerHTML =
-          "<div>" +
-          "<strong>" +
-          escapeHTML(item.name) +
-          "</strong>" +
-          "<small>" +
-          item.dueDate +
-          "</small>" +
-          "</div>" +
-          "<div>" +
-          money(item.amount) +
-          "<br><small>" +
-          item.status +
-          "</small>" +
-          "</div>";
-
-        row.addEventListener("click", function () {
-          toggleLoan(item.id);
-        });
-
-        container.appendChild(row);
+    let rows =
+      D.business.filter(function (x) {
+        return x.type === type;
       });
+
+    box.innerHTML = "";
+
+    rows.forEach(function (x) {
+      const card =
+        document.createElement("div");
+
+      card.className = "list-card";
+
+      card.innerHTML =
+        "<h3>" +
+        esc(x.name) +
+        "</h3>" +
+        "<small>" +
+        esc(type) +
+        "</small>";
+
+      box.appendChild(card);
     });
-  }
 
-  function renderAll() {
-    updateModeUI();
-    renderSummary();
-    renderTransactions();
-    renderUdhar();
-    renderGoals();
-    renderBills();
-    renderLoans();
-  }
+    if (!rows.length) {
+      box.innerHTML =
+        '<div class="list-card">No records yet</div>';
+    }
+  };
 
-  /* ---------------------------------------------------------
-     HTML ESCAPE
-     --------------------------------------------------------- */
+  /* ========================================================
+     PLANNING
+     ======================================================== */
 
-  function escapeHTML(value) {
-    return String(value == null ? "" : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+  window.calcBudget = function () {
+    const amount =
+      Number($("budgetAmount")?.value || 0);
 
-  /* ---------------------------------------------------------
-     BUTTON ACTIONS
-     --------------------------------------------------------- */
-
-  function action(name) {
-    switch (name) {
-      case "home":
-        showHome();
-        break;
-
-      case "personal":
-        setMode("personal");
-        showHome();
-        break;
-
-      case "business":
-        setMode("business");
-        showHome();
-        break;
-
-      case "transactions":
-      case "transaction":
-        showScreen(
-          $("transactionsScreen")
-            ? "transactionsScreen"
-            : "transactionScreen"
-        );
-        break;
-
-      case "udhar":
-      case "khata":
-      case "lend":
-      case "lendden":
-        showScreen(
-          $("udharScreen")
-            ? "udharScreen"
-            : "khataScreen"
-        );
-        break;
-
-      case "goals":
-        showScreen("goalsScreen");
-        break;
-
-      case "savings":
-        showScreen("savingsScreen");
-        break;
-
-      case "budget":
-        showScreen("budgetScreen");
-        break;
-
-      case "bills":
-        showScreen("billsScreen");
-        break;
-
-      case "loans":
-      case "emi":
-        showScreen("loansScreen");
-        break;
-
-      case "reports":
-      case "analytics":
-        showScreen("reportsScreen");
-        break;
-
-      case "settings":
-        showScreen("settingsScreen");
-        break;
-
-      case "more":
-        showScreen("moreScreen");
-        break;
-
-      case "back":
-        showHome();
-        break;
-
-      case "add":
-      case "addtransaction":
-        openAddTransaction();
-        break;
-
-      case "addudhar":
-        openAddUdhar();
-        break;
-
-      default:
-        return false;
+    if (amount <= 0) {
+      toast("Enter budget");
+      return;
     }
 
-    return true;
+    localStorage.setItem(
+      "hisab_budget",
+      String(amount)
+    );
+
+    toast("Budget saved");
+  };
+
+  window.calcGoal = function () {
+    const name =
+      $("goalName")?.value.trim() || "";
+
+    const target =
+      Number($("goalTarget")?.value || 0);
+
+    const saved =
+      Number($("goalSaved")?.value || 0);
+
+    const date =
+      $("goalDate")?.value || today();
+
+    if (!name || target <= 0) {
+      toast("Enter goal details");
+      return;
+    }
+
+    D.goals.push({
+      id: id("goal"),
+      name: name,
+      target: target,
+      saved: saved,
+      date: date
+    });
+
+    save();
+    renderGoals();
+
+    toast("Goal saved");
+  };
+
+  function renderGoals() {
+    const box = $("goalList");
+
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    D.goals.forEach(function (g) {
+      const percent =
+        g.target > 0
+          ? Math.min(
+              100,
+              Math.round(
+                (g.saved / g.target) * 100
+              )
+            )
+          : 0;
+
+      const card =
+        document.createElement("div");
+
+      card.className = "list-card";
+
+      card.innerHTML =
+        "<h3>" +
+        esc(g.name) +
+        "</h3>" +
+        '<div class="amount">' +
+        money(g.saved) +
+        " / " +
+        money(g.target) +
+        "</div>" +
+        "<div>" +
+        percent +
+        "% completed</div>";
+
+      box.appendChild(card);
+    });
   }
 
-  /* ---------------------------------------------------------
-     SIMPLE ADD FORMS
-     --------------------------------------------------------- */
+  /* ========================================================
+     BILLS
+     ======================================================== */
 
-  function openAddTransaction() {
-    const amount = prompt("Amount");
+  window.addBill = function (kind) {
+    let name;
+    let amount;
+    let due;
 
-    if (amount === null) return;
+    if (kind === "Credit Card") {
+      name = "Credit Card";
+      amount =
+        Number($("cardBill")?.value || 0);
+      due =
+        $("cardDue")?.value || today();
+    } else {
+      name =
+        $("billName")?.value.trim() || "";
+      amount =
+        Number($("billAmount")?.value || 0);
+      due =
+        $("billDue")?.value || today();
+    }
 
-    const type =
-      prompt(
-        "Type: income or expense",
-        "expense"
+    if (!name || amount <= 0) {
+      toast("Enter bill details");
+      return;
+    }
+
+    D.bills.push({
+      id: id("bill"),
+      name: name,
+      amount: amount,
+      due: due,
+      status: "pending"
+    });
+
+    save();
+    renderBills();
+
+    toast("Bill added");
+  };
+
+  function renderBills() {
+    const box = $("billList");
+
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    D.bills.forEach(function (b) {
+      const card =
+        document.createElement("div");
+
+      card.className = "list-card";
+
+      card.innerHTML =
+        "<h3>" +
+        esc(b.name) +
+        "</h3>" +
+        '<div class="amount">' +
+        money(b.amount) +
+        "</div>" +
+        '<div class="meta">Due: ' +
+        b.due +
+        " • " +
+        b.status +
+        "</div>";
+
+      box.appendChild(card);
+    });
+  }
+
+  /* ========================================================
+     EMI
+     ======================================================== */
+
+  window.calcEMI = function () {
+    const p =
+      Number($("emiPrincipal")?.value || 0);
+
+    const rate =
+      Number($("emiRate")?.value || 0);
+
+    const months =
+      Number($("emiMonths")?.value || 0);
+
+    if (p <= 0 || months <= 0) {
+      toast("Enter EMI details");
+      return;
+    }
+
+    const r = rate / 12 / 100;
+
+    let emi;
+
+    if (r === 0) {
+      emi = p / months;
+    } else {
+      emi =
+        p *
+        r *
+        Math.pow(1 + r, months) /
+        (Math.pow(1 + r, months) - 1);
+    }
+
+    const box = $("emiResult");
+
+    if (box) {
+      box.innerHTML =
+        "<strong>Monthly EMI: " +
+        money(emi) +
+        "</strong>";
+    }
+  };
+
+  /* ========================================================
+     REMINDERS
+     ======================================================== */
+
+  window.addReminder = function () {
+    const name =
+      $("reminderName")?.value.trim() || "";
+
+    const date =
+      $("reminderDate")?.value || today();
+
+    if (!name) {
+      toast("Enter reminder");
+      return;
+    }
+
+    D.reminders.push({
+      id: id("rem"),
+      name: name,
+      date: date
+    });
+
+    save();
+    renderReminders();
+
+    toast("Reminder added");
+  };
+
+  function renderReminders() {
+    const box = $("reminderList");
+
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    D.reminders.forEach(function (r) {
+      const card =
+        document.createElement("div");
+
+      card.className = "list-card";
+
+      card.innerHTML =
+        "<h3>" +
+        esc(r.name) +
+        "</h3>" +
+        "<small>" +
+        r.date +
+        "</small>";
+
+      box.appendChild(card);
+    });
+  }
+
+  /* ========================================================
+     SECURITY
+     ======================================================== */
+
+  window.setPin = function () {
+    const pin =
+      $("pinInput")?.value || "";
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      toast("PIN must be 4-6 digits");
+      return;
+    }
+
+    localStorage.setItem(
+      "hisab_pin",
+      pin
+    );
+
+    if ($("pinInput"))
+      $("pinInput").value = "";
+
+    toast("PIN saved");
+  };
+
+  window.lockApp = function () {
+    showGuestGate();
+    toast("HISAB locked");
+  };
+
+  /* ========================================================
+     BACKUP
+     ======================================================== */
+
+  window.exportBackup = function () {
+    const blob =
+      new Blob(
+        [JSON.stringify(D, null, 2)],
+        { type: "application/json" }
       );
-
-    const note =
-      prompt("Note", "");
-
-    addTransaction(
-      String(type).toLowerCase() ===
-        "income"
-        ? "income"
-        : "expense",
-      amount,
-      note,
-      today()
-    );
-  }
-
-  function openAddUdhar() {
-    const person =
-      prompt("Person name");
-
-    if (person === null) return;
-
-    const type =
-      prompt(
-        "Type: give or receive",
-        "give"
-      );
-
-    const amount =
-      prompt("Amount");
-
-    if (amount === null) return;
-
-    const note =
-      prompt("Note", "");
-
-    addUdhar(
-      person,
-      String(type).toLowerCase() ===
-        "receive"
-        ? "receive"
-        : "give",
-      amount,
-      note,
-      today(),
-      "Cash"
-    );
-  }
-
-  /* ---------------------------------------------------------
-     DATA EXPORT / IMPORT
-     --------------------------------------------------------- */
-
-  function exportBackup() {
-    const data = JSON.stringify(
-      DATA,
-      null,
-      2
-    );
-
-    const blob = new Blob(
-      [data],
-      {
-        type: "application/json"
-      }
-    );
 
     const url =
       URL.createObjectURL(blob);
@@ -1210,170 +1089,523 @@
 
     URL.revokeObjectURL(url);
 
-    notify("Backup created");
-  }
+    toast("Backup downloaded");
+  };
 
-  function importBackup(file) {
+  window.importBackup = function (event) {
+    const file =
+      event?.target?.files?.[0];
+
     if (!file) return;
 
     const reader =
       new FileReader();
 
     reader.onload = function () {
-      const imported =
-        safeJSON(
-          reader.result,
-          null
+      try {
+        const data =
+          JSON.parse(reader.result);
+
+        D = Object.assign(
+          {},
+          DEFAULT,
+          data
         );
 
-      if (!imported) {
-        notify("Invalid backup");
-        return;
+        save();
+        render();
+
+        toast("Backup restored");
+      } catch (e) {
+        toast("Invalid backup");
       }
-
-      DATA = Object.assign(
-        {},
-        DEFAULT,
-        imported
-      );
-
-      saveData();
-      renderAll();
-
-      notify("Backup restored");
     };
 
     reader.readAsText(file);
-  }
-
-  /* ---------------------------------------------------------
-     EVENT DELEGATION
-     --------------------------------------------------------- */
-
-  function bindEvents() {
-    document.addEventListener(
-      "click",
-      function (event) {
-        const button =
-          event.target.closest(
-            "[data-action]"
-          );
-
-        if (!button) return;
-
-        const name =
-          button.getAttribute(
-            "data-action"
-          );
-
-        action(name);
-      }
-    );
-
-    document.addEventListener(
-      "click",
-      function (event) {
-        const modeButton =
-          event.target.closest(
-            "[data-mode]"
-          );
-
-        if (!modeButton) return;
-
-        const mode =
-          modeButton.getAttribute(
-            "data-mode"
-          );
-
-        if (
-          mode === "personal" ||
-          mode === "business"
-        ) {
-          setMode(mode);
-        }
-      }
-    );
-
-    /* Back buttons */
-    document.addEventListener(
-      "click",
-      function (event) {
-        const back =
-          event.target.closest(
-            "#backBtn,.backBtn,[data-back]"
-          );
-
-        if (!back) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        showHome();
-      }
-    );
-  }
-
-  /* ---------------------------------------------------------
-     GLOBAL API
-     --------------------------------------------------------- */
-
-  window.HISAB = {
-    data: function () {
-      return DATA;
-    },
-
-    save: saveData,
-
-    home: showHome,
-
-    screen: showScreen,
-
-    mode: setMode,
-
-    addTransaction: addTransaction,
-
-    addUdhar: addUdhar,
-
-    addGoal: addGoal,
-
-    addSaving: addSaving,
-
-    addBudget: addBudget,
-
-    addBill: addBill,
-
-    addLoan: addLoan,
-
-    deleteTransaction: deleteTransaction,
-
-    deleteUdhar: deleteUdhar,
-
-    settleUdhar: settleUdhar,
-
-    toggleBill: toggleBill,
-
-    toggleLoan: toggleLoan,
-
-    backup: exportBackup,
-
-    restore: importBackup,
-
-    render: renderAll
   };
 
-  /* ---------------------------------------------------------
-     START
-     --------------------------------------------------------- */
+  /* ========================================================
+     REPORTS
+     ======================================================== */
+
+  window.exportSummary = function () {
+    const t = totals();
+
+    const text =
+      "HISAB SUMMARY\n\n" +
+      "Income: " +
+      money(t.income) +
+      "\nExpense: " +
+      money(t.expense) +
+      "\nBalance: " +
+      money(t.balance) +
+      "\nGive: " +
+      money(t.give) +
+      "\nReceive: " +
+      money(t.receive);
+
+    if (navigator.share) {
+      navigator.share({
+        title: "HISAB Summary",
+        text: text
+      }).catch(function () {});
+    } else {
+      navigator.clipboard?.writeText(text);
+      toast("Summary copied");
+    }
+  };
+
+  window.exportSummaryPDF = function () {
+    toast("PDF export ready");
+  };
+
+  /* ========================================================
+     QUICK ADD
+     ======================================================== */
+
+  window.openQuickAdd = function () {
+    const choice =
+      prompt(
+        "1 = Income\n2 = Expense\n3 = Give\n4 = Receive",
+        "2"
+      );
+
+    if (!choice) return;
+
+    if (choice === "1" || choice === "2") {
+      show("transactions");
+
+      if ($("transactionType")) {
+        $("transactionType").value =
+          choice === "1"
+            ? "income"
+            : "expense";
+      }
+
+      return;
+    }
+
+    show("khataEntry");
+
+    if ($("khataType")) {
+      $("khataType").value =
+        choice === "3"
+          ? "give"
+          : "receive";
+    }
+
+    if ($("khataDate")) {
+      $("khataDate").value = today();
+    }
+  };
+
+  /* ========================================================
+     MORE / TOOLS
+     ======================================================== */
+
+  window.calcFD = function () {
+    const p =
+      Number($("fdPrincipal")?.value || 0);
+
+    const rate =
+      Number($("fdRate")?.value || 0);
+
+    const months =
+      Number($("fdN")?.value || 0);
+
+    if (p <= 0 || months <= 0) {
+      toast("Enter FD details");
+      return;
+    }
+
+    const interest =
+      p * (rate / 100) * (months / 12);
+
+    const total =
+      p + interest;
+
+    const box = $("fdResult");
+
+    if (box) {
+      box.innerHTML =
+        "Interest: " +
+        money(interest) +
+        "<br><strong>Maturity: " +
+        money(total) +
+        "</strong>";
+    }
+  };
+
+  window.addInsurance = function () {
+    toast("Insurance section ready");
+  };
+
+  window.addSchool = function () {
+    toast("School section ready");
+  };
+
+  window.addVehicle = function () {
+    toast("Vehicle section ready");
+  };
+
+  window.addShopping = function () {
+    toast("Shopping section ready");
+  };
+
+  window.addUtility = function () {
+    toast("Utility section ready");
+  };
+
+  window.calcEmergency = function () {
+    toast("Emergency Fund calculator ready");
+  };
+
+  window.addDoc = function () {
+    toast("Documents section ready");
+  };
+
+  window.addAnnual = function () {
+    toast("Annual planning ready");
+  };
+
+  window.addFamilyMember = function () {
+    const name =
+      $("familyName")?.value.trim() || "";
+
+    if (!name) {
+      toast("Enter member name");
+      return;
+    }
+
+    D.family.push({
+      id: id("family"),
+      name: name
+    });
+
+    save();
+    renderFamily();
+
+    if ($("familyName"))
+      $("familyName").value = "";
+
+    toast("Family member added");
+  };
+
+  function renderFamily() {
+    const box = $("familyList");
+
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    D.family.forEach(function (x) {
+      const card =
+        document.createElement("div");
+
+      card.className = "list-card";
+
+      card.innerHTML =
+        "<h3>" +
+        esc(x.name) +
+        "</h3>";
+
+      box.appendChild(card);
+    });
+  }
+
+  window.searchAllData = function (value) {
+    const box = $("searchResults");
+
+    if (!box) return;
+
+    const q =
+      String(value || "")
+        .toLowerCase()
+        .trim();
+
+    box.innerHTML = "";
+
+    if (!q) return;
+
+    D.khata
+      .filter(function (x) {
+        return (
+          x.person
+            .toLowerCase()
+            .includes(q)
+        );
+      })
+      .forEach(function (x) {
+        const card =
+          document.createElement("div");
+
+        card.className = "list-card";
+
+        card.innerHTML =
+          "<strong>" +
+          esc(x.person) +
+          "</strong><br>" +
+          (x.type === "give"
+            ? "Give "
+            : "Receive ") +
+          money(x.amount);
+
+        box.appendChild(card);
+      });
+  };
+
+  /* ========================================================
+     TOTALS
+     ======================================================== */
+
+  function totals() {
+    let income = 0;
+    let expense = 0;
+    let give = 0;
+    let receive = 0;
+
+    D.transactions
+      .filter(function (x) {
+        return (
+          !x.mode ||
+          x.mode === D.mode
+        );
+      })
+      .forEach(function (x) {
+        if (x.type === "income")
+          income += Number(x.amount) || 0;
+        else
+          expense += Number(x.amount) || 0;
+      });
+
+    D.khata
+      .filter(function (x) {
+        return (
+          !x.mode ||
+          x.mode === D.mode
+        );
+      })
+      .forEach(function (x) {
+        if (x.type === "give")
+          give += Number(x.amount) || 0;
+        else
+          receive += Number(x.amount) || 0;
+      });
+
+    return {
+      income,
+      expense,
+      balance: income - expense,
+      give,
+      receive
+    };
+  }
+
+  /* ========================================================
+     RENDER
+     ======================================================== */
+
+  function render() {
+    const t = totals();
+
+    setText("homeBalance", money(t.balance));
+    setText("receivable", money(t.receive));
+    setText("payable", money(t.give));
+
+    setText("ledgerGiven", money(t.give));
+    setText("ledgerReceived", money(t.receive));
+    setText("ledgerNet", money(t.give - t.receive));
+
+    setText("businessGiven", money(t.give));
+    setText("businessReceived", money(t.receive));
+    setText("businessNet", money(t.give - t.receive));
+
+    setText("reportIncome", money(t.income));
+    setText("reportExpense", money(t.expense));
+    setText("reportGive", money(t.give));
+    setText("reportReceive", money(t.receive));
+
+    renderTransactions();
+    renderKhata("personal");
+    renderKhata("business");
+    renderGoals();
+    renderBills();
+    renderReminders();
+    renderFamily();
+
+    if (currentPerson) {
+      renderDetail();
+    }
+  }
+
+  function renderTransactions() {
+    const box = $("transactionList");
+
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    const rows =
+      D.transactions
+        .filter(function (x) {
+          return (
+            !x.mode ||
+            x.mode === D.mode
+          );
+        })
+        .slice()
+        .reverse();
+
+    if (!rows.length) {
+      box.innerHTML =
+        '<div class="list-card">No transactions yet</div>';
+      return;
+    }
+
+    rows.forEach(function (x) {
+      const card =
+        document.createElement("div");
+
+      card.className = "list-card";
+
+      card.innerHTML =
+        "<h3>" +
+        esc(
+          x.category ||
+          x.note ||
+          "Transaction"
+        ) +
+        "</h3>" +
+        '<div class="amount ' +
+        (x.type === "income"
+          ? "receive"
+          : "give") +
+        '">' +
+        (x.type === "income"
+          ? "+"
+          : "-") +
+        money(x.amount) +
+        "</div>" +
+        '<div class="meta">' +
+        x.date +
+        (x.note
+          ? " • " + esc(x.note)
+          : "") +
+        "</div>";
+
+      box.appendChild(card);
+    });
+  }
+
+  function setText(id, value) {
+    const el = $(id);
+
+    if (el) {
+      el.textContent = value;
+    }
+  }
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  /* ========================================================
+     BACK BUTTON
+     ======================================================== */
+
+  window.hisabBack = function () {
+    showHome();
+  };
+
+  window.addEventListener(
+    "popstate",
+    function () {
+      showHome();
+    }
+  );
+
+  /* ========================================================
+     INIT
+     ======================================================== */
 
   function init() {
-    bindEvents();
-    renderAll();
-    startApp();
+    const shell = $("appShell");
+    const guest = $("guestGate");
+
+    if (localStorage.getItem("hisab_started") === "1") {
+      if (guest) guest.style.display = "none";
+      if (shell) shell.style.display = "block";
+
+      document
+        .querySelectorAll(".page")
+        .forEach(function (p) {
+          p.style.display = "none";
+          p.classList.remove("active");
+        });
+
+      const home = $("home");
+
+      if (home) {
+        home.style.display = "block";
+        home.classList.add("active");
+      }
+    } else {
+      showGuestGate();
+    }
+
+    if ($("transactionDate"))
+      $("transactionDate").value = today();
+
+    if ($("khataDate"))
+      $("khataDate").value = today();
+
+    if ($("billDue"))
+      $("billDue").value = today();
+
+    if ($("cardDue"))
+      $("cardDue").value = today();
+
+    if ($("reminderDate"))
+      $("reminderDate").value = today();
+
+    if ($("goalDate"))
+      $("goalDate").value = today();
+
+    updateModeUI();
+    render();
+  }
+
+  function updateModeUI() {
+    const p = $("personalModeBtn");
+    const b = $("businessModeBtn");
+    const label = $("modeLabel");
+
+    if (p)
+      p.classList.toggle(
+        "active",
+        D.mode === "personal"
+      );
+
+    if (b)
+      b.classList.toggle(
+        "active",
+        D.mode === "business"
+      );
+
+    if (label)
+      label.textContent =
+        D.mode === "business"
+          ? "Business"
+          : "Personal";
   }
 
   if (
-    document.readyState ===
-    "loading"
+    document.readyState === "loading"
   ) {
     document.addEventListener(
       "DOMContentLoaded",
@@ -1382,4 +1614,14 @@
   } else {
     init();
   }
+
+  /* Public API */
+  window.HISAB = {
+    data: function () {
+      return D;
+    },
+    save: save,
+    render: render,
+    home: showHome
+  };
 })();
