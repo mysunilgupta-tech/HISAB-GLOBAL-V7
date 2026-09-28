@@ -1,53 +1,7 @@
-/* HISAB V7 — FINAL REPAIR CONTROLLER
-   BACK BUTTON FIX ONLY
-   बाकी existing HISAB functions को disturb नहीं करता.
-*/
+/* HISAB V7 — FINAL BACK BUTTON REPAIR ONLY */
 
 (function () {
   "use strict";
-
-  /* ================= BASIC HELPERS ================= */
-
-  function $(id) {
-    return document.getElementById(id);
-  }
-
-  function getData() {
-    try {
-      if (window.D && typeof window.D === "object") return window.D;
-
-      const raw = localStorage.getItem("hisab_v7_data");
-      if (raw) return JSON.parse(raw);
-
-    } catch (e) {
-      console.warn("HISAB data read error:", e);
-    }
-
-    return null;
-  }
-
-  function saveSafe() {
-    try {
-      if (typeof window.save === "function") {
-        window.save();
-        return;
-      }
-
-      const d = getData();
-
-      if (d) {
-        localStorage.setItem(
-          "hisab_v7_data",
-          JSON.stringify(d)
-        );
-      }
-
-    } catch (e) {
-      console.warn("HISAB save error:", e);
-    }
-  }
-
-  /* ================= BACK BUTTON ================= */
 
   const BACK_PAGES = [
     "personal",
@@ -66,17 +20,17 @@
     "final"
   ];
 
+  /* ================= CURRENT PAGE ================= */
+
   function getCurrentPage() {
-    const pages = document.querySelectorAll(".page, .screen");
+    const pages = document.querySelectorAll(".page");
 
     for (const page of pages) {
+      if (!page.id) continue;
+
       const style = window.getComputedStyle(page);
 
-      if (
-        !page.classList.contains("hidden") &&
-        style.display !== "none" &&
-        page.id
-      ) {
+      if (style.display !== "none") {
         return page;
       }
     }
@@ -89,7 +43,31 @@
     return page ? page.id : "";
   }
 
+  /* ================= DATA ================= */
+
+  function getData() {
+    try {
+      if (
+        window.D &&
+        typeof window.D === "object"
+      ) {
+        return window.D;
+      }
+
+      const raw =
+        localStorage.getItem("hisab_v7_data");
+
+      return raw ? JSON.parse(raw) : null;
+
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ================= BACK ACTION ================= */
+
   function goToParentPage() {
+
     const id = getPageId();
     const d = getData();
 
@@ -98,90 +76,135 @@
       id === "khataEntry" ||
       id === "khataDetail"
     ) {
+
       const mode =
-        d && d.detailMode === "business"
+        d &&
+        d.detailMode === "business"
           ? "business"
           : "personal";
 
-      if (typeof window.show === "function") {
+      if (
+        typeof window.show === "function"
+      ) {
         window.show(mode);
       }
 
       return;
     }
 
-    /* Main sections */
-    if (
-      id === "personal" ||
-      id === "business" ||
-      id === "transactions" ||
-      id === "planning" ||
-      id === "credit" ||
-      id === "reports" ||
-      id === "reminders" ||
-      id === "privacy" ||
-      id === "family" ||
-      id === "familytools" ||
-      id === "tools13" ||
-      id === "final"
-    ) {
-      if (typeof window.show === "function") {
+    /* All main sections → Home */
+    if (BACK_PAGES.includes(id)) {
+
+      if (
+        typeof window.show === "function"
+      ) {
         window.show("home");
       }
 
       return;
     }
 
-    if (typeof window.show === "function") {
+    if (
+      typeof window.show === "function"
+    ) {
       window.show("home");
     }
   }
 
+  /* ================= CREATE BACK BUTTON ================= */
+
   function createBackButton() {
-    if ($("hisabGlobalBackButton")) {
-      return $("hisabGlobalBackButton");
+
+    let btn =
+      document.getElementById(
+        "hisabGlobalBackButton"
+      );
+
+    if (btn) {
+      return btn;
     }
 
-    const btn = document.createElement("button");
+    btn =
+      document.createElement("button");
 
-    btn.id = "hisabGlobalBackButton";
+    btn.id =
+      "hisabGlobalBackButton";
+
     btn.type = "button";
-    btn.innerHTML = "← Back";
+
+    btn.textContent = "← Back";
+
+    btn.setAttribute(
+      "aria-label",
+      "Back"
+    );
 
     btn.style.position = "fixed";
     btn.style.left = "12px";
+
     btn.style.top =
       "calc(8px + env(safe-area-inset-top))";
-    btn.style.zIndex = "999999";
+
+    btn.style.zIndex =
+      "2147483647";
+
     btn.style.display = "none";
-    btn.style.padding = "9px 14px";
+
+    btn.style.padding =
+      "10px 15px";
+
     btn.style.border = "0";
-    btn.style.borderRadius = "12px";
-    btn.style.background = "#082b45";
-    btn.style.color = "#ffffff";
-    btn.style.fontSize = "14px";
-    btn.style.fontWeight = "700";
+
+    btn.style.borderRadius =
+      "12px";
+
+    btn.style.background =
+      "#082b45";
+
+    btn.style.color =
+      "#ffffff";
+
+    btn.style.fontSize =
+      "14px";
+
+    btn.style.fontWeight =
+      "700";
+
+    btn.style.lineHeight =
+      "1";
+
     btn.style.boxShadow =
       "0 4px 12px rgba(0,0,0,.20)";
-    btn.style.cursor = "pointer";
 
-    btn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+    btn.addEventListener(
+      "click",
+      function (e) {
 
-      goToParentPage();
-    });
+        e.preventDefault();
+        e.stopPropagation();
+
+        goToParentPage();
+      }
+    );
 
     document.body.appendChild(btn);
 
     return btn;
   }
 
-  function updateBackButton() {
-    const btn = createBackButton();
-    const id = getPageId();
+  /* ================= UPDATE BUTTON ================= */
 
-    if (BACK_PAGES.includes(id)) {
+  function updateBackButton() {
+
+    const btn =
+      createBackButton();
+
+    const id =
+      getPageId();
+
+    if (
+      BACK_PAGES.includes(id)
+    ) {
       btn.style.display = "block";
     } else {
       btn.style.display = "none";
@@ -190,146 +213,165 @@
 
   /* ================= SHOW WRAPPER ================= */
 
-  const originalShow = window.show;
+  const originalShow =
+    window.show;
 
   if (
-    typeof originalShow === "function" &&
+    typeof originalShow ===
+      "function" &&
     !window.__hisabRepairShowWrapped
   ) {
-    window.__hisabRepairShowWrapped = true;
 
-    window.show = function (id) {
+    window.__hisabRepairShowWrapped =
+      true;
 
-      try {
-        const d = getData();
+    window.show =
+      function (id) {
 
-        if (d) {
-          if (id === "personal") {
-            d.mode = "personal";
-          }
+        const result =
+          originalShow.apply(
+            this,
+            arguments
+          );
 
-          if (id === "business") {
-            d.mode = "business";
-          }
+        setTimeout(
+          updateBackButton,
+          0
+        );
 
-          saveSafe();
-        }
-      } catch (e) {
-        console.warn("HISAB mode error:", e);
-      }
+        setTimeout(
+          updateBackButton,
+          100
+        );
 
-      const result = originalShow.apply(
-        this,
-        arguments
-      );
-
-      setTimeout(updateBackButton, 50);
-      setTimeout(updateBackButton, 200);
-
-      return result;
-    };
+        return result;
+      };
   }
 
-  /* ================= ANDROID / DEVICE BACK ================= */
+  /* ================= DEVICE BACK ================= */
 
   function handleDeviceBack() {
-    const id = getPageId();
 
-    if (BACK_PAGES.includes(id)) {
+    const id =
+      getPageId();
+
+    if (
+      BACK_PAGES.includes(id)
+    ) {
+
       goToParentPage();
+
       return;
     }
 
     if (
       id === "home" ||
-      id === "welcome" ||
-      id === "guestGate"
+      id === "welcome"
     ) {
       return;
     }
 
-    if (typeof window.show === "function") {
+    if (
+      typeof window.show ===
+      "function"
+    ) {
       window.show("home");
     }
   }
 
-  /* Browser/device back */
+  /* Browser back */
   window.addEventListener(
     "popstate",
-    function () {
-      handleDeviceBack();
-    }
+    handleDeviceBack
   );
 
-  /* Capacitor App plugin, if available */
+  /* ================= CAPACITOR BACK ================= */
+
   function connectCapacitorBack() {
+
     try {
-      if (
+
+      const App =
         window.Capacitor &&
         window.Capacitor.Plugins &&
-        window.Capacitor.Plugins.App &&
-        typeof window.Capacitor.Plugins.App.addListener ===
-          "function"
+        window.Capacitor.Plugins.App;
+
+      if (
+        App &&
+        typeof App.addListener ===
+          "function" &&
+        !window.__hisabCapBackConnected
       ) {
-        if (window.__hisabCapBackConnected) {
-          return;
-        }
 
-        window.__hisabCapBackConnected = true;
+        window.__hisabCapBackConnected =
+          true;
 
-        window.Capacitor.Plugins.App.addListener(
+        App.addListener(
           "backButton",
-          function () {
-            handleDeviceBack();
-          }
+          handleDeviceBack
         );
       }
+
     } catch (e) {
+
       console.warn(
-        "Capacitor Back connection skipped:",
+        "HISAB Capacitor Back skipped:",
         e
       );
     }
   }
 
-  /* ================= EXISTING HEADER BUTTONS ================= */
+  /* ================= EXISTING BACK BUTTONS ================= */
 
   function fixExistingBackButtons() {
-    const buttons = document.querySelectorAll(
-      ".page-title button"
-    );
 
-    buttons.forEach(function (button) {
+    document
+      .querySelectorAll(
+        ".page-title button"
+      )
+      .forEach(function (button) {
 
-      if (
-        button.dataset.hisabBackFixed === "1"
-      ) {
-        return;
-      }
+        if (
+          button.dataset
+            .hisabBackFixed === "1"
+        ) {
+          return;
+        }
 
-      const text =
-        (button.innerText || "")
-          .trim()
-          .toLowerCase();
+        const text =
+          (
+            button.innerText ||
+            ""
+          )
+            .trim()
+            .toLowerCase();
 
-      if (
-        text === "←" ||
-        text === "back" ||
-        text.includes("back")
-      ) {
-        button.dataset.hisabBackFixed = "1";
+        if (
+          text === "←" ||
+          text === "back" ||
+          text.includes("back")
+        ) {
 
-        button.onclick = function (e) {
-          e.preventDefault();
-          e.stopPropagation();
+          button.dataset
+            .hisabBackFixed = "1";
 
-          goToParentPage();
-        };
-      }
-    });
+          button.addEventListener(
+            "click",
+            function (e) {
+
+              e.preventDefault();
+              e.stopPropagation();
+
+              goToParentPage();
+
+            },
+            true
+          );
+        }
+      });
   }
 
-  /* ================= STARTUP ================= */
+  /* ================= START ================= */
 
   function startRepair() {
 
@@ -341,44 +383,59 @@
 
     updateBackButton();
 
-    setTimeout(function () {
-      fixExistingBackButtons();
-      updateBackButton();
-    }, 100);
+    setTimeout(
+      updateBackButton,
+      100
+    );
 
-    setTimeout(function () {
-      fixExistingBackButtons();
-      updateBackButton();
-    }, 500);
+    setTimeout(
+      updateBackButton,
+      500
+    );
   }
 
   if (
-    document.readyState === "loading"
+    document.readyState ===
+    "loading"
   ) {
+
     document.addEventListener(
       "DOMContentLoaded",
       startRepair
     );
+
   } else {
+
     startRepair();
   }
 
-  /* ================= PAGE CHANGE WATCH ================= */
+  /* ================= SAFE WATCH ================= */
+
+  /*
+   * IMPORTANT:
+   * Only watch DOM additions/removals.
+   * Do NOT watch style/class here.
+   */
 
   const observer =
-    new MutationObserver(function () {
-      fixExistingBackButtons();
-      updateBackButton();
-    });
+    new MutationObserver(
+      function () {
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: [
-      "class",
-      "style"
-    ]
-  });
+        fixExistingBackButtons();
+
+        /*
+         * Page changes are handled
+         * by the show() wrapper.
+         */
+      }
+    );
+
+  observer.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
 
 })();
