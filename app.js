@@ -1,7 +1,10 @@
 /* =========================================================
-   HISAB V7 — STABLE CONTROLLER
-   FIX #1 — BUSINESS SALES + PURCHASE
-   Compatible with current HISAB V7 HTML
+   HISAB V7 — STABLE APP CONTROLLER
+   Compatible with supplied HISAB V7 index.html
+   White-screen safe navigation
+   Personal + Business separate
+   Business Sales + Purchase
+   Udhar / Transactions / Planning / Payments / Reports
    Local-first • Offline • No Login
    ========================================================= */
 
@@ -38,8 +41,7 @@
       khataFilter: "all",
       detailFilter: "all",
       selectedPerson: "",
-      selectedMode: "personal",
-      lastPage: ""
+      selectedMode: "personal"
     }
   };
 
@@ -89,45 +91,64 @@
     return JSON.parse(JSON.stringify(DEFAULT));
   }
 
-  function normaliseData(saved) {
-    saved = saved && typeof saved === "object"
-      ? saved
-      : {};
+  function arr(v) {
+    return Array.isArray(v) ? v : [];
+  }
 
+  function normalizeData(saved) {
     const base = cloneDefault();
 
-    const data = {
+    if (!saved || typeof saved !== "object") {
+      return base;
+    }
+
+    const out = {
       ...base,
       ...saved
     };
 
-    const arrays = [
-      "transactions",
-      "khata",
-      "business",
-      "sales",
-      "purchases",
-      "goals",
-      "savings",
-      "bills",
-      "loans",
-      "reminders",
-      "family",
-      "tools"
-    ];
+    out.transactions = arr(saved.transactions);
+    out.khata = arr(saved.khata);
+    out.business = arr(saved.business);
+    out.sales = arr(saved.sales);
+    out.purchases = arr(saved.purchases);
+    out.goals = arr(saved.goals);
+    out.savings = arr(saved.savings);
+    out.bills = arr(saved.bills);
+    out.loans = arr(saved.loans);
+    out.reminders = arr(saved.reminders);
+    out.family = arr(saved.family);
+    out.tools = arr(saved.tools);
 
-    arrays.forEach(function (key) {
-      data[key] = Array.isArray(saved[key])
-        ? saved[key]
-        : [];
-    });
-
-    data.ui = {
+    out.ui = {
       ...base.ui,
-      ...(saved.ui || {})
+      ...(saved.ui && typeof saved.ui === "object"
+        ? saved.ui
+        : {})
     };
 
-    return data;
+    out.mode =
+      saved.mode === "business"
+        ? "business"
+        : "personal";
+
+    out.currency =
+      saved.currency || "₹";
+
+    out.language =
+      saved.language === "en"
+        ? "en"
+        : "hi";
+
+    out.budget =
+      Number(saved.budget) || 0;
+
+    out.pin =
+      typeof saved.pin === "string"
+        ? saved.pin
+        : "";
+
+    return out;
   }
 
   function loadData() {
@@ -138,7 +159,7 @@
         return cloneDefault();
       }
 
-      return normaliseData(JSON.parse(raw));
+      return normalizeData(JSON.parse(raw));
 
     } catch (e) {
       console.error("HISAB load error:", e);
@@ -148,88 +169,131 @@
 
   function save() {
     try {
-      const copy = JSON.parse(JSON.stringify(D));
-
-      delete copy.ui;
-
       localStorage.setItem(
         KEY,
-        JSON.stringify(copy)
+        JSON.stringify(D)
       );
-
-      window.D = D;
-
     } catch (e) {
       console.error("HISAB save error:", e);
     }
+
+    window.D = D;
   }
 
-  function alertMsg(message) {
-    window.alert(String(message));
+  function msg(text) {
+    window.alert(String(text));
   }
 
-  function safePrompt(message, value) {
-    try {
-      return window.prompt(message, value);
-    } catch (e) {
-      return null;
-    }
+  function value(id, fallback) {
+    const el = $(id);
+    if (!el) return fallback == null ? "" : fallback;
+    return el.value == null ? fallback : el.value;
+  }
+
+  function setValue(id, v) {
+    const el = $(id);
+    if (el) el.value = v == null ? "" : v;
   }
 
   /* =========================================================
-     PAGE NAVIGATION
-     Supports both old and current IDs
+     PAGE NAVIGATION — WHITE SCREEN SAFE
      ========================================================= */
 
-  function findPage(pageId) {
+  function pageId(name) {
     const aliases = {
       home: ["home", "homeScreen"],
       personal: ["personal", "personalScreen"],
       business: ["business", "businessScreen"],
-      transactions: ["transactions", "transactionsScreen"],
-      reports: ["reports", "reportsScreen"],
-      settings: ["settings", "settingsScreen"],
-      more: ["more", "moreScreen"],
-      add: ["add", "addScreen"],
-      khataDetail: ["khataDetail", "khataDetailScreen"]
+      khataEntry: ["khataEntry", "khataForm"],
+      khataDetail: ["khataDetail", "khataDetailScreen"],
+      transactions: ["transactions", "transactionScreen"],
+      planning: ["planning", "planningScreen"],
+      credit: ["credit", "payments", "creditScreen"],
+      reports: ["reports", "reportScreen"],
+      reminders: ["reminders", "reminderScreen"],
+      privacy: ["privacy", "security", "privacyScreen"],
+      family: ["family", "familyScreen"],
+      ads: ["ads", "adsScreen"],
+      familytools: ["familytools", "familyTools"],
+      tools13: ["tools13", "tools"],
+      final: ["final", "settings", "more"]
     };
 
-    const ids = aliases[pageId] || [pageId];
+    const list =
+      aliases[name] ||
+      [name];
 
-    for (let i = 0; i < ids.length; i++) {
-      const el = $(ids[i]);
-
-      if (el) {
-        return el;
+    for (let i = 0; i < list.length; i++) {
+      if ($(list[i])) {
+        return list[i];
       }
     }
 
     return null;
   }
 
-  function show(pageId) {
-    const pages = document.querySelectorAll(".page");
+  function getPages() {
+    return Array.from(
+      document.querySelectorAll(".page")
+    );
+  }
 
-    pages.forEach(function (page) {
-      page.style.display = "none";
-      page.classList.remove("active");
-    });
+  function show(name) {
+    try {
+      const target = pageId(name);
 
-    const page = findPage(pageId);
+      if (!target) {
+        console.warn(
+          "HISAB: page not found:",
+          name
+        );
+        return false;
+      }
 
-    if (page) {
-      page.style.display = "";
+      const pages = getPages();
+
+      pages.forEach(function (p) {
+        p.style.display = "none";
+        p.classList.remove("active");
+      });
+
+      const page = $(target);
+
+      if (!page) return false;
+
+      page.style.display = "block";
       page.classList.add("active");
 
-      D.ui.lastPage = page.id || pageId;
-    } else {
-      console.warn(
-        "HISAB page not found:",
-        pageId
-      );
-    }
+      D.ui.lastPage = name;
 
-    renderAll();
+      renderAll();
+
+      window.scrollTo(0, 0);
+
+      return true;
+
+    } catch (e) {
+      console.error(
+        "HISAB navigation error:",
+        e
+      );
+
+      const home =
+        $("home") ||
+        $("homeScreen");
+
+      if (home) {
+        getPages().forEach(function (p) {
+          p.style.display = "none";
+          p.classList.remove("active");
+        });
+
+        home.style.display = "block";
+        home.classList.add("active");
+      }
+
+      return false;
+    }
   }
 
   function goHome() {
@@ -241,7 +305,45 @@
   }
 
   /* =========================================================
-     MODE
+     GUEST
+     ========================================================= */
+
+  function showGuestGate() {
+    const gate = $("guestGate");
+    const shell = $("appShell");
+
+    if (!gate || !shell) return;
+
+    const started =
+      localStorage.getItem(GUEST_KEY);
+
+    if (started === "1") {
+      gate.style.display = "none";
+      shell.style.display = "block";
+      show("home");
+    } else {
+      gate.style.display = "flex";
+      shell.style.display = "none";
+    }
+  }
+
+  function enterGuestMode() {
+    localStorage.setItem(
+      GUEST_KEY,
+      "1"
+    );
+
+    const gate = $("guestGate");
+    const shell = $("appShell");
+
+    if (gate) gate.style.display = "none";
+    if (shell) shell.style.display = "block";
+
+    show("home");
+  }
+
+  /* =========================================================
+     PERSONAL / BUSINESS
      ========================================================= */
 
   function setMode(mode) {
@@ -252,36 +354,38 @@
 
     D.ui.selectedMode = D.mode;
 
-    if ($("modeLabel")) {
-      $("modeLabel").textContent =
+    save();
+
+    const p = $("personalModeBtn");
+    const b = $("businessModeBtn");
+    const label = $("modeLabel");
+
+    if (p) {
+      p.classList.toggle(
+        "active",
+        D.mode === "personal"
+      );
+    }
+
+    if (b) {
+      b.classList.toggle(
+        "active",
+        D.mode === "business"
+      );
+    }
+
+    if (label) {
+      label.textContent =
         D.mode === "business"
           ? "Business"
           : "Personal";
     }
 
-    if ($("personalModeBtn")) {
-      $("personalModeBtn")
-        .classList.toggle(
-          "active",
-          D.mode === "personal"
-        );
-    }
-
-    if ($("businessModeBtn")) {
-      $("businessModeBtn")
-        .classList.toggle(
-          "active",
-          D.mode === "business"
-        );
-    }
-
-    save();
-
-    if (D.mode === "business") {
-      show("business");
-    } else {
-      show("personal");
-    }
+    show(
+      D.mode === "business"
+        ? "business"
+        : "personal"
+    );
   }
 
   /* =========================================================
@@ -289,43 +393,50 @@
      ========================================================= */
 
   function addTransaction() {
-    const typeEl = $("transactionType");
-    const amountEl = $("transactionAmount");
-    const categoryEl = $("transactionCategory");
-    const noteEl = $("transactionNote");
-    const dateEl = $("transactionDate");
+    const type =
+      value(
+        "transactionType",
+        "expense"
+      );
 
-    const type = typeEl
-      ? typeEl.value
-      : "expense";
+    const amount =
+      parseFloat(
+        value("transactionAmount", "")
+      );
 
-    const amount = parseFloat(
-      amountEl ? amountEl.value : ""
-    );
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alertMsg("Please enter a valid amount.");
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      msg("Please enter a valid amount.");
       return;
     }
 
-    const category = categoryEl
-      ? categoryEl.value.trim()
-      : "";
+    const category =
+      String(
+        value(
+          "transactionCategory",
+          ""
+        )
+      ).trim() || "General";
 
-    const note = noteEl
-      ? noteEl.value.trim()
-      : "";
+    const note =
+      String(
+        value("transactionNote", "")
+      ).trim();
 
-    const date = dateEl
-      ? dateEl.value || today()
-      : today();
+    const date =
+      value(
+        "transactionDate",
+        today()
+      ) || today();
 
     D.transactions.push({
       id: makeId(),
       mode: D.mode,
       type: type,
       amount: amount,
-      category: category || "General",
+      category: category,
       note: note,
       date: date,
       createdAt: Date.now()
@@ -333,23 +444,84 @@
 
     save();
 
-    if (amountEl) amountEl.value = "";
-    if (categoryEl) categoryEl.value = "";
-    if (noteEl) noteEl.value = "";
+    setValue("transactionAmount", "");
+    setValue("transactionCategory", "");
+    setValue("transactionNote", "");
 
     renderAll();
 
-    alertMsg("Transaction added.");
+    msg("Transaction added.");
   }
 
   function deleteTransaction(txId) {
     D.transactions =
-      D.transactions.filter(function (x) {
-        return x.id !== txId;
-      });
+      D.transactions.filter(
+        x => x.id !== txId
+      );
 
     save();
     renderAll();
+  }
+
+  function renderTransactions() {
+    const list = $("transactionList");
+    if (!list) return;
+
+    const rows =
+      D.transactions
+        .filter(
+          x =>
+            (x.mode || "personal") === D.mode
+        )
+        .slice()
+        .sort(
+          (a, b) =>
+            String(b.date)
+              .localeCompare(
+                String(a.date)
+              )
+        );
+
+    if (!rows.length) {
+      list.innerHTML =
+        '<div class="empty-state">No transactions yet.</div>';
+      return;
+    }
+
+    let html = "";
+
+    rows.forEach(function (x) {
+      html += `
+        <div class="list-item">
+          <strong>
+            ${x.type === "income"
+              ? "💰 Income"
+              : "💸 Expense"}
+          </strong>
+
+          <div>${money(x.amount)}</div>
+
+          <small>
+            ${esc(x.date)}
+            • ${esc(x.category)}
+          </small>
+
+          ${
+            x.note
+              ? `<p>${esc(x.note)}</p>`
+              : ""
+          }
+
+          <button
+            type="button"
+            onclick="deleteTransaction('${esc(x.id)}')">
+            🗑 Delete
+          </button>
+        </div>
+      `;
+    });
+
+    list.innerHTML = html;
   }
 
   /* =========================================================
@@ -360,77 +532,99 @@
     D.ui.selectedMode =
       mode === "business"
         ? "business"
-        : D.mode;
+        : "personal";
 
-    const form = $("khataForm");
+    const page =
+      $("khataEntry");
 
-    if (form) {
-      form.style.display = "";
-      form.classList.add("active");
-    }
+    if (!page) return;
 
-    if ($("khataDate")) {
-      $("khataDate").value = today();
-    }
+    show("khataEntry");
 
-    if ($("khataPerson")) {
-      $("khataPerson").focus();
+    setValue(
+      "khataDate",
+      today()
+    );
+
+    const person =
+      $("khataPerson");
+
+    if (person) {
+      setTimeout(
+        () => person.focus(),
+        50
+      );
     }
   }
 
   function closeKhataForm() {
-    const form = $("khataForm");
-
-    if (form) {
-      form.style.display = "none";
-      form.classList.remove("active");
-    }
+    show(
+      D.ui.selectedMode === "business"
+        ? "business"
+        : "personal"
+    );
   }
 
   function saveKhataEntry() {
-    const person = $("khataPerson")
-      ? $("khataPerson").value.trim()
-      : "";
+    const person =
+      String(
+        value("khataPerson", "")
+      ).trim();
 
-    const type = $("khataType")
-      ? $("khataType").value
-      : "give";
+    const type =
+      value(
+        "khataType",
+        "give"
+      );
 
-    const amount = parseFloat(
-      $("khataAmount")
-        ? $("khataAmount").value
-        : ""
-    );
+    const amount =
+      parseFloat(
+        value("khataAmount", "")
+      );
 
     if (!person) {
-      alertMsg("Please enter name.");
+      msg("Please enter name.");
       return;
     }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alertMsg("Please enter valid amount.");
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      msg("Please enter valid amount.");
       return;
     }
 
-    const date = $("khataDate")
-      ? $("khataDate").value || today()
-      : today();
+    const mode =
+      D.ui.selectedMode ||
+      D.mode;
 
-    const method = $("khataMethod")
-      ? $("khataMethod").value || "Cash"
-      : "Cash";
+    const date =
+      value(
+        "khataDate",
+        today()
+      ) || today();
 
-    const status = $("khataStatus")
-      ? $("khataStatus").value || "pending"
-      : "pending";
+    const method =
+      value(
+        "khataMethod",
+        "Cash"
+      );
 
-    const note = $("khataNote")
-      ? $("khataNote").value.trim()
-      : "";
+    const status =
+      value(
+        "khataStatus",
+        "pending"
+      );
+
+    const note =
+      String(
+        value("khataNote", "")
+      ).trim();
 
     D.khata.push({
       id: makeId(),
-      mode: D.ui.selectedMode || D.mode,
+      mode: mode,
       person: person,
       type: type,
       amount: amount,
@@ -442,87 +636,279 @@
     });
 
     save();
-    closeKhataForm();
 
-    if ($("khataPerson")) $("khataPerson").value = "";
-    if ($("khataAmount")) $("khataAmount").value = "";
-    if ($("khataNote")) $("khataNote").value = "";
+    setValue("khataPerson", "");
+    setValue("khataAmount", "");
+    setValue("khataNote", "");
 
     renderAll();
 
-    alertMsg("Udhar entry saved.");
+    show(
+      mode === "business"
+        ? "business"
+        : "personal"
+    );
+
+    msg("Udhar entry saved.");
   }
 
   function currentKhata(mode) {
-    return D.khata.filter(function (x) {
-      return (x.mode || "personal") === mode;
-    });
+    return D.khata.filter(
+      x =>
+        (x.mode || "personal") === mode
+    );
   }
 
   function deleteKhata(kid) {
     D.khata =
-      D.khata.filter(function (x) {
-        return x.id !== kid;
-      });
+      D.khata.filter(
+        x => x.id !== kid
+      );
 
     save();
     renderAll();
   }
 
-  function openKhataDetail(person, mode) {
-    D.ui.selectedPerson = person;
+  function searchKhata(mode) {
+    if (mode === "business") {
+      renderBusiness();
+    } else {
+      renderPersonal();
+    }
+  }
+
+  function filterKhata(
+    mode,
+    filter,
+    button
+  ) {
+    D.ui.khataFilter =
+      filter || "all";
+
+    document.querySelectorAll(
+      ".filter-row button"
+    ).forEach(function (b) {
+      b.classList.remove("active");
+    });
+
+    if (button) {
+      button.classList.add("active");
+    }
+
+    if (mode === "business") {
+      renderBusiness();
+    } else {
+      renderPersonal();
+    }
+  }
+
+  function openKhataDetail(
+    person,
+    mode
+  ) {
+    D.ui.selectedPerson =
+      String(person || "");
+
     D.ui.selectedMode =
       mode === "business"
         ? "business"
-        : (mode || D.mode);
+        : "personal";
 
-    const page = findPage("khataDetail");
-
-    if (page) {
-      document.querySelectorAll(".page")
-        .forEach(function (p) {
-          p.style.display = "none";
-          p.classList.remove("active");
-        });
-
-      page.style.display = "";
-      page.classList.add("active");
-    }
-
-    renderKhataDetail();
+    show("khataDetail");
   }
 
   function closeKhataDetail() {
-    const page = findPage("khataDetail");
-
-    if (page) {
-      page.style.display = "none";
-      page.classList.remove("active");
-    }
-
     show(
-      D.mode === "business"
+      D.ui.selectedMode === "business"
         ? "business"
         : "personal"
     );
   }
 
-  function renderKhataDetail() {
-    const person = D.ui.selectedPerson;
-    const mode =
-      D.ui.selectedMode || D.mode;
+  function detailFilter(
+    filter,
+    button
+  ) {
+    D.ui.detailFilter =
+      filter || "all";
 
-    if (!person) return;
+    document.querySelectorAll(
+      "#khataDetail .filter-row button"
+    ).forEach(function (b) {
+      b.classList.remove("active");
+    });
 
+    if (button) {
+      button.classList.add("active");
+    }
+
+    renderKhataDetail();
+  }
+
+  function renderPersonal() {
     const list =
-      currentKhata(mode).filter(function (x) {
-        return x.person === person;
-      });
+      $("personalList");
+
+    const mode = "personal";
+
+    let rows =
+      currentKhata(mode);
+
+    const search =
+      String(
+        value("personalSearch", "")
+      )
+        .trim()
+        .toLowerCase();
+
+    const filter =
+      D.ui.khataFilter || "all";
+
+    if (search) {
+      rows =
+        rows.filter(
+          x =>
+            `${x.person} ${x.note} ${x.type} ${x.amount}`
+              .toLowerCase()
+              .includes(search)
+        );
+    }
+
+    if (
+      filter !== "all" &&
+      filter !== "pending"
+    ) {
+      rows =
+        rows.filter(
+          x => x.type === filter
+        );
+    }
+
+    if (filter === "pending") {
+      rows =
+        rows.filter(
+          x => x.status === "pending"
+        );
+    }
 
     let give = 0;
     let receive = 0;
 
-    list.forEach(function (x) {
+    currentKhata(mode).forEach(
+      function (x) {
+        if (x.type === "give") {
+          give += Number(x.amount) || 0;
+        }
+
+        if (x.type === "receive") {
+          receive += Number(x.amount) || 0;
+        }
+      }
+    );
+
+    if ($("ledgerGiven"))
+      $("ledgerGiven").textContent =
+        money(give);
+
+    if ($("ledgerReceived"))
+      $("ledgerReceived").textContent =
+        money(receive);
+
+    if ($("ledgerNet"))
+      $("ledgerNet").textContent =
+        money(give - receive);
+
+    if (!list) return;
+
+    rows =
+      rows.slice().sort(
+        (a, b) =>
+          String(b.date)
+            .localeCompare(
+              String(a.date)
+            )
+      );
+
+    if (!rows.length) {
+      list.innerHTML =
+        '<div class="empty-state">No Udhar entries yet.</div>';
+      return;
+    }
+
+    let html = "";
+
+    rows.forEach(function (x) {
+      const cls =
+        x.type === "give"
+          ? "give-entry"
+          : "receive-entry";
+
+      html += `
+        <div class="list-item ${cls}">
+          <strong>
+            ${x.type === "give"
+              ? "🔴 Give"
+              : "🟢 Receive"}
+            — ${esc(x.person)}
+          </strong>
+
+          <div>
+            ${money(x.amount)}
+          </div>
+
+          <small>
+            ${esc(x.date)}
+            • ${esc(x.method || "Cash")}
+            • ${esc(x.status || "pending")}
+          </small>
+
+          ${
+            x.note
+              ? `<p>${esc(x.note)}</p>`
+              : ""
+          }
+
+          <button
+            type="button"
+            onclick="openKhataDetail('${esc(x.person)}','personal')">
+            📒 History
+          </button>
+
+          <button
+            type="button"
+            onclick="deleteKhata('${esc(x.id)}')">
+            🗑 Delete
+          </button>
+        </div>
+      `;
+    });
+
+    list.innerHTML = html;
+  }
+
+  function renderKhataDetail() {
+    const person =
+      D.ui.selectedPerson;
+
+    const mode =
+      D.ui.selectedMode ||
+      D.mode;
+
+    const page =
+      $("khataDetail");
+
+    if (!page || !person) return;
+
+    let rows =
+      currentKhata(mode)
+        .filter(
+          x => x.person === person
+        );
+
+    let give = 0;
+    let receive = 0;
+
+    rows.forEach(function (x) {
       if (x.type === "give") {
         give += Number(x.amount) || 0;
       }
@@ -532,68 +918,97 @@
       }
     });
 
-    if ($("detailPersonName")) {
+    if ($("detailPersonName"))
       $("detailPersonName").textContent =
         person;
-    }
 
-    if ($("detailGive")) {
+    if ($("detailGive"))
       $("detailGive").textContent =
         money(give);
-    }
 
-    if ($("detailReceive")) {
+    if ($("detailReceive"))
       $("detailReceive").textContent =
         money(receive);
-    }
 
-    if ($("detailBalance")) {
+    if ($("detailBalance"))
       $("detailBalance").textContent =
         money(give - receive);
+
+    const filter =
+      D.ui.detailFilter || "all";
+
+    if (filter === "give") {
+      rows =
+        rows.filter(
+          x => x.type === "give"
+        );
     }
 
-    const listEl = $("khataDetailList");
+    if (filter === "receive") {
+      rows =
+        rows.filter(
+          x => x.type === "receive"
+        );
+    }
 
-    if (!listEl) return;
+    if (filter === "pending") {
+      rows =
+        rows.filter(
+          x => x.status === "pending"
+        );
+    }
 
-    if (!list.length) {
-      listEl.innerHTML =
-        '<div class="empty-state">No entries yet.</div>';
+    const history =
+      $("khataHistory");
 
+    if (!history) return;
+
+    rows =
+      rows.slice().sort(
+        (a, b) =>
+          String(b.date)
+            .localeCompare(
+              String(a.date)
+            )
+      );
+
+    if (!rows.length) {
+      history.innerHTML =
+        '<div class="empty-state">No history found.</div>';
       return;
     }
 
-    const sorted = list.slice().sort(function (a, b) {
-      return String(b.date)
-        .localeCompare(String(a.date));
-    });
+    history.innerHTML =
+      rows.map(function (x) {
+        return `
+          <div class="list-item">
+            <strong>
+              ${x.type === "give"
+                ? "🔴 Give"
+                : "🟢 Receive"}
+              ${money(x.amount)}
+            </strong>
 
-    listEl.innerHTML = sorted.map(function (x) {
-      const isGive = x.type === "give";
+            <small>
+              ${esc(x.date)}
+              • ${esc(x.method || "Cash")}
+              • ${esc(x.status || "pending")}
+            </small>
 
-      return `
-        <div class="list-item">
-          <strong style="color:${isGive ? "#d93025" : "#188038"}">
-            ${isGive ? "Give" : "Receive"} —
-            ${money(x.amount)}
-          </strong>
-          <small>
-            ${esc(x.date)}
-            • ${esc(x.method || "Cash")}
-            • ${esc(x.status || "pending")}
-          </small>
-          ${
-            x.note
-              ? `<p>${esc(x.note)}</p>`
-              : ""
-          }
-          <button type="button"
-            onclick="deleteKhata('${x.id}')">
-            🗑 Delete
-          </button>
-        </div>
-      `;
-    }).join("");
+            ${
+              x.note
+                ? `<p>${esc(x.note)}</p>`
+                : ""
+            }
+
+            <button
+              type="button"
+              onclick="deleteKhata('${esc(x.id)}')">
+              🗑 Delete
+            </button>
+          </div>
+        `;
+      }).join("");
   }
 
   /* =========================================================
@@ -614,33 +1029,13 @@
         ? "Supplier Name:"
         : "Customer Name:";
 
-    const result =
-      safePrompt(label, "");
+    const raw =
+      window.prompt(label);
 
-    if (result === null) return;
+    if (!raw || !raw.trim()) return;
 
-    const name = result.trim();
-
-    if (!name) return;
-
-    const exists = D.business.some(function (x) {
-      return (
-        x.type === type &&
-        String(x.name).toLowerCase() ===
-          name.toLowerCase()
-      );
-    });
-
-    if (exists) {
-      alertMsg(
-        "This " +
-        (type === "supplier"
-          ? "supplier"
-          : "customer") +
-        " already exists."
-      );
-      return;
-    }
+    const name =
+      raw.trim();
 
     D.business.push({
       id: makeId(),
@@ -650,268 +1045,292 @@
     });
 
     save();
+
+    D.ui.businessFilter =
+      type;
+
     renderBusiness();
 
-    alertMsg(
+    msg(
       type === "supplier"
         ? "Supplier added."
         : "Customer added."
     );
   }
 
-  function deleteBusinessContact(contactId) {
+  function deleteBusinessContact(id) {
     D.business =
-      D.business.filter(function (x) {
-        return x.id !== contactId;
-      });
+      D.business.filter(
+        x => x.id !== id
+      );
 
     save();
     renderBusiness();
   }
 
   /* =========================================================
-     #1 BUSINESS SALE
+     BUSINESS SALES
      ========================================================= */
 
   function addBusinessSale() {
-    const customerResult =
-      safePrompt("Customer Name:", "");
-
-    if (customerResult === null) return;
-
     const customer =
-      customerResult.trim();
+      window.prompt(
+        "Customer Name:"
+      );
 
-    if (!customer) {
-      alertMsg("Please enter customer name.");
-      return;
-    }
+    if (
+      !customer ||
+      !customer.trim()
+    ) return;
 
-    const amountResult =
-      safePrompt("Sale Amount:", "");
-
-    if (amountResult === null) return;
+    const item =
+      window.prompt(
+        "Item / Product Name:",
+        ""
+      ) || "";
 
     const amount =
-      parseFloat(amountResult);
+      parseFloat(
+        window.prompt(
+          "Sale Amount:",
+          "0"
+        )
+      );
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alertMsg("Please enter a valid Sale Amount.");
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      msg(
+        "Please enter a valid Sale Amount."
+      );
       return;
     }
 
-    const dateResult =
-      safePrompt("Sale Date:", today());
-
-    if (dateResult === null) return;
-
     const date =
-      dateResult.trim() || today();
-
-    const methodResult =
-      safePrompt(
-        "Payment Method:",
-        "Cash"
-      );
-
-    if (methodResult === null) return;
+      window.prompt(
+        "Sale Date:",
+        today()
+      ) || today();
 
     const method =
-      methodResult.trim() || "Cash";
+      window.prompt(
+        "Payment Method:",
+        "Cash"
+      ) || "Cash";
 
-    const noteResult =
-      safePrompt("Sale Note:", "");
-
-    if (noteResult === null) return;
-
-    const statusResult =
-      safePrompt(
+    const statusInput =
+      window.prompt(
         "Status (completed / pending):",
         "completed"
-      );
-
-    if (statusResult === null) return;
+      ) || "completed";
 
     const status =
-      statusResult.trim().toLowerCase() ===
-      "pending"
+      statusInput
+        .toLowerCase()
+        .trim() === "pending"
         ? "pending"
         : "completed";
 
-    const sale = {
+    const invoice =
+      window.prompt(
+        "Invoice / Reference:",
+        ""
+      ) || "";
+
+    const note =
+      window.prompt(
+        "Sale Note:",
+        ""
+      ) || "";
+
+    D.sales.push({
       id: makeId(),
       mode: "business",
-      customer: customer,
+      customer:
+        customer.trim(),
+      item: item.trim(),
       amount: amount,
       date: date,
-      method: method,
-      note: noteResult.trim(),
+      method: method.trim(),
       status: status,
+      invoice: invoice.trim(),
+      note: note.trim(),
       createdAt: Date.now()
-    };
+    });
 
-    D.sales.push(sale);
+    /* Automatically create customer if missing */
 
-    /* Automatically create customer contact */
-    const customerExists =
-      D.business.some(function (x) {
-        return (
+    const exists =
+      D.business.some(
+        x =>
           x.type === "customer" &&
-          String(x.name).toLowerCase() ===
-            customer.toLowerCase()
-        );
-      });
+          String(x.name)
+            .toLowerCase() ===
+          customer
+            .trim()
+            .toLowerCase()
+      );
 
-    if (!customerExists) {
+    if (!exists) {
       D.business.push({
         id: makeId(),
         type: "customer",
-        name: customer,
+        name: customer.trim(),
         createdAt: Date.now()
       });
     }
 
     save();
 
-    D.ui.businessFilter = "sales";
+    D.ui.businessFilter =
+      "sales";
 
     renderBusiness();
 
-    alertMsg(
-      "Sale entry added successfully."
+    msg(
+      "Business Sale entry added successfully."
     );
   }
 
+  function deleteBusinessSale(id) {
+    D.sales =
+      D.sales.filter(
+        x => x.id !== id
+      );
+
+    save();
+    renderBusiness();
+  }
+
   /* =========================================================
-     #1 BUSINESS PURCHASE
+     BUSINESS PURCHASE
      ========================================================= */
 
   function addBusinessPurchase() {
-    const supplierResult =
-      safePrompt("Supplier Name:", "");
-
-    if (supplierResult === null) return;
-
     const supplier =
-      supplierResult.trim();
+      window.prompt(
+        "Supplier Name:"
+      );
 
-    if (!supplier) {
-      alertMsg("Please enter supplier name.");
-      return;
-    }
+    if (
+      !supplier ||
+      !supplier.trim()
+    ) return;
 
-    const amountResult =
-      safePrompt("Purchase Amount:", "");
-
-    if (amountResult === null) return;
+    const item =
+      window.prompt(
+        "Item / Product Name:",
+        ""
+      ) || "";
 
     const amount =
-      parseFloat(amountResult);
+      parseFloat(
+        window.prompt(
+          "Purchase Amount:",
+          "0"
+        )
+      );
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alertMsg(
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      msg(
         "Please enter a valid Purchase Amount."
       );
       return;
     }
 
-    const dateResult =
-      safePrompt("Purchase Date:", today());
-
-    if (dateResult === null) return;
-
     const date =
-      dateResult.trim() || today();
-
-    const methodResult =
-      safePrompt(
-        "Payment Method:",
-        "Cash"
-      );
-
-    if (methodResult === null) return;
+      window.prompt(
+        "Purchase Date:",
+        today()
+      ) || today();
 
     const method =
-      methodResult.trim() || "Cash";
+      window.prompt(
+        "Payment Method:",
+        "Cash"
+      ) || "Cash";
 
-    const noteResult =
-      safePrompt("Purchase Note:", "");
-
-    if (noteResult === null) return;
-
-    const statusResult =
-      safePrompt(
+    const statusInput =
+      window.prompt(
         "Status (completed / pending):",
         "completed"
-      );
-
-    if (statusResult === null) return;
+      ) || "completed";
 
     const status =
-      statusResult.trim().toLowerCase() ===
-      "pending"
+      statusInput
+        .toLowerCase()
+        .trim() === "pending"
         ? "pending"
         : "completed";
 
-    const purchase = {
+    const invoice =
+      window.prompt(
+        "Bill / Invoice Reference:",
+        ""
+      ) || "";
+
+    const note =
+      window.prompt(
+        "Purchase Note:",
+        ""
+      ) || "";
+
+    D.purchases.push({
       id: makeId(),
       mode: "business",
-      supplier: supplier,
+      supplier:
+        supplier.trim(),
+      item: item.trim(),
       amount: amount,
       date: date,
-      method: method,
-      note: noteResult.trim(),
+      method: method.trim(),
       status: status,
+      invoice: invoice.trim(),
+      note: note.trim(),
       createdAt: Date.now()
-    };
+    });
 
-    D.purchases.push(purchase);
-
-    /* Automatically create supplier contact */
-    const supplierExists =
-      D.business.some(function (x) {
-        return (
+    const exists =
+      D.business.some(
+        x =>
           x.type === "supplier" &&
-          String(x.name).toLowerCase() ===
-            supplier.toLowerCase()
-        );
-      });
+          String(x.name)
+            .toLowerCase() ===
+          supplier
+            .trim()
+            .toLowerCase()
+      );
 
-    if (!supplierExists) {
+    if (!exists) {
       D.business.push({
         id: makeId(),
         type: "supplier",
-        name: supplier,
+        name: supplier.trim(),
         createdAt: Date.now()
       });
     }
 
     save();
 
-    D.ui.businessFilter = "purchase";
+    D.ui.businessFilter =
+      "purchase";
 
     renderBusiness();
 
-    alertMsg(
-      "Purchase entry added successfully."
+    msg(
+      "Business Purchase entry added successfully."
     );
   }
 
-  function deleteBusinessSale(saleId) {
-    D.sales =
-      D.sales.filter(function (x) {
-        return x.id !== saleId;
-      });
-
-    save();
-    renderBusiness();
-  }
-
-  function deleteBusinessPurchase(purchaseId) {
+  function deleteBusinessPurchase(id) {
     D.purchases =
-      D.purchases.filter(function (x) {
-        return x.id !== purchaseId;
-      });
+      D.purchases.filter(
+        x => x.id !== id
+      );
 
     save();
     renderBusiness();
@@ -921,12 +1340,15 @@
      BUSINESS FILTER
      ========================================================= */
 
-  function businessFilter(filter, button) {
+  function businessFilter(
+    filter,
+    button
+  ) {
     D.ui.businessFilter =
       filter || "customer";
 
     document.querySelectorAll(
-      ".business-filter button, .business-tabs button"
+      ".business-tabs button"
     ).forEach(function (b) {
       b.classList.remove("active");
     });
@@ -943,118 +1365,77 @@
      ========================================================= */
 
   function renderBusiness() {
-    const list = $("businessList");
+    const list =
+      $("businessList");
 
     if (!list) return;
 
     const filter =
-      D.ui.businessFilter || "customer";
-
-    const searchEl =
-      $("businessSearch");
+      D.ui.businessFilter ||
+      "customer";
 
     const search =
-      searchEl
-        ? searchEl.value.trim().toLowerCase()
-        : "";
+      String(
+        value("businessSearch", "")
+      )
+        .trim()
+        .toLowerCase();
 
-    /* -------------------------
-       BUSINESS UDHAR SUMMARY
-       ------------------------- */
+    let html = "";
 
-    const businessKhata =
-      currentKhata("business");
-
-    let given = 0;
-    let received = 0;
-
-    businessKhata.forEach(function (x) {
-      if (x.type === "give") {
-        given += Number(x.amount) || 0;
-      }
-
-      if (x.type === "receive") {
-        received += Number(x.amount) || 0;
-      }
-    });
-
-    if ($("businessGiven")) {
-      $("businessGiven").textContent =
-        money(given);
-    }
-
-    if ($("businessReceived")) {
-      $("businessReceived").textContent =
-        money(received);
-    }
-
-    if ($("businessNet")) {
-      $("businessNet").textContent =
-        money(given - received);
-    }
-
-    /* =====================================================
-       SALES
-       ===================================================== */
+    /* ---------------- SALES ---------------- */
 
     if (filter === "sales") {
-      let sales =
-        D.sales.filter(function (x) {
-          return (x.mode || "business") ===
-            "business";
-        });
+      let rows =
+        D.sales.slice();
 
       if (search) {
-        sales = sales.filter(function (x) {
-          return (
-            `${x.customer} ${x.amount} ${x.date} ${x.method} ${x.note} ${x.status}`
+        rows =
+          rows.filter(function (x) {
+            return `
+              ${x.customer}
+              ${x.item}
+              ${x.amount}
+              ${x.date}
+              ${x.method}
+              ${x.status}
+              ${x.invoice}
+              ${x.note}
+            `
               .toLowerCase()
-              .includes(search)
-          );
-        });
+              .includes(search);
+          });
       }
 
-      sales.sort(function (a, b) {
-        return (
-          String(b.date)
-            .localeCompare(String(a.date)) ||
-          Number(b.createdAt || 0) -
-            Number(a.createdAt || 0)
-        );
-      });
-
       const total =
-        sales.reduce(function (sum, x) {
-          return sum + Number(x.amount || 0);
-        }, 0);
+        rows.reduce(
+          (sum, x) =>
+            sum + (Number(x.amount) || 0),
+          0
+        );
 
-      const pending =
-        sales
-          .filter(function (x) {
-            return x.status === "pending";
-          })
-          .reduce(function (sum, x) {
-            return sum + Number(x.amount || 0);
-          }, 0);
-
-      let html = `
+      html += `
         <div class="summary-card">
           <small>Total Sales</small>
           <strong>${money(total)}</strong>
         </div>
 
-        <div class="summary-card">
-          <small>Pending Sales</small>
-          <strong>${money(pending)}</strong>
-        </div>
-
-        <button type="button"
+        <button
+          type="button"
           onclick="addBusinessSale()">
           ➕ Add Sale
         </button>
       `;
 
-      if (!sales.length) {
+      rows.sort(
+        (a, b) =>
+          String(b.date)
+            .localeCompare(
+              String(a.date)
+            )
+      );
+
+      if (!rows.length) {
         html += `
           <div class="empty-state">
             No sales entries yet.
@@ -1062,13 +1443,9 @@
         `;
       }
 
-      sales.forEach(function (x) {
-        const status =
-          x.status || "completed";
-
+      rows.forEach(function (x) {
         html += `
-          <div class="list-item business-sale-item">
-
+          <div class="list-item">
             <strong>
               🛒 ${esc(x.customer)}
             </strong>
@@ -1077,11 +1454,23 @@
               ${money(x.amount)}
             </div>
 
+            ${
+              x.item
+                ? `<small>Item: ${esc(x.item)}</small>`
+                : ""
+            }
+
             <small>
               ${esc(x.date)}
-              • ${esc(x.method || "Cash")}
-              • ${esc(status)}
+              • ${esc(x.method)}
+              • ${esc(x.status)}
             </small>
+
+            ${
+              x.invoice
+                ? `<small>Ref: ${esc(x.invoice)}</small>`
+                : ""
+            }
 
             ${
               x.note
@@ -1089,11 +1478,11 @@
                 : ""
             }
 
-            <button type="button"
-              onclick="deleteBusinessSale('${x.id}')">
+            <button
+              type="button"
+              onclick="deleteBusinessSale('${esc(x.id)}')">
               🗑 Delete
             </button>
-
           </div>
         `;
       });
@@ -1102,69 +1491,59 @@
       return;
     }
 
-    /* =====================================================
-       PURCHASE
-       ===================================================== */
+    /* ---------------- PURCHASE ---------------- */
 
     if (filter === "purchase") {
-      let purchases =
-        D.purchases.filter(function (x) {
-          return (x.mode || "business") ===
-            "business";
-        });
+      let rows =
+        D.purchases.slice();
 
       if (search) {
-        purchases =
-          purchases.filter(function (x) {
-            return (
-              `${x.supplier} ${x.amount} ${x.date} ${x.method} ${x.note} ${x.status}`
-                .toLowerCase()
-                .includes(search)
-            );
+        rows =
+          rows.filter(function (x) {
+            return `
+              ${x.supplier}
+              ${x.item}
+              ${x.amount}
+              ${x.date}
+              ${x.method}
+              ${x.status}
+              ${x.invoice}
+              ${x.note}
+            `
+              .toLowerCase()
+              .includes(search);
           });
       }
 
-      purchases.sort(function (a, b) {
-        return (
-          String(b.date)
-            .localeCompare(String(a.date)) ||
-          Number(b.createdAt || 0) -
-            Number(a.createdAt || 0)
-        );
-      });
-
       const total =
-        purchases.reduce(function (sum, x) {
-          return sum + Number(x.amount || 0);
-        }, 0);
+        rows.reduce(
+          (sum, x) =>
+            sum + (Number(x.amount) || 0),
+          0
+        );
 
-      const pending =
-        purchases
-          .filter(function (x) {
-            return x.status === "pending";
-          })
-          .reduce(function (sum, x) {
-            return sum + Number(x.amount || 0);
-          }, 0);
-
-      let html = `
+      html += `
         <div class="summary-card">
           <small>Total Purchase</small>
           <strong>${money(total)}</strong>
         </div>
 
-        <div class="summary-card">
-          <small>Pending Purchase</small>
-          <strong>${money(pending)}</strong>
-        </div>
-
-        <button type="button"
+        <button
+          type="button"
           onclick="addBusinessPurchase()">
           ➕ Add Purchase
         </button>
       `;
 
-      if (!purchases.length) {
+      rows.sort(
+        (a, b) =>
+          String(b.date)
+            .localeCompare(
+              String(a.date)
+            )
+      );
+
+      if (!rows.length) {
         html += `
           <div class="empty-state">
             No purchase entries yet.
@@ -1172,13 +1551,9 @@
         `;
       }
 
-      purchases.forEach(function (x) {
-        const status =
-          x.status || "completed";
-
+      rows.forEach(function (x) {
         html += `
-          <div class="list-item business-purchase-item">
-
+          <div class="list-item">
             <strong>
               📦 ${esc(x.supplier)}
             </strong>
@@ -1187,11 +1562,23 @@
               ${money(x.amount)}
             </div>
 
+            ${
+              x.item
+                ? `<small>Item: ${esc(x.item)}</small>`
+                : ""
+            }
+
             <small>
               ${esc(x.date)}
-              • ${esc(x.method || "Cash")}
-              • ${esc(status)}
+              • ${esc(x.method)}
+              • ${esc(x.status)}
             </small>
+
+            ${
+              x.invoice
+                ? `<small>Ref: ${esc(x.invoice)}</small>`
+                : ""
+            }
 
             ${
               x.note
@@ -1199,11 +1586,11 @@
                 : ""
             }
 
-            <button type="button"
-              onclick="deleteBusinessPurchase('${x.id}')">
+            <button
+              type="button"
+              onclick="deleteBusinessPurchase('${esc(x.id)}')">
               🗑 Delete
             </button>
-
           </div>
         `;
       });
@@ -1212,70 +1599,60 @@
       return;
     }
 
-    /* =====================================================
-       CUSTOMERS / SUPPLIERS
-       ===================================================== */
+    /* ---------------- CUSTOMER / SUPPLIER ---------------- */
 
-    if (
-      filter === "customer" ||
+    const role =
       filter === "supplier"
-    ) {
-      let contacts =
-        D.business.filter(function (x) {
-          return x.type === filter;
-        });
+        ? "supplier"
+        : "customer";
 
-      if (search) {
-        contacts =
-          contacts.filter(function (x) {
-            return String(x.name)
+    const contacts =
+      D.business.filter(
+        x =>
+          x.type === role &&
+          (
+            !search ||
+            String(x.name)
               .toLowerCase()
-              .includes(search);
-          });
-      }
+              .includes(search)
+          )
+      );
 
-      contacts.sort(function (a, b) {
-        return String(a.name)
-          .localeCompare(String(b.name));
-      });
+    html += `
+      <button
+        type="button"
+        onclick="${
+          role === "customer"
+            ? "addBusinessCustomer()"
+            : "addBusinessSupplier()"
+        }">
+        ➕ Add ${
+          role === "customer"
+            ? "Customer"
+            : "Supplier"
+        }
+      </button>
+    `;
 
-      let html =
-        filter === "customer"
-          ? `
-            <button type="button"
-              onclick="addBusinessCustomer()">
-              ➕ Add Customer
-            </button>
-          `
-          : `
-            <button type="button"
-              onclick="addBusinessSupplier()">
-              ➕ Add Supplier
-            </button>
-          `;
+    if (!contacts.length) {
+      html += `
+        <div class="empty-state">
+          No ${role} entries yet.
+        </div>
+      `;
+    }
 
-      if (!contacts.length) {
-        html += `
-          <div class="empty-state">
-            No ${filter} entries yet.
-          </div>
-        `;
-      }
+    contacts.forEach(function (c) {
+      let give = 0;
+      let receive = 0;
 
-      contacts.forEach(function (c) {
-        /* Only same contact type history */
-        const history =
-          businessKhata.filter(function (x) {
-            return (
-              String(x.person).toLowerCase() ===
-                String(c.name).toLowerCase()
-            );
-          });
-
-        let give = 0;
-        let receive = 0;
-
-        history.forEach(function (x) {
+      D.khata
+        .filter(
+          x =>
+            x.mode === "business" &&
+            x.person === c.name
+        )
+        .forEach(function (x) {
           if (x.type === "give") {
             give += Number(x.amount) || 0;
           }
@@ -1285,90 +1662,69 @@
           }
         });
 
-        /* Sales total for customer */
-        let salesTotal = 0;
+      let salesTotal = 0;
+      let purchaseTotal = 0;
 
-        if (filter === "customer") {
-          D.sales.forEach(function (x) {
-            if (
-              String(x.customer).toLowerCase() ===
-              String(c.name).toLowerCase()
-            ) {
-              salesTotal +=
-                Number(x.amount) || 0;
-            }
+      if (role === "customer") {
+        D.sales
+          .filter(
+            x => x.customer === c.name
+          )
+          .forEach(function (x) {
+            salesTotal +=
+              Number(x.amount) || 0;
           });
-        }
+      }
 
-        /* Purchase total for supplier */
-        let purchaseTotal = 0;
-
-        if (filter === "supplier") {
-          D.purchases.forEach(function (x) {
-            if (
-              String(x.supplier).toLowerCase() ===
-              String(c.name).toLowerCase()
-            ) {
-              purchaseTotal +=
-                Number(x.amount) || 0;
-            }
+      if (role === "supplier") {
+        D.purchases
+          .filter(
+            x => x.supplier === c.name
+          )
+          .forEach(function (x) {
+            purchaseTotal +=
+              Number(x.amount) || 0;
           });
-        }
+      }
 
-        html += `
-          <div class="list-item">
-
-            <strong>
-              ${
-                filter === "customer"
-                  ? "👤"
-                  : "🚚"
-              }
-              ${esc(c.name)}
-            </strong>
-
+      html += `
+        <div class="list-item">
+          <strong>
             ${
-              filter === "customer"
-                ? `
-                  <small>
-                    Sales: ${money(salesTotal)}
-                  </small>
-                `
-                : `
-                  <small>
-                    Purchase: ${money(purchaseTotal)}
-                  </small>
-                `
+              role === "customer"
+                ? "👤"
+                : "🚚"
             }
+            ${esc(c.name)}
+          </strong>
 
-            <small>
-              Give: ${money(give)}
-              • Receive: ${money(receive)}
-            </small>
+          ${
+            role === "customer"
+              ? `<small>Total Sales: ${money(salesTotal)}</small>`
+              : `<small>Total Purchase: ${money(purchaseTotal)}</small>`
+          }
 
-            <button type="button"
-              onclick="openKhataDetail('${esc(c.name)}','business')">
-              📒 History
-            </button>
+          <small>
+            Give: ${money(give)}
+            • Receive: ${money(receive)}
+          </small>
 
-            <button type="button"
-              onclick="deleteBusinessContact('${c.id}')">
-              🗑 Delete
-            </button>
+          <button
+            type="button"
+            onclick="openKhataDetail('${esc(c.name)}','business')">
+            📒 History
+          </button>
 
-          </div>
-        `;
-      });
+          <button
+            type="button"
+            onclick="deleteBusinessContact('${esc(c.id)}')">
+            🗑 Delete
+          </button>
+        </div>
+      `;
+    });
 
-      list.innerHTML = html;
-      return;
-    }
-
-    list.innerHTML = `
-      <div class="empty-state">
-        No business entries.
-      </div>
-    `;
+    list.innerHTML = html;
   }
 
   /* =========================================================
@@ -1376,14 +1732,16 @@
      ========================================================= */
 
   function calcBudget() {
-    const amount = parseFloat(
-      $("budgetAmount")
-        ? $("budgetAmount").value
-        : ""
-    );
+    const amount =
+      parseFloat(
+        value("budgetAmount", "")
+      );
 
-    if (!Number.isFinite(amount) || amount < 0) {
-      alertMsg("Please enter valid budget.");
+    if (
+      !Number.isFinite(amount) ||
+      amount < 0
+    ) {
+      msg("Please enter valid budget.");
       return;
     }
 
@@ -1392,7 +1750,7 @@
     save();
     renderAll();
 
-    alertMsg("Budget saved.");
+    msg("Budget saved.");
   }
 
   /* =========================================================
@@ -1400,50 +1758,108 @@
      ========================================================= */
 
   function calcGoal() {
-    const name = $("goalName")
-      ? $("goalName").value.trim()
-      : "";
+    const name =
+      String(
+        value("goalName", "")
+      ).trim();
 
-    const target = parseFloat(
-      $("goalTarget")
-        ? $("goalTarget").value
-        : ""
-    );
-
-    const savedAmount =
+    const target =
       parseFloat(
-        $("goalSaved")
-          ? $("goalSaved").value
-          : "0"
+        value("goalTarget", "")
+      );
+
+    const saved =
+      parseFloat(
+        value("goalSaved", "0")
       ) || 0;
 
-    const date = $("goalDate")
-      ? $("goalDate").value
-      : "";
+    const date =
+      value("goalDate", "") ||
+      today();
 
     if (!name) {
-      alertMsg("Enter goal name.");
+      msg("Enter goal name.");
       return;
     }
 
-    if (!Number.isFinite(target) || target <= 0) {
-      alertMsg("Enter valid target.");
+    if (
+      !Number.isFinite(target) ||
+      target <= 0
+    ) {
+      msg("Enter valid target.");
       return;
     }
 
     D.goals.push({
       id: makeId(),
+      mode: D.mode,
       name: name,
       target: target,
-      saved: savedAmount,
-      date: date || today(),
+      saved: saved,
+      date: date,
       createdAt: Date.now()
     });
 
     save();
+
+    setValue("goalName", "");
+    setValue("goalTarget", "");
+    setValue("goalSaved", "");
+
     renderAll();
 
-    alertMsg("Goal saved.");
+    msg("Goal saved.");
+  }
+
+  function renderGoals() {
+    const list =
+      $("goalList");
+
+    if (!list) return;
+
+    const rows =
+      D.goals.filter(
+        x =>
+          !x.mode ||
+          x.mode === D.mode
+      );
+
+    if (!rows.length) {
+      list.innerHTML =
+        '<div class="empty-state">No goals yet.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      rows.map(function (x) {
+        const percent =
+          x.target > 0
+            ? Math.min(
+                100,
+                (Number(x.saved) /
+                  Number(x.target)) *
+                  100
+              )
+            : 0;
+
+        return `
+          <div class="list-item">
+            <strong>
+              🎯 ${esc(x.name)}
+            </strong>
+
+            <div>
+              ${money(x.saved)}
+              / ${money(x.target)}
+            </div>
+
+            <small>
+              ${percent.toFixed(0)}% complete
+              • ${esc(x.date || "")}
+            </small>
+          </div>
+        `;
+      }).join("");
   }
 
   /* =========================================================
@@ -1451,54 +1867,54 @@
      ========================================================= */
 
   function addBill(type) {
-    let name = "";
-    let amount = 0;
-    let due = "";
+    let name;
+    let amount;
+    let due;
 
     if (type === "Credit Card") {
       name = "Credit Card";
-
-      amount = parseFloat(
-        $("cardBill")
-          ? $("cardBill").value
-          : ""
-      );
-
-      due = $("cardDue")
-        ? $("cardDue").value
-        : "";
-
+      amount =
+        parseFloat(
+          value("cardBill", "")
+        );
+      due =
+        value("cardDue", "") ||
+        today();
     } else {
-      name = $("billName")
-        ? $("billName").value.trim()
-        : "";
+      name =
+        String(
+          value("billName", "")
+        ).trim();
 
-      amount = parseFloat(
-        $("billAmount")
-          ? $("billAmount").value
-          : ""
-      );
+      amount =
+        parseFloat(
+          value("billAmount", "")
+        );
 
-      due = $("billDue")
-        ? $("billDue").value
-        : "";
+      due =
+        value("billDue", "") ||
+        today();
     }
 
     if (!name) {
-      name = type || "Bill";
+      name = type;
     }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alertMsg("Enter valid bill amount.");
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      msg("Enter valid bill amount.");
       return;
     }
 
     D.bills.push({
       id: makeId(),
+      mode: D.mode,
       name: name,
-      type: type || "Bill",
+      type: type,
       amount: amount,
-      due: due || today(),
+      due: due,
       status: "pending",
       history: [],
       createdAt: Date.now()
@@ -1507,7 +1923,39 @@
     save();
     renderAll();
 
-    alertMsg("Bill added.");
+    msg("Bill added.");
+  }
+
+  function renderBills() {
+    const list =
+      $("billList");
+
+    if (!list) return;
+
+    if (!D.bills.length) {
+      list.innerHTML =
+        '<div class="empty-state">No bills yet.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      D.bills.map(function (x) {
+        return `
+          <div class="list-item">
+            <strong>
+              💳 ${esc(x.name)}
+            </strong>
+
+            <div>${money(x.amount)}</div>
+
+            <small>
+              ${esc(x.type)}
+              • Due ${esc(x.due)}
+              • ${esc(x.status)}
+            </small>
+          </div>
+        `;
+      }).join("");
   }
 
   /* =========================================================
@@ -1515,24 +1963,21 @@
      ========================================================= */
 
   function calcEMI() {
-    const principal = parseFloat(
-      $("emiPrincipal")
-        ? $("emiPrincipal").value
-        : ""
-    );
+    const principal =
+      parseFloat(
+        value("emiPrincipal", "")
+      );
 
-    const rate = parseFloat(
-      $("emiRate")
-        ? $("emiRate").value
-        : "0"
-    ) || 0;
+    const rate =
+      parseFloat(
+        value("emiRate", "")
+      ) || 0;
 
-    const months = parseInt(
-      $("emiMonths")
-        ? $("emiMonths").value
-        : "",
-      10
-    );
+    const months =
+      parseInt(
+        value("emiMonths", ""),
+        10
+      );
 
     if (
       !Number.isFinite(principal) ||
@@ -1540,7 +1985,7 @@
       !Number.isFinite(months) ||
       months <= 0
     ) {
-      alertMsg(
+      msg(
         "Please enter valid loan details."
       );
       return;
@@ -1552,7 +1997,8 @@
     let emi;
 
     if (monthlyRate === 0) {
-      emi = principal / months;
+      emi =
+        principal / months;
     } else {
       emi =
         principal *
@@ -1569,8 +2015,11 @@
         );
     }
 
-    if ($("emiResult")) {
-      $("emiResult").innerHTML = `
+    const result =
+      $("emiResult");
+
+    if (result) {
+      result.innerHTML = `
         <div class="summary-card">
           <small>Monthly EMI</small>
           <strong>${money(emi)}</strong>
@@ -1587,6 +2036,7 @@
 
     D.loans.push({
       id: makeId(),
+      mode: D.mode,
       principal: principal,
       rate: rate,
       months: months,
@@ -1605,35 +2055,62 @@
      ========================================================= */
 
   function addReminder() {
-    const name = $("reminderName")
-      ? $("reminderName").value.trim()
-      : "";
+    const name =
+      String(
+        value("reminderName", "")
+      ).trim();
 
-    const date = $("reminderDate")
-      ? $("reminderDate").value
-      : "";
+    const date =
+      value(
+        "reminderDate",
+        ""
+      ) || today();
 
     if (!name) {
-      alertMsg("Enter reminder.");
+      msg("Enter reminder.");
       return;
     }
 
     D.reminders.push({
       id: makeId(),
       name: name,
-      date: date || today(),
+      date: date,
       createdAt: Date.now()
     });
 
     save();
 
-    if ($("reminderName")) {
-      $("reminderName").value = "";
-    }
+    setValue(
+      "reminderName",
+      ""
+    );
 
     renderAll();
 
-    alertMsg("Reminder added.");
+    msg("Reminder added.");
+  }
+
+  function renderReminders() {
+    const list =
+      $("reminderList");
+
+    if (!list) return;
+
+    if (!D.reminders.length) {
+      list.innerHTML =
+        '<div class="empty-state">No reminders yet.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      D.reminders.map(function (x) {
+        return `
+          <div class="list-item">
+            <strong>🔔 ${esc(x.name)}</strong>
+            <small>${esc(x.date)}</small>
+          </div>
+        `;
+      }).join("");
   }
 
   /* =========================================================
@@ -1641,12 +2118,13 @@
      ========================================================= */
 
   function addFamilyMember() {
-    const name = $("familyName")
-      ? $("familyName").value.trim()
-      : "";
+    const name =
+      String(
+        value("familyName", "")
+      ).trim();
 
     if (!name) {
-      alertMsg(
+      msg(
         "Enter family member name."
       );
       return;
@@ -1660,11 +2138,35 @@
 
     save();
 
-    if ($("familyName")) {
-      $("familyName").value = "";
-    }
+    setValue(
+      "familyName",
+      ""
+    );
 
     renderAll();
+  }
+
+  function renderFamily() {
+    const list =
+      $("familyList");
+
+    if (!list) return;
+
+    if (!D.family.length) {
+      list.innerHTML =
+        '<div class="empty-state">No family members yet.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      D.family.map(function (x) {
+        return `
+          <div class="list-item">
+            👨‍👩‍👧
+            <strong>${esc(x.name)}</strong>
+          </div>
+        `;
+      }).join("");
   }
 
   /* =========================================================
@@ -1672,26 +2174,28 @@
      ========================================================= */
 
   function calcFD() {
-    const p = parseFloat(
-      $("fdPrincipal")
-        ? $("fdPrincipal").value
-        : ""
-    );
+    const p =
+      parseFloat(
+        value("fdPrincipal", "")
+      );
 
-    const r = parseFloat(
-      $("fdRate")
-        ? $("fdRate").value
-        : "0"
-    ) || 0;
+    const r =
+      parseFloat(
+        value("fdRate", "")
+      ) || 0;
 
-    const n = parseFloat(
-      $("fdN")
-        ? $("fdN").value
-        : ""
-    );
+    const n =
+      parseFloat(
+        value("fdN", "")
+      );
 
-    if (!p || p <= 0 || !n || n <= 0) {
-      alertMsg("Enter valid FD details.");
+    if (
+      !Number.isFinite(p) ||
+      p <= 0 ||
+      !Number.isFinite(n) ||
+      n <= 0
+    ) {
+      msg("Enter valid FD details.");
       return;
     }
 
@@ -1708,12 +2212,13 @@
     }
   }
 
-  function addTool(type, message) {
-    const name = safePrompt(message, "");
+  function addTool(type, label) {
+    const name =
+      window.prompt(
+        label || "Name:"
+      );
 
-    if (name === null || !name.trim()) {
-      return;
-    }
+    if (!name) return;
 
     D.tools.push({
       id: makeId(),
@@ -1724,10 +2229,11 @@
 
     save();
 
-    alertMsg(
-      type.charAt(0).toUpperCase() +
-      type.slice(1) +
-      " entry added."
+    msg(
+      label
+        ? label.replace(":", "") +
+          " added."
+        : "Entry added."
     );
   }
 
@@ -1769,23 +2275,25 @@
   function calcEmergency() {
     const monthly =
       parseFloat(
-        safePrompt(
+        window.prompt(
           "Monthly essential expenses:",
           "0"
-        ) || "0"
+        )
       ) || 0;
 
     const months =
       parseFloat(
-        safePrompt(
+        window.prompt(
           "Emergency months:",
           "6"
-        ) || "6"
+        )
       ) || 6;
 
-    alertMsg(
+    msg(
       "Recommended Emergency Fund: " +
-      money(monthly * months)
+      money(
+        monthly * months
+      )
     );
   }
 
@@ -1814,7 +2322,6 @@
         : "hi";
 
     save();
-
     applyLanguage();
     renderAll();
   }
@@ -1837,24 +2344,36 @@
   }
 
   /* =========================================================
-     BACKUP
+     BACKUP / RESTORE
      ========================================================= */
 
   function exportBackup() {
     try {
       const data =
-        JSON.stringify(D, null, 2);
+        JSON.stringify(
+          D,
+          null,
+          2
+        );
 
-      const blob = new Blob(
-        [data],
-        { type: "application/json" }
-      );
+      const blob =
+        new Blob(
+          [data],
+          {
+            type:
+              "application/json"
+          }
+        );
 
       const url =
-        URL.createObjectURL(blob);
+        URL.createObjectURL(
+          blob
+        );
 
       const a =
-        document.createElement("a");
+        document.createElement(
+          "a"
+        );
 
       a.href = url;
       a.download =
@@ -1866,13 +2385,10 @@
       a.click();
       a.remove();
 
-      setTimeout(function () {
-        URL.revokeObjectURL(url);
-      }, 1000);
+      URL.revokeObjectURL(url);
 
     } catch (e) {
-      console.error(e);
-      alertMsg(
+      msg(
         "Backup could not be created."
       );
     }
@@ -1891,39 +2407,37 @@
     const reader =
       new FileReader();
 
-    reader.onload = function () {
-      try {
-        const imported =
-          JSON.parse(
-            reader.result
+    reader.onload =
+      function () {
+        try {
+          const imported =
+            JSON.parse(
+              reader.result
+            );
+
+          D =
+            normalizeData(
+              imported
+            );
+
+          save();
+          renderAll();
+
+          msg(
+            "Backup restored successfully."
           );
 
-        D = normaliseData(
-          imported
-        );
+        } catch (e) {
+          console.error(
+            "Restore error:",
+            e
+          );
 
-        save();
-        renderAll();
-
-        alertMsg(
-          "Backup restored successfully."
-        );
-
-      } catch (e) {
-        console.error(e);
-
-        alertMsg(
-          "Invalid backup file."
-        );
-      }
-
-      if (
-        event &&
-        event.target
-      ) {
-        event.target.value = "";
-      }
-    };
+          msg(
+            "Invalid backup file."
+          );
+        }
+      };
 
     reader.readAsText(file);
   }
@@ -1933,12 +2447,15 @@
      ========================================================= */
 
   function setPin() {
-    const pin = $("pinInput")
-      ? $("pinInput").value.trim()
-      : "";
+    const pin =
+      String(
+        value("pinInput", "")
+      ).trim();
 
-    if (!/^\d{4,6}$/.test(pin)) {
-      alertMsg(
+    if (
+      !/^\d{4,6}$/.test(pin)
+    ) {
+      msg(
         "PIN must be 4 to 6 digits."
       );
       return;
@@ -1948,18 +2465,19 @@
 
     save();
 
-    if ($("pinInput")) {
-      $("pinInput").value = "";
-    }
+    setValue(
+      "pinInput",
+      ""
+    );
 
-    alertMsg(
+    msg(
       "Security PIN saved."
     );
   }
 
   function lockApp() {
     if (!D.pin) {
-      alertMsg(
+      msg(
         "Please set a PIN first."
       );
       return;
@@ -1969,18 +2487,18 @@
       "hisab_unlocked"
     );
 
-    alertMsg(
+    msg(
       "HISAB locked. Reopen the app to unlock."
     );
   }
 
   /* =========================================================
-     SEARCH
+     SEARCH EVERYTHING
      ========================================================= */
 
-  function searchAllData(value) {
+  function searchAllData(input) {
     const q =
-      String(value || "")
+      String(input || "")
         .trim()
         .toLowerCase();
 
@@ -1996,84 +2514,95 @@
 
     const results = [];
 
-    D.transactions.forEach(function (x) {
-      const text =
-        `${x.type} ${x.category} ${x.note} ${x.amount} ${x.date}`;
+    D.transactions.forEach(
+      function (x) {
+        const text =
+          `${x.type} ${x.category} ${x.note} ${x.amount}`;
 
-      if (
-        text.toLowerCase().includes(q)
-      ) {
-        results.push(
-          `💰 ${x.type} — ${money(x.amount)}`
-        );
+        if (
+          text
+            .toLowerCase()
+            .includes(q)
+        ) {
+          results.push(
+            `💰 ${x.type} — ${money(x.amount)}`
+          );
+        }
       }
-    });
+    );
 
-    D.khata.forEach(function (x) {
-      const text =
-        `${x.person} ${x.type} ${x.note} ${x.amount} ${x.date}`;
+    D.khata.forEach(
+      function (x) {
+        const text =
+          `${x.person} ${x.type} ${x.note} ${x.amount}`;
 
-      if (
-        text.toLowerCase().includes(q)
-      ) {
-        results.push(
-          `📒 ${x.person} — ${x.type} ${money(x.amount)}`
-        );
+        if (
+          text
+            .toLowerCase()
+            .includes(q)
+        ) {
+          results.push(
+            `📒 ${x.person} — ${x.type} ${money(x.amount)}`
+          );
+        }
       }
-    });
+    );
 
-    D.sales.forEach(function (x) {
-      const text =
-        `${x.customer} ${x.note} ${x.amount} ${x.date} ${x.method}`;
+    D.sales.forEach(
+      function (x) {
+        const text =
+          `${x.customer} ${x.item} ${x.note} ${x.amount}`;
 
-      if (
-        text.toLowerCase().includes(q)
-      ) {
-        results.push(
-          `🛒 Sale — ${x.customer} — ${money(x.amount)}`
-        );
+        if (
+          text
+            .toLowerCase()
+            .includes(q)
+        ) {
+          results.push(
+            `🛒 Sale — ${x.customer} — ${money(x.amount)}`
+          );
+        }
       }
-    });
+    );
 
-    D.purchases.forEach(function (x) {
-      const text =
-        `${x.supplier} ${x.note} ${x.amount} ${x.date} ${x.method}`;
+    D.purchases.forEach(
+      function (x) {
+        const text =
+          `${x.supplier} ${x.item} ${x.note} ${x.amount}`;
 
-      if (
-        text.toLowerCase().includes(q)
-      ) {
-        results.push(
-          `📦 Purchase — ${x.supplier} — ${money(x.amount)}`
-        );
+        if (
+          text
+            .toLowerCase()
+            .includes(q)
+        ) {
+          results.push(
+            `📦 Purchase — ${x.supplier} — ${money(x.amount)}`
+          );
+        }
       }
-    });
+    );
 
-    D.business.forEach(function (x) {
-      if (
-        String(x.name)
-          .toLowerCase()
-          .includes(q)
-      ) {
-        results.push(
-          `💼 ${x.type} — ${x.name}`
-        );
+    D.business.forEach(
+      function (x) {
+        if (
+          String(x.name)
+            .toLowerCase()
+            .includes(q)
+        ) {
+          results.push(
+            `💼 ${x.type} — ${x.name}`
+          );
+        }
       }
-    });
+    );
 
     box.innerHTML =
       results.length
-        ? results.map(function (x) {
-            return `
-              <div class="list-item">
-                ${esc(x)}
-              </div>
-            `;
-          }).join("")
-        : `
-          <div class="empty-state">
-            No results found.
-          </div>
-        `;
+        ? results.map(
+            x =>
+              `<div class="list-item">${esc(x)}</div>`
+          ).join("")
+        : `<div class="empty-state">No results found.</div>`;
   }
 
   /* =========================================================
@@ -2086,27 +2615,29 @@
     let give = 0;
     let receive = 0;
 
-    D.transactions.forEach(function (x) {
-      if (
-        (x.mode || "personal") !==
-        D.mode
-      ) {
-        return;
-      }
+    D.transactions.forEach(
+      function (x) {
+        if (
+          (x.mode || "personal") !==
+          D.mode
+        ) return;
 
-      if (x.type === "income") {
-        income +=
-          Number(x.amount) || 0;
-      }
+        if (x.type === "income") {
+          income +=
+            Number(x.amount) || 0;
+        }
 
-      if (x.type === "expense") {
-        expense +=
-          Number(x.amount) || 0;
+        if (x.type === "expense") {
+          expense +=
+            Number(x.amount) || 0;
+        }
       }
-    });
+    );
 
-    currentKhata(D.mode)
-      .forEach(function (x) {
+    currentKhata(
+      D.mode
+    ).forEach(
+      function (x) {
         if (x.type === "give") {
           give +=
             Number(x.amount) || 0;
@@ -2116,26 +2647,41 @@
           receive +=
             Number(x.amount) || 0;
         }
-      });
+      }
+    );
 
-    if ($("reportIncome")) {
+    if ($("reportIncome"))
       $("reportIncome").textContent =
         money(income);
-    }
 
-    if ($("reportExpense")) {
+    if ($("reportExpense"))
       $("reportExpense").textContent =
         money(expense);
-    }
 
-    if ($("reportGive")) {
+    if ($("reportGive"))
       $("reportGive").textContent =
         money(give);
-    }
 
-    if ($("reportReceive")) {
+    if ($("reportReceive"))
       $("reportReceive").textContent =
         money(receive);
+
+    const content =
+      $("reportContent");
+
+    if (content) {
+      const balance =
+        income -
+        expense +
+        receive -
+        give;
+
+      content.innerHTML = `
+        <div class="summary-card">
+          <small>Current Balance</small>
+          <strong>${money(balance)}</strong>
+        </div>
+      `;
     }
   }
 
@@ -2168,30 +2714,115 @@
       );
 
     if (
-      navigator.share &&
-      typeof navigator.share === "function"
+      navigator.share
     ) {
       navigator.share({
-        title: "HISAB Summary",
+        title:
+          "HISAB Summary",
         text: text
-      }).catch(function () {});
+      }).catch(
+        function () {}
+      );
     } else {
-      alertMsg(text);
+      msg(text);
     }
   }
 
   function exportSummaryPDF() {
-    alertMsg(
-      "PDF export will open the print/share option."
+    try {
+      window.print();
+    } catch (e) {
+      msg(
+        "PDF print option is not available."
+      );
+    }
+  }
+
+  /* =========================================================
+     KHATA SHARE / PDF
+     ========================================================= */
+
+  function khataText() {
+    const person =
+      D.ui.selectedPerson;
+
+    const mode =
+      D.ui.selectedMode ||
+      D.mode;
+
+    const rows =
+      currentKhata(mode)
+        .filter(
+          x => x.person === person
+        );
+
+    let text =
+      "HISAB Udhar Statement\n\n" +
+      "Name: " +
+      person +
+      "\n\n";
+
+    rows.forEach(function (x) {
+      text +=
+        x.date +
+        " | " +
+        x.type +
+        " | " +
+        money(x.amount) +
+        " | " +
+        (x.status || "") +
+        "\n";
+    });
+
+    return text;
+  }
+
+  function shareKhata() {
+    const text =
+      khataText();
+
+    if (navigator.share) {
+      navigator.share({
+        title:
+          "HISAB Udhar Statement",
+        text: text
+      }).catch(
+        function () {}
+      );
+    } else {
+      msg(text);
+    }
+  }
+
+  function exportKhataPDF() {
+    window.print();
+  }
+
+  function openPaymentEntry() {
+    openKhataForm(
+      D.ui.selectedMode ||
+      D.mode
     );
 
-    setTimeout(function () {
-      try {
-        window.print();
-      } catch (e) {
-        console.error(e);
-      }
-    }, 150);
+    if ($("khataPerson")) {
+      $("khataPerson").value =
+        D.ui.selectedPerson || "";
+    }
+  }
+
+  /* =========================================================
+     QUICK ADD
+     ========================================================= */
+
+  function openQuickAdd() {
+    if (
+      D.mode === "business"
+    ) {
+      show("business");
+      return;
+    }
+
+    show("transactions");
   }
 
   /* =========================================================
@@ -2199,34 +2830,37 @@
      ========================================================= */
 
   function renderHome() {
-    const mode = D.mode;
+    const mode =
+      D.mode;
 
     let income = 0;
     let expense = 0;
     let give = 0;
     let receive = 0;
 
-    D.transactions.forEach(function (x) {
-      if (
-        (x.mode || "personal") !==
-        mode
-      ) {
-        return;
-      }
+    D.transactions.forEach(
+      function (x) {
+        if (
+          (x.mode || "personal") !==
+          mode
+        ) return;
 
-      if (x.type === "income") {
-        income +=
-          Number(x.amount) || 0;
-      }
+        if (x.type === "income") {
+          income +=
+            Number(x.amount) || 0;
+        }
 
-      if (x.type === "expense") {
-        expense +=
-          Number(x.amount) || 0;
+        if (x.type === "expense") {
+          expense +=
+            Number(x.amount) || 0;
+        }
       }
-    });
+    );
 
-    currentKhata(mode)
-      .forEach(function (x) {
+    currentKhata(
+      mode
+    ).forEach(
+      function (x) {
         if (x.type === "give") {
           give +=
             Number(x.amount) || 0;
@@ -2236,54 +2870,44 @@
           receive +=
             Number(x.amount) || 0;
         }
-      });
+      }
+    );
 
-    /*
-      Personal/Business balance:
-      Income - Expense + Receive - Give
-    */
     const balance =
       income -
       expense +
       receive -
       give;
 
-    if ($("homeBalance")) {
+    if ($("homeBalance"))
       $("homeBalance").textContent =
         money(balance);
-    }
 
-    if ($("receivable")) {
+    if ($("receivable"))
       $("receivable").textContent =
         money(receive);
-    }
 
-    if ($("payable")) {
+    if ($("payable"))
       $("payable").textContent =
         money(give);
-    }
 
-    if ($("ledgerGiven")) {
+    if ($("ledgerGiven"))
       $("ledgerGiven").textContent =
         money(give);
-    }
 
-    if ($("ledgerReceived")) {
+    if ($("ledgerReceived"))
       $("ledgerReceived").textContent =
         money(receive);
-    }
 
-    if ($("ledgerNet")) {
+    if ($("ledgerNet"))
       $("ledgerNet").textContent =
         money(give - receive);
-    }
 
-    if ($("modeLabel")) {
+    if ($("modeLabel"))
       $("modeLabel").textContent =
         mode === "business"
           ? "Business"
           : "Personal";
-    }
 
     if ($("personalModeBtn")) {
       $("personalModeBtn")
@@ -2310,29 +2934,24 @@
     try {
       applyLanguage();
       renderHome();
+      renderPersonal();
       renderBusiness();
+      renderKhataDetail();
+      renderTransactions();
+      renderGoals();
+      renderBills();
+      renderReminders();
+      renderFamily();
       renderReports();
 
-      if (D.ui.selectedPerson) {
-        renderKhataDetail();
-      }
-
-      const budgetEl =
-        $("budgetAmount");
-
-      if (
-        budgetEl &&
-        Number(D.budget) >= 0
-      ) {
-        budgetEl.value =
+      if ($("budgetAmount")) {
+        $("budgetAmount").value =
           D.budget || "";
       }
 
+      window.D = D;
+
     } catch (e) {
-      /*
-        Never let one render error
-        produce a completely blank app.
-      */
       console.error(
         "HISAB render error:",
         e
@@ -2350,7 +2969,14 @@
   window.back = back;
   window.goHome = goHome;
 
-  window.setMode = setMode;
+  window.showGuestGate =
+    showGuestGate;
+
+  window.enterGuestMode =
+    enterGuestMode;
+
+  window.setMode =
+    setMode;
 
   window.addTransaction =
     addTransaction;
@@ -2367,11 +2993,20 @@
   window.saveKhataEntry =
     saveKhataEntry;
 
+  window.searchKhata =
+    searchKhata;
+
+  window.filterKhata =
+    filterKhata;
+
   window.openKhataDetail =
     openKhataDetail;
 
   window.closeKhataDetail =
     closeKhataDetail;
+
+  window.detailFilter =
+    detailFilter;
 
   window.deleteKhata =
     deleteKhata;
@@ -2472,6 +3107,18 @@
   window.exportSummaryPDF =
     exportSummaryPDF;
 
+  window.openPaymentEntry =
+    openPaymentEntry;
+
+  window.shareKhata =
+    shareKhata;
+
+  window.exportKhataPDF =
+    exportKhataPDF;
+
+  window.openQuickAdd =
+    openQuickAdd;
+
   /* =========================================================
      STARTUP
      ========================================================= */
@@ -2526,21 +3173,9 @@
           today();
       }
 
-      const guestGate =
-        $("guestGate");
-
-      if (guestGate) {
-        const guest =
-          localStorage.getItem(
-            GUEST_KEY
-          );
-
-        if (!guest) {
-          guestGate.style.display = "";
-        }
-      }
-
       renderAll();
+
+      showGuestGate();
 
     } catch (e) {
       console.error(
@@ -2549,10 +3184,37 @@
       );
 
       /*
-        Keep the page visible even if
-        an optional element is missing.
-      */
-      renderAll();
+       * Emergency fallback:
+       * Never leave the app completely blank.
+       */
+
+      const gate =
+        $("guestGate");
+
+      const shell =
+        $("appShell");
+
+      if (gate)
+        gate.style.display =
+          "flex";
+
+      if (shell)
+        shell.style.display =
+          "block";
+
+      const home =
+        $("home");
+
+      if (home) {
+        getPages().forEach(
+          p =>
+            p.style.display =
+              "none"
+        );
+
+        home.style.display =
+          "block";
+      }
     }
   }
 
