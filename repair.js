@@ -1,15 +1,15 @@
 /* =========================================================
-   HISAB V7 — SAFE BACK REPAIR
-   Works with existing app.js
-   Does NOT remove or replace app features
+   HISAB V7 — REPAIR.JS
+   FINAL SAFE BACK FIX
+   Compatible with current app.js
    ========================================================= */
 
 (function () {
   "use strict";
 
-  var stack = [];
-  var current = "home";
-  var locked = false;
+  var historyStack = [];
+  var currentPage = "home";
+  var busy = false;
 
   var pages = [
     "home",
@@ -30,21 +30,23 @@
     "final"
   ];
 
-  function page(id) {
+  function getPage(id) {
     return document.getElementById(id);
   }
 
-  /* -------------------------------
-     Detect an existing Back/Close
-     ------------------------------- */
+  function hasBackButton(page) {
+    if (!page) return true;
 
-  function alreadyHasBack(el) {
-    if (!el) return false;
+    if (page.querySelector(".hisab-auto-back")) {
+      return true;
+    }
 
-    var buttons = el.querySelectorAll("button");
+    var buttons = page.querySelectorAll("button");
 
     for (var i = 0; i < buttons.length; i++) {
-      var t = (buttons[i].textContent || "").trim().toLowerCase();
+      var t = (buttons[i].textContent || "")
+        .trim()
+        .toLowerCase();
 
       if (
         t.indexOf("←") === 0 ||
@@ -60,18 +62,11 @@
     return false;
   }
 
-  /* -------------------------------
-     Add automatic Back button
-     ------------------------------- */
+  function addBackButton(page) {
+    if (!page || page.id === "home") return;
+    if (hasBackButton(page)) return;
 
-  function addBack(el) {
-    if (!el || el.id === "home") return;
-
-    if (el.querySelector(".hisab-auto-back")) return;
-
-    if (alreadyHasBack(el)) return;
-
-    var title = el.querySelector(".page-title");
+    var title = page.querySelector(".page-title");
 
     if (!title) return;
 
@@ -90,94 +85,11 @@
     title.insertBefore(btn, title.firstChild);
   }
 
-  function prepare() {
+  function prepareButtons() {
     for (var i = 0; i < pages.length; i++) {
-      addBack(page(pages[i]));
+      addBackButton(getPage(pages[i]));
     }
   }
-
-  /* -------------------------------
-     Direct page display
-     Used only for Back.
-     Does NOT call app.js show().
-     ------------------------------- */
-
-  function display(id) {
-    var target = page(id);
-
-    if (!target) {
-      target = page("home");
-      id = "home";
-    }
-
-    var all = document.querySelectorAll(".page");
-
-    for (var i = 0; i < all.length; i++) {
-      all[i].style.display = "none";
-      all[i].classList.remove("active");
-    }
-
-    target.style.display = "";
-    target.classList.add("active");
-
-    current = id;
-
-    prepare();
-
-    try {
-      window.scrollTo(0, 0);
-    } catch (e) {}
-  }
-
-  /* -------------------------------
-     Remember navigation
-     ------------------------------- */
-
-  function remember(id) {
-    if (!id || id === current) return;
-
-    if (page(id)) {
-      stack.push(current);
-      current = id;
-    }
-  }
-
-  /* -------------------------------
-     Back
-     ------------------------------- */
-
-  function goBack() {
-    if (locked) return;
-
-    locked = true;
-
-    var previous = null;
-
-    while (stack.length) {
-      previous = stack.pop();
-
-      if (previous && page(previous)) {
-        break;
-      }
-
-      previous = null;
-    }
-
-    if (previous) {
-      display(previous);
-    } else {
-      stack = [];
-      display("home");
-    }
-
-    setTimeout(function () {
-      locked = false;
-    }, 120);
-  }
-
-  /* -------------------------------
-     Hook app.js show()
-     ------------------------------- */
 
   function install() {
     if (typeof window.show !== "function") {
@@ -185,7 +97,9 @@
       return;
     }
 
-    if (window.__HISAB_REPAIR_INSTALLED) return;
+    if (window.__HISAB_REPAIR_INSTALLED) {
+      return;
+    }
 
     window.__HISAB_REPAIR_INSTALLED = true;
 
@@ -193,69 +107,110 @@
 
     window.__HISAB_ORIGINAL_SHOW = originalShow;
 
-    window.show = function (id) {
-      if (!page(id)) {
+    /*
+     * IMPORTANT:
+     * Respect app.js second argument.
+     * show(page, false) MUST NOT enter Back history.
+     */
+    window.show = function (id, remember) {
+
+      if (!getPage(id)) {
         console.warn("HISAB: page not found:", id);
         return false;
       }
 
-      if (id !== current) {
-        remember(id);
+      if (remember !== false && id !== currentPage) {
+        historyStack.push(currentPage);
       }
 
-      /*
-       * IMPORTANT:
-       * Call app.js show ONLY ONCE.
-       * No recursive realShow() call.
-       */
-
       try {
-        var result = originalShow(id);
+        var result = originalShow(id, remember);
 
-        current = id;
+        currentPage = id;
 
         setTimeout(function () {
-          prepare();
+          prepareButtons();
         }, 30);
 
         return result;
-      } catch (e) {
-        console.error("HISAB navigation error:", e);
 
-        display(id);
-
+      } catch (error) {
+        console.error("HISAB repair navigation:", error);
         return false;
       }
     };
+
+    prepareButtons();
 
     window.HISAB_REPAIR = {
       back: goBack,
 
       home: function () {
-        stack = [];
-        display("home");
+        historyStack = [];
+        currentPage = "home";
+
+        try {
+          originalShow("home", false);
+        } catch (e) {}
       },
 
       clearHistory: function () {
-        stack = [];
+        historyStack = [];
       }
     };
-
-    prepare();
   }
 
-  /* -------------------------------
-     CSS
-     ------------------------------- */
+  function goBack() {
+    if (busy) return;
 
-  function style() {
-    if (document.getElementById("hisabRepairStyle")) return;
+    busy = true;
 
-    var s = document.createElement("style");
+    var previous = null;
 
-    s.id = "hisabRepairStyle";
+    while (historyStack.length) {
+      var candidate = historyStack.pop();
 
-    s.textContent = `
+      if (candidate && getPage(candidate)) {
+        previous = candidate;
+        break;
+      }
+    }
+
+    if (!previous) {
+      previous = "home";
+      historyStack = [];
+    }
+
+    currentPage = previous;
+
+    try {
+      /*
+       * Use app.js show(false) so renderAll(),
+       * data refresh and existing navigation remain intact.
+       */
+      if (typeof window.__HISAB_ORIGINAL_SHOW === "function") {
+        window.__HISAB_ORIGINAL_SHOW(previous, false);
+      }
+    } catch (error) {
+      console.error("HISAB Back error:", error);
+    }
+
+    setTimeout(function () {
+      prepareButtons();
+      busy = false;
+    }, 120);
+  }
+
+  function addStyle() {
+    if (document.getElementById("hisabRepairStyle")) {
+      return;
+    }
+
+    var style = document.createElement("style");
+
+    style.id = "hisabRepairStyle";
+
+    style.textContent = `
       .hisab-auto-back{
         flex:0 0 auto !important;
         width:auto !important;
@@ -275,6 +230,7 @@
         display:inline-flex !important;
         align-items:center !important;
         justify-content:center !important;
+        cursor:pointer !important;
       }
 
       .hisab-auto-back:active{
@@ -288,15 +244,11 @@
       }
     `;
 
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
-  /* -------------------------------
-     Start
-     ------------------------------- */
-
   function start() {
-    style();
+    addStyle();
     install();
   }
 
