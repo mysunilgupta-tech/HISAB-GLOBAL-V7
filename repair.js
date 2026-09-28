@@ -1,161 +1,415 @@
-/* =========================================================
-   HISAB V7 — REPAIR CONTROLLER
-   Back Button + Welcome Screen Fix
-   Works with current app.js + index.html
-   ========================================================= */
+/* HISAB V7 — FINAL BACK BUTTON / HEADER FIX
+   Only Back button UI/navigation repair.
+   Other app features unchanged.
+*/
 
 (function () {
   "use strict";
 
-  function get(id) {
-    return document.getElementById(id);
-  }
+  const BACK_PAGES = [
+    "personal",
+    "business",
+    "khataEntry",
+    "khataDetail",
+    "transactions",
+    "planning",
+    "credit",
+    "reports",
+    "reminders",
+    "privacy",
+    "family",
+    "familytools",
+    "tools13",
+    "final"
+  ];
 
-  function hideAllPages() {
-    document
-      .querySelectorAll(".page.screen")
-      .forEach(function (page) {
-        page.classList.remove("active");
-      });
+  let repairTimer = null;
+  let repairing = false;
 
-    const gate = get("guestGate");
-    if (gate) {
-      gate.classList.remove("active");
-    }
-  }
+  function getCurrentPage() {
+    const pages = document.querySelectorAll(".page");
 
-  function openHome() {
-    hideAllPages();
+    for (const page of pages) {
+      if (!page.id) continue;
 
-    const shell = get("appShell");
-    if (shell) {
-      shell.style.display = "block";
-    }
+      const s = getComputedStyle(page);
 
-    const home = get("home");
-    if (home) {
-      home.classList.add("active");
-    }
-
-    if (typeof window.renderHome === "function") {
-      window.renderHome();
-    }
-  }
-
-  /* =========================================================
-     WELCOME SCREEN BYPASS
-     Start Using HISAB -> Direct Home
-     ========================================================= */
-
-  function fixWelcomeScreen() {
-    const welcome = get("welcome");
-
-    if (welcome) {
-      welcome.classList.remove("active");
-      welcome.style.display = "none";
-    }
-  }
-
-  /* =========================================================
-     SAFE SETMODE
-     Personal / Business -> Home
-     ========================================================= */
-
-  const oldSetMode = window.setMode;
-
-  window.setMode = function (mode) {
-    if (mode !== "personal" && mode !== "business") {
-      mode = "personal";
-    }
-
-    if (window.D) {
-      window.D.mode = mode;
-
-      if (typeof window.save === "function") {
-        window.save();
+      if (
+        s.display !== "none" &&
+        page.offsetWidth > 0 &&
+        page.offsetHeight > 0
+      ) {
+        return page;
       }
     }
 
-    if (typeof oldSetMode === "function") {
-      oldSetMode(mode);
-    } else {
-      openHome();
+    return null;
+  }
+
+  function getPageTitle(page) {
+    if (!page) return null;
+
+    return (
+      page.querySelector(".page-title") ||
+      page.querySelector(".page-header") ||
+      page.querySelector("header")
+    );
+  }
+
+  function isBackButton(button) {
+    if (!button) return false;
+
+    if (button.id === "hisabGlobalBackButton") {
+      return true;
     }
 
-    fixWelcomeScreen();
-  };
+    const text = (
+      button.innerText ||
+      button.textContent ||
+      ""
+    ).trim().toLowerCase();
 
-  /* =========================================================
-     START USING HISAB
-     Direct Home instead of Welcome
-     ========================================================= */
+    return (
+      text === "back" ||
+      text === "←" ||
+      text === "‹" ||
+      text === "〈" ||
+      text.includes("back")
+    );
+  }
 
-  const oldEnterGuestMode = window.enterGuestMode;
+  function styleBackButton(button) {
+    if (!button) return;
 
-  window.enterGuestMode = function () {
-    if (typeof oldEnterGuestMode === "function") {
-      try {
-        oldEnterGuestMode();
-      } catch (e) {
-        console.error("Guest mode error:", e);
-      }
-    }
+    button.type = "button";
+    button.setAttribute("aria-label", "Back");
 
-    openHome();
-    fixWelcomeScreen();
-  };
+    button.style.width = "62px";
+    button.style.minWidth = "62px";
+    button.style.maxWidth = "62px";
 
-  /* =========================================================
-     BACK BUTTON
-     ========================================================= */
+    button.style.height = "30px";
+    button.style.minHeight = "30px";
+    button.style.maxHeight = "30px";
 
-  const oldGoBack = window.goBack;
+    button.style.padding = "0";
+    button.style.margin = "0";
 
-  window.goBack = function () {
-    if (typeof oldGoBack === "function") {
-      oldGoBack();
-    } else {
-      openHome();
-    }
+    button.style.boxSizing = "border-box";
 
-    fixWelcomeScreen();
-  };
+    button.style.display = "flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
 
-  /* =========================================================
-     NORMAL SHOW
-     ========================================================= */
+    button.style.border = "0";
+    button.style.borderRadius = "8px";
 
-  const oldShow = window.show;
+    button.style.background = "#082b45";
+    button.style.color = "#ffffff";
 
-  window.show = function (id) {
-    if (id === "welcome") {
-      openHome();
+    button.style.fontFamily = "inherit";
+    button.style.fontSize = "11px";
+    button.style.fontWeight = "700";
+    button.style.lineHeight = "1";
+    button.style.whiteSpace = "nowrap";
+
+    button.style.boxShadow =
+      "0 2px 6px rgba(0,0,0,.15)";
+
+    button.style.position = "absolute";
+    button.style.left = "8px";
+    button.style.top = "50%";
+    button.style.transform = "translateY(-50%)";
+
+    button.style.zIndex = "5";
+    button.style.overflow = "hidden";
+  }
+
+  function attachBackAction(button) {
+    if (!button) return;
+
+    if (button.dataset.hisabBackAction === "1") {
       return;
     }
 
-    if (typeof oldShow === "function") {
-      oldShow(id);
-    }
+    button.dataset.hisabBackAction = "1";
 
-    fixWelcomeScreen();
-  };
+    button.addEventListener(
+      "click",
+      function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
 
-  /* =========================================================
-     INITIAL REPAIR
-     ========================================================= */
-
-  function repair() {
-    fixWelcomeScreen();
+        if (typeof window.goBack === "function") {
+          window.goBack();
+        }
+      },
+      true
+    );
   }
 
-  if (document.readyState === "loading") {
+  function prepareTitle(title) {
+    if (!title) return;
+
+    const computed = getComputedStyle(title);
+
+    if (computed.position === "static") {
+      title.style.position = "relative";
+    }
+
+    const paddingLeft =
+      parseFloat(
+        getComputedStyle(title).paddingLeft
+      ) || 0;
+
+    if (paddingLeft < 76) {
+      title.style.paddingLeft = "76px";
+    }
+  }
+
+  function findExistingBack(title) {
+    if (!title) return null;
+
+    const buttons =
+      title.querySelectorAll("button");
+
+    for (const button of buttons) {
+      if (isBackButton(button)) {
+        return button;
+      }
+    }
+
+    return null;
+  }
+
+  function createBackButton(title) {
+    let button =
+      title.querySelector(
+        '[data-hisab-page-back="1"]'
+      );
+
+    if (!button) {
+      button = document.createElement("button");
+
+      button.type = "button";
+      button.textContent = "← Back";
+
+      button.setAttribute(
+        "data-hisab-page-back",
+        "1"
+      );
+
+      title.insertBefore(
+        button,
+        title.firstChild
+      );
+    }
+
+    styleBackButton(button);
+    attachBackAction(button);
+
+    return button;
+  }
+
+  function repairPage(page) {
+    if (!page) return;
+
+    const id = page.id;
+
+    if (!BACK_PAGES.includes(id)) {
+      return;
+    }
+
+    const title = getPageTitle(page);
+
+    if (!title) {
+      return;
+    }
+
+    prepareTitle(title);
+
+    let button = findExistingBack(title);
+
+    if (!button) {
+      button = createBackButton(title);
+    }
+
+    styleBackButton(button);
+    attachBackAction(button);
+  }
+
+  function repairAll() {
+    if (repairing) return;
+
+    repairing = true;
+
+    try {
+      const current = getCurrentPage();
+
+      const oldGlobal =
+        document.getElementById(
+          "hisabGlobalBackButton"
+        );
+
+      if (oldGlobal) {
+        oldGlobal.remove();
+      }
+
+      BACK_PAGES.forEach(function (id) {
+        const page =
+          document.getElementById(id);
+
+        if (!page) return;
+
+        repairPage(page);
+
+        const title =
+          getPageTitle(page);
+
+        if (!title) return;
+
+        const button =
+          findExistingBack(title);
+
+        if (!button) return;
+
+        button.style.display =
+          current === page
+            ? "flex"
+            : "none";
+      });
+    } catch (e) {
+      console.warn(
+        "HISAB Back repair:",
+        e
+      );
+    }
+
+    repairing = false;
+  }
+
+  function scheduleRepair(delay) {
+    clearTimeout(repairTimer);
+
+    repairTimer = setTimeout(function () {
+      repairAll();
+    }, delay || 0);
+  }
+
+  const originalShow = window.show;
+
+  if (
+    typeof originalShow === "function" &&
+    !window.__hisabFinalBackShowFix
+  ) {
+    window.__hisabFinalBackShowFix = true;
+
+    window.show = function () {
+      const result =
+        originalShow.apply(
+          this,
+          arguments
+        );
+
+      scheduleRepair(0);
+
+      return result;
+    };
+  }
+
+  function handleAndroidBack() {
+    const page = getCurrentPage();
+
+    const id = page ? page.id : "";
+
+    if (
+      id === "home" ||
+      id === "welcome" ||
+      id === ""
+    ) {
+      return;
+    }
+
+    if (typeof window.goBack === "function") {
+      window.goBack();
+    }
+  }
+
+  function connectAndroidBack() {
+    try {
+      const App =
+        window.Capacitor &&
+        window.Capacitor.Plugins &&
+        window.Capacitor.Plugins.App;
+
+      if (
+        App &&
+        typeof App.addListener === "function" &&
+        !window.__hisabFinalAndroidBackFix
+      ) {
+        window.__hisabFinalAndroidBackFix = true;
+
+        App.addListener(
+          "backButton",
+          handleAndroidBack
+        );
+      }
+    } catch (e) {
+      console.warn(
+        "HISAB Android Back:",
+        e
+      );
+    }
+  }
+
+  window.addEventListener(
+    "popstate",
+    handleAndroidBack
+  );
+
+  function startRepair() {
+    repairAll();
+    connectAndroidBack();
+
+    setTimeout(function () {
+      repairAll();
+    }, 150);
+
+    setTimeout(function () {
+      repairAll();
+    }, 400);
+
+    setTimeout(function () {
+      repairAll();
+    }, 800);
+  }
+
+  if (
+    document.readyState === "loading"
+  ) {
     document.addEventListener(
       "DOMContentLoaded",
-      repair,
+      startRepair,
       { once: true }
     );
   } else {
-    repair();
+    startRepair();
+  }
+
+  if (document.body) {
+    const observer =
+      new MutationObserver(function () {
+        scheduleRepair(120);
+      });
+
+    observer.observe(
+      document.body,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
   }
 
 })();
