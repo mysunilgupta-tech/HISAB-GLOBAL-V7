@@ -1,7 +1,7 @@
 /* =========================================================
-   HISAB V7 — SAFE BACK BUTTON FIX
-   Navigation only
-   White-screen safe
+   HISAB V7 — REPAIR.JS
+   SAFE BACK BUTTON SYSTEM
+   Compatible with current app.js + index.html
    Does NOT replace app.js
    ========================================================= */
 
@@ -11,7 +11,6 @@
   var historyStack = [];
   var currentPage = "home";
   var busy = false;
-  var installed = false;
 
   var pages = [
     "home",
@@ -36,20 +35,24 @@
     return document.getElementById(id);
   }
 
+  /* ---------------------------------------------------------
+     CHECK EXISTING BACK/CLOSE BUTTON
+     --------------------------------------------------------- */
+
   function hasExistingBack(page) {
     if (!page) return false;
 
     var buttons = page.querySelectorAll("button");
 
     for (var i = 0; i < buttons.length; i++) {
-      var text = (buttons[i].textContent || "")
-        .trim()
-        .toLowerCase();
+      var text = (buttons[i].textContent || "").trim().toLowerCase();
 
       if (
         text.indexOf("←") === 0 ||
+        text.indexOf("back") !== -1 ||
         text.indexOf("✕") === 0 ||
-        text.indexOf("back") !== -1
+        text === "close" ||
+        text === "बंद"
       ) {
         return true;
       }
@@ -57,6 +60,10 @@
 
     return false;
   }
+
+  /* ---------------------------------------------------------
+     ADD BACK BUTTON ONLY WHERE NEEDED
+     --------------------------------------------------------- */
 
   function addBackButton(page) {
     if (!page || page.id === "home") return;
@@ -69,71 +76,66 @@
 
     if (!title) return;
 
-    var btn = document.createElement("button");
+    var button = document.createElement("button");
 
-    btn.type = "button";
-    btn.className = "hisab-auto-back";
-    btn.setAttribute("aria-label", "Back");
-    btn.innerHTML = "← Back";
+    button.type = "button";
+    button.className = "hisab-auto-back";
+    button.textContent = "← Back";
 
-    btn.onclick = function (e) {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
       goBack();
-      return false;
-    };
+    });
 
-    title.insertBefore(btn, title.firstChild);
+    title.insertBefore(button, title.firstChild);
   }
 
   function prepareButtons() {
-    try {
-      for (var i = 0; i < pages.length; i++) {
-        addBackButton(getPage(pages[i]));
-      }
-    } catch (e) {
-      /* Back button error must never stop the app */
+    for (var i = 0; i < pages.length; i++) {
+      addBackButton(getPage(pages[i]));
     }
   }
 
-  function originalShow(id) {
-    try {
-      if (typeof window.__HISAB_ORIGINAL_SHOW === "function") {
-        window.__HISAB_ORIGINAL_SHOW(id);
-        return true;
-      }
+  /* ---------------------------------------------------------
+     ORIGINAL SHOW FROM APP.JS
+     --------------------------------------------------------- */
 
-      return false;
-    } catch (e) {
-      return false;
-    }
+  function getOriginalShow() {
+    return window.__HISAB_ORIGINAL_SHOW;
   }
+
+  /* ---------------------------------------------------------
+     SHOW PAGE THROUGH APP.JS
+     --------------------------------------------------------- */
 
   function realShow(id, remember) {
-    var target = getPage(id);
+    var page = getPage(id);
 
-    /*
-      IMPORTANT:
-      Target page nahi mila to current screen ko hide nahi karna.
-      Isse white screen prevent hoti hai.
-    */
-    if (!target) {
+    if (!page) {
+      console.warn("HISAB repair: page not found:", id);
       return false;
     }
 
     if (remember && currentPage !== id) {
-      if (currentPage && getPage(currentPage)) {
+      if (historyStack[historyStack.length - 1] !== currentPage) {
         historyStack.push(currentPage);
       }
     }
 
-    var ok = originalShow(id);
+    var originalShow = getOriginalShow();
 
-    if (!ok) {
-      return false;
+    if (typeof originalShow === "function") {
+      try {
+        originalShow(id, false);
+      } catch (error) {
+        console.error("HISAB repair show error:", error);
+
+        /* Emergency local navigation */
+        showPageDirect(id);
+      }
+    } else {
+      showPageDirect(id);
     }
 
     currentPage = id;
@@ -149,29 +151,52 @@
     return true;
   }
 
+  /* ---------------------------------------------------------
+     EMERGENCY SAFE NAVIGATION
+     --------------------------------------------------------- */
+
+  function showPageDirect(id) {
+    var target = getPage(id);
+
+    if (!target) return;
+
+    var all = document.querySelectorAll(".page");
+
+    for (var i = 0; i < all.length; i++) {
+      all[i].style.display = "none";
+      all[i].classList.remove("active");
+    }
+
+    target.style.display = "";
+    target.classList.add("active");
+  }
+
+  /* ---------------------------------------------------------
+     BACK
+     --------------------------------------------------------- */
+
   function goBack() {
     if (busy) return;
 
     busy = true;
 
-    try {
-      var previous = historyStack.pop();
+    var previous = null;
 
-      while (previous && !getPage(previous)) {
-        previous = historyStack.pop();
+    while (historyStack.length > 0) {
+      previous = historyStack.pop();
+
+      if (previous && getPage(previous)) {
+        break;
       }
 
-      if (previous) {
-        realShow(previous, false);
-      } else {
-        historyStack = [];
+      previous = null;
+    }
 
-        if (getPage("home")) {
-          realShow("home", false);
-        }
-      }
-    } catch (e) {
-      /* Never allow Back to crash the app */
+    if (previous && previous !== currentPage) {
+      realShow(previous, false);
+    } else {
+      historyStack = [];
+      realShow("home", false);
     }
 
     setTimeout(function () {
@@ -179,130 +204,128 @@
     }, 120);
   }
 
+  /* ---------------------------------------------------------
+     INSTALL
+     --------------------------------------------------------- */
+
   function install() {
-    if (installed) return;
 
     /*
-      app.js ka show function load hone ka wait.
-      Infinite aggressive loop nahi.
+      Wait for app.js to create window.show.
+      repair.js must not destroy or replace app.js logic.
     */
+
     if (typeof window.show !== "function") {
-      setTimeout(install, 200);
+      setTimeout(install, 100);
       return;
     }
 
     /*
-      Agar kisi aur system ne already original show save
-      kiya hai to usko dobara wrap nahi karna.
+      Save original app.js show only once.
     */
-    if (!window.__HISAB_ORIGINAL_SHOW) {
+
+    if (
+      !window.__HISAB_ORIGINAL_SHOW ||
+      window.__HISAB_ORIGINAL_SHOW === window.show
+    ) {
       window.__HISAB_ORIGINAL_SHOW = window.show;
-    }
-
-    if (!window.__HISAB_BACK_WRAPPED) {
-      var baseShow = window.__HISAB_ORIGINAL_SHOW;
-
-      window.show = function (id) {
-        if (!getPage(id)) {
-          return false;
-        }
-
-        return realShow(id, true);
-      };
 
       /*
-        Safety reference:
-        original app.js show kabhi overwrite nahi hoga.
+        Repair wrapper.
+        App.js remains the real page renderer.
       */
-      window.__HISAB_ORIGINAL_SHOW = baseShow;
-      window.__HISAB_BACK_WRAPPED = true;
+
+      window.show = function (id) {
+        if (!id) return false;
+
+        if (currentPage !== id) {
+          historyStack.push(currentPage);
+        }
+
+        return realShow(id, false);
+      };
     }
 
-    installed = true;
-
     prepareButtons();
+
+    /*
+      Public repair controls.
+    */
 
     window.HISAB_REPAIR = {
       back: goBack,
 
       home: function () {
         historyStack = [];
-
-        if (getPage("home")) {
-          realShow("home", false);
-        }
+        currentPage = "home";
+        realShow("home", false);
       },
 
-      refreshBackButtons: function () {
-        prepareButtons();
+      clearHistory: function () {
+        historyStack = [];
       }
     };
   }
 
-  /* =========================================================
-     SAFE STYLE
-     ========================================================= */
+  /* ---------------------------------------------------------
+     STYLE
+     --------------------------------------------------------- */
 
   function addStyle() {
-    if (document.getElementById("hisab-back-style")) return;
+
+    if (document.getElementById("hisabRepairStyle")) {
+      return;
+    }
 
     var style = document.createElement("style");
-    style.id = "hisab-back-style";
+
+    style.id = "hisabRepairStyle";
 
     style.textContent = `
-      .hisab-auto-back{
-        display:inline-flex !important;
-        align-items:center !important;
-        justify-content:center !important;
-        flex:0 0 auto !important;
-        width:auto !important;
-        min-width:72px !important;
-        max-width:90px !important;
-        height:40px !important;
-        padding:8px 12px !important;
-        margin:0 10px 0 0 !important;
-        border-radius:11px !important;
-        background:#fff !important;
-        color:#2457d6 !important;
-        border:1px solid #dfe5ef !important;
-        font-size:13px !important;
-        font-weight:700 !important;
-        line-height:1 !important;
-        box-shadow:0 3px 10px rgba(30,55,90,.06) !important;
-        white-space:nowrap !important;
-        box-sizing:border-box !important;
+      .hisab-auto-back {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 72px !important;
+        height: 40px !important;
+        box-sizing: border-box !important;
+        padding: 8px 12px !important;
+        margin: 0 10px 0 0 !important;
+        border-radius: 11px !important;
+        background: #ffffff !important;
+        color: #2457d6 !important;
+        border: 1px solid #dfe5ef !important;
+        font-size: 13px !important;
+        line-height: 22px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 3px 10px rgba(30,55,90,.06) !important;
+        white-space: nowrap !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       }
 
-      .hisab-auto-back:active{
-        transform:scale(.96) !important;
+      .hisab-auto-back:active {
+        transform: scale(.96) !important;
       }
 
-      .page-title{
-        gap:8px !important;
-        display:flex !important;
-        align-items:center !important;
+      .page-title {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
       }
     `;
 
-    try {
-      document.head.appendChild(style);
-    } catch (e) {}
+    document.head.appendChild(style);
   }
 
-  /* =========================================================
+  /* ---------------------------------------------------------
      START
-     ========================================================= */
+     --------------------------------------------------------- */
 
   function start() {
-    try {
-      addStyle();
-      install();
-    } catch (e) {
-      /*
-        Repair system fail ho bhi jaye,
-        main HISAB app ko stop nahi karega.
-      */
-    }
+    addStyle();
+    install();
   }
 
   if (document.readyState === "loading") {
