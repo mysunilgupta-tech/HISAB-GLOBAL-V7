@@ -20,8 +20,6 @@
     "final"
   ];
 
-  /* ================= CURRENT PAGE ================= */
-
   function getCurrentPage() {
     const pages = document.querySelectorAll(".page");
 
@@ -30,7 +28,11 @@
 
       const style = window.getComputedStyle(page);
 
-      if (style.display !== "none") {
+      if (
+        style.display !== "none" &&
+        page.offsetWidth > 0 &&
+        page.offsetHeight > 0
+      ) {
         return page;
       }
     }
@@ -42,8 +44,6 @@
     const page = getCurrentPage();
     return page ? page.id : "";
   }
-
-  /* ================= DATA ================= */
 
   function getData() {
     try {
@@ -64,14 +64,11 @@
     }
   }
 
-  /* ================= BACK ACTION ================= */
-
   function goToParentPage() {
 
     const id = getPageId();
     const d = getData();
 
-    /* Udhar form/detail */
     if (
       id === "khataEntry" ||
       id === "khataDetail"
@@ -92,7 +89,6 @@
       return;
     }
 
-    /* All main sections → Home */
     if (BACK_PAGES.includes(id)) {
 
       if (
@@ -110,8 +106,6 @@
       window.show("home");
     }
   }
-
-  /* ================= CREATE BACK BUTTON ================= */
 
   function createBackButton() {
 
@@ -143,15 +137,25 @@
     btn.style.left = "12px";
 
     btn.style.top =
-      "calc(8px + env(safe-area-inset-top))";
+      "calc(10px + env(safe-area-inset-top))";
+
+    btn.style.right = "auto";
+    btn.style.bottom = "auto";
 
     btn.style.zIndex =
       "2147483647";
 
     btn.style.display = "none";
 
+    btn.style.visibility = "visible";
+    btn.style.opacity = "1";
+    btn.style.pointerEvents = "auto";
+
     btn.style.padding =
       "10px 15px";
+
+    btn.style.minHeight =
+      "40px";
 
     btn.style.border = "0";
 
@@ -176,6 +180,12 @@
     btn.style.boxShadow =
       "0 4px 12px rgba(0,0,0,.20)";
 
+    btn.style.fontFamily =
+      "inherit";
+
+    btn.style.cursor =
+      "pointer";
+
     btn.addEventListener(
       "click",
       function (e) {
@@ -192,8 +202,6 @@
     return btn;
   }
 
-  /* ================= UPDATE BUTTON ================= */
-
   function updateBackButton() {
 
     const btn =
@@ -205,13 +213,17 @@
     if (
       BACK_PAGES.includes(id)
     ) {
+
       btn.style.display = "block";
+      btn.style.visibility = "visible";
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+
     } else {
+
       btn.style.display = "none";
     }
   }
-
-  /* ================= SHOW WRAPPER ================= */
 
   const originalShow =
     window.show;
@@ -244,11 +256,14 @@
           100
         );
 
+        setTimeout(
+          updateBackButton,
+          300
+        );
+
         return result;
       };
   }
-
-  /* ================= DEVICE BACK ================= */
 
   function handleDeviceBack() {
 
@@ -279,13 +294,10 @@
     }
   }
 
-  /* Browser back */
   window.addEventListener(
     "popstate",
     handleDeviceBack
   );
-
-  /* ================= CAPACITOR BACK ================= */
 
   function connectCapacitorBack() {
 
@@ -320,8 +332,6 @@
       );
     }
   }
-
-  /* ================= EXISTING BACK BUTTONS ================= */
 
   function fixExistingBackButtons() {
 
@@ -371,8 +381,6 @@
       });
   }
 
-  /* ================= START ================= */
-
   function startRepair() {
 
     createBackButton();
@@ -390,7 +398,12 @@
 
     setTimeout(
       updateBackButton,
-      500
+      300
+    );
+
+    setTimeout(
+      updateBackButton,
+      700
     );
   }
 
@@ -409,24 +422,12 @@
     startRepair();
   }
 
-  /* ================= SAFE WATCH ================= */
-
-  /*
-   * IMPORTANT:
-   * Only watch DOM additions/removals.
-   * Do NOT watch style/class here.
-   */
-
   const observer =
     new MutationObserver(
       function () {
 
         fixExistingBackButtons();
 
-        /*
-         * Page changes are handled
-         * by the show() wrapper.
-         */
       }
     );
 
