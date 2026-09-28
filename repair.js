@@ -1,4 +1,5 @@
 /* HISAB V7 — FINAL BACK BUTTON / HEADER FIX
+   Safe version
    Only Back button UI/navigation repair.
    app.js, data and other features unchanged.
 */
@@ -22,6 +23,9 @@
     "tools13",
     "final"
   ];
+
+  let repairTimer = null;
+  let repairing = false;
 
   function getCurrentPage() {
     const pages = document.querySelectorAll(".page");
@@ -116,8 +120,7 @@
     button.style.position = "absolute";
     button.style.left = "8px";
     button.style.top = "50%";
-    button.style.transform =
-      "translateY(-50%)";
+    button.style.transform = "translateY(-50%)";
 
     button.style.zIndex = "5";
     button.style.overflow = "hidden";
@@ -126,9 +129,7 @@
   function attachBackAction(button) {
     if (!button) return;
 
-    if (
-      button.dataset.hisabBackAction === "1"
-    ) {
+    if (button.dataset.hisabBackAction === "1") {
       return;
     }
 
@@ -141,9 +142,7 @@
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        if (
-          typeof window.goBack === "function"
-        ) {
+        if (typeof window.goBack === "function") {
           window.goBack();
         }
       },
@@ -154,8 +153,7 @@
   function prepareTitle(title) {
     if (!title) return;
 
-    const computed =
-      getComputedStyle(title);
+    const computed = getComputedStyle(title);
 
     if (computed.position === "static") {
       title.style.position = "relative";
@@ -163,13 +161,9 @@
 
     const paddingLeft =
       parseFloat(
-        getComputedStyle(title)
-          .paddingLeft
+        getComputedStyle(title).paddingLeft
       ) || 0;
 
-    /*
-      Back button ke liye enough space.
-    */
     if (paddingLeft < 76) {
       title.style.paddingLeft = "76px";
     }
@@ -197,8 +191,7 @@
       );
 
     if (!button) {
-      button =
-        document.createElement("button");
+      button = document.createElement("button");
 
       button.type = "button";
       button.textContent = "← Back";
@@ -237,12 +230,7 @@
 
     prepareTitle(title);
 
-    /*
-      Existing Back arrow ko reuse karo.
-      Duplicate button nahi banega.
-    */
-    let button =
-      findExistingBack(title);
+    let button = findExistingBack(title);
 
     if (!button) {
       button = createBackButton(title);
@@ -253,59 +241,78 @@
   }
 
   function repairAll() {
-    const current =
-      getCurrentPage();
+    if (repairing) return;
 
-    /*
-      Purane versions ka floating button
-      remove karo.
-    */
-    const oldGlobal =
-      document.getElementById(
-        "hisabGlobalBackButton"
+    repairing = true;
+
+    try {
+      const current = getCurrentPage();
+
+      const oldGlobal =
+        document.getElementById(
+          "hisabGlobalBackButton"
+        );
+
+      if (oldGlobal) {
+        oldGlobal.remove();
+      }
+
+      BACK_PAGES.forEach(function (id) {
+        const page =
+          document.getElementById(id);
+
+        if (!page) return;
+
+        repairPage(page);
+
+        const title =
+          getPageTitle(page);
+
+        if (!title) return;
+
+        const button =
+          findExistingBack(title);
+
+        if (!button) return;
+
+        button.style.display =
+          current === page
+            ? "flex"
+            : "none";
+      });
+    } catch (e) {
+      console.warn(
+        "HISAB Back repair:",
+        e
       );
-
-    if (oldGlobal) {
-      oldGlobal.remove();
     }
 
-    BACK_PAGES.forEach(function (id) {
-      const page =
-        document.getElementById(id);
+    repairing = false;
+  }
 
-      if (!page) return;
+  /*
+    Safe refresh.
+    DOM change ke turant andar repairAll()
+    nahi chalega.
+  */
+  function scheduleRepair(delay) {
+    clearTimeout(repairTimer);
 
-      repairPage(page);
-
-      const title =
-        getPageTitle(page);
-
-      if (!title) return;
-
-      const button =
-        findExistingBack(title);
-
-      if (!button) return;
-
-      button.style.display =
-        current === page
-          ? "flex"
-          : "none";
-    });
+    repairTimer = setTimeout(function () {
+      repairAll();
+    }, delay || 0);
   }
 
   /*
     show() ke baad Back button update.
   */
-  const originalShow =
-    window.show;
+  const originalShow = window.show;
 
   if (
     typeof originalShow === "function" &&
     !window.__hisabFinalBackShowFix
   ) {
-    window.__hisabFinalBackShowFix =
-      true;
+    window.__hisabFinalBackShowFix = true;
 
     window.show = function () {
       const result =
@@ -314,20 +321,7 @@
           arguments
         );
 
-      setTimeout(
-        repairAll,
-        0
-      );
-
-      setTimeout(
-        repairAll,
-        80
-      );
-
-      setTimeout(
-        repairAll,
-        200
-      );
+      scheduleRepair(0);
 
       return result;
     };
@@ -337,11 +331,9 @@
     Android hardware Back.
   */
   function handleAndroidBack() {
-    const page =
-      getCurrentPage();
+    const page = getCurrentPage();
 
-    const id =
-      page ? page.id : "";
+    const id = page ? page.id : "";
 
     if (
       id === "home" ||
@@ -351,9 +343,7 @@
       return;
     }
 
-    if (
-      typeof window.goBack === "function"
-    ) {
+    if (typeof window.goBack === "function") {
       window.goBack();
     }
   }
@@ -370,12 +360,10 @@
 
       if (
         App &&
-        typeof App.addListener ===
-          "function" &&
+        typeof App.addListener === "function" &&
         !window.__hisabFinalAndroidBackFix
       ) {
-        window.__hisabFinalAndroidBackFix =
-          true;
+        window.__hisabFinalAndroidBackFix = true;
 
         App.addListener(
           "backButton",
@@ -405,46 +393,43 @@
     repairAll();
     connectAndroidBack();
 
-    setTimeout(
-      repairAll,
-      100
-    );
+    setTimeout(function () {
+      repairAll();
+    }, 150);
 
-    setTimeout(
-      repairAll,
-      300
-    );
+    setTimeout(function () {
+      repairAll();
+    }, 400);
 
-    setTimeout(
-      repairAll,
-      700
-    );
+    setTimeout(function () {
+      repairAll();
+    }, 800);
   }
 
   if (
-    document.readyState ===
-    "loading"
+    document.readyState === "loading"
   ) {
     document.addEventListener(
       "DOMContentLoaded",
-      startRepair
+      startRepair,
+      { once: true }
     );
   } else {
     startRepair();
   }
 
   /*
-    Page changes detect karo.
-    Data/features ko touch nahi karta.
+    SAFE DOM observer
+    -----------------
+    Continuous repair loop nahi banega.
+    Sirf changes ke baad ek delayed repair.
   */
-  const observer =
-    new MutationObserver(
-      function () {
-        repairAll();
-      }
-    );
-
   if (document.body) {
+    const observer =
+      new MutationObserver(function () {
+        scheduleRepair(120);
+      });
+
     observer.observe(
       document.body,
       {
