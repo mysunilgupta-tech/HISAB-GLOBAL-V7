@@ -1,4 +1,7 @@
-/* HISAB V7 — BACK BUTTON FINAL POSITION FIX */
+/* HISAB V7 — FINAL BACK BUTTON / HEADER FIX
+   Only Back button UI/navigation repair.
+   app.js, data and other features unchanged.
+*/
 
 (function () {
   "use strict";
@@ -26,10 +29,10 @@
     for (const page of pages) {
       if (!page.id) continue;
 
-      const style = getComputedStyle(page);
+      const s = getComputedStyle(page);
 
       if (
-        style.display !== "none" &&
+        s.display !== "none" &&
         page.offsetWidth > 0 &&
         page.offsetHeight > 0
       ) {
@@ -40,189 +43,325 @@
     return null;
   }
 
-  function getPageId() {
-    const page = getCurrentPage();
-    return page ? page.id : "";
-  }
+  function getPageTitle(page) {
+    if (!page) return null;
 
-  function getData() {
-    try {
-      if (window.D && typeof window.D === "object") {
-        return window.D;
-      }
-
-      const raw = localStorage.getItem("hisab_v7_data");
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function goToParentPage() {
-    const id = getPageId();
-    const d = getData();
-
-    if (id === "khataEntry" || id === "khataDetail") {
-      const mode =
-        d && d.detailMode === "business"
-          ? "business"
-          : "personal";
-
-      if (typeof window.show === "function") {
-        window.show(mode);
-      }
-      return;
-    }
-
-    if (BACK_PAGES.includes(id)) {
-      if (typeof window.show === "function") {
-        window.show("home");
-      }
-      return;
-    }
-
-    if (typeof window.show === "function") {
-      window.show("home");
-    }
-  }
-
-  function createBackButton() {
-    let btn = document.getElementById(
-      "hisabGlobalBackButton"
+    return (
+      page.querySelector(".page-title") ||
+      page.querySelector(".page-header") ||
+      page.querySelector("header")
     );
+  }
 
-    if (btn) return btn;
+  function isBackButton(button) {
+    if (!button) return false;
 
-    btn = document.createElement("button");
+    if (button.id === "hisabGlobalBackButton") {
+      return true;
+    }
 
-    btn.id = "hisabGlobalBackButton";
-    btn.type = "button";
-    btn.textContent = "← Back";
-    btn.setAttribute("aria-label", "Back");
+    const text = (
+      button.innerText ||
+      button.textContent ||
+      ""
+    ).trim().toLowerCase();
 
-    /*
-      HEADER-FRIENDLY POSITION
-      Status bar ke neeche,
-      lekin screen ke bilkul top par nahi.
-    */
-    btn.style.position = "fixed";
-    btn.style.top =
-      "calc(env(safe-area-inset-top, 0px) + 16px)";
-    btn.style.left = "10px";
+    return (
+      text === "back" ||
+      text === "←" ||
+      text === "‹" ||
+      text === "〈" ||
+      text.includes("back")
+    );
+  }
 
-    btn.style.right = "auto";
-    btn.style.bottom = "auto";
+  function styleBackButton(button) {
+    if (!button) return;
 
-    /* COMPACT SIZE */
-    btn.style.width = "68px";
-    btn.style.height = "34px";
-    btn.style.minWidth = "68px";
-    btn.style.minHeight = "34px";
-    btn.style.maxWidth = "68px";
-    btn.style.padding = "0";
+    button.type = "button";
+    button.setAttribute("aria-label", "Back");
 
-    /* PERFECT CENTER */
-    btn.style.display = "none";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
+    button.style.width = "62px";
+    button.style.minWidth = "62px";
+    button.style.maxWidth = "62px";
 
-    /* STYLE */
-    btn.style.boxSizing = "border-box";
-    btn.style.border = "0";
-    btn.style.borderRadius = "9px";
-    btn.style.background = "#082b45";
-    btn.style.color = "#ffffff";
+    button.style.height = "30px";
+    button.style.minHeight = "30px";
+    button.style.maxHeight = "30px";
 
-    btn.style.fontFamily = "inherit";
-    btn.style.fontSize = "12px";
-    btn.style.fontWeight = "700";
-    btn.style.lineHeight = "1";
-    btn.style.whiteSpace = "nowrap";
+    button.style.padding = "0";
+    button.style.margin = "0";
 
-    btn.style.boxShadow =
-      "0 2px 8px rgba(0,0,0,.16)";
+    button.style.boxSizing = "border-box";
 
-    btn.style.zIndex = "2147483647";
+    button.style.display = "flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
 
-    btn.style.visibility = "visible";
-    btn.style.opacity = "1";
-    btn.style.pointerEvents = "auto";
+    button.style.border = "0";
+    button.style.borderRadius = "8px";
 
-    btn.addEventListener(
+    button.style.background = "#082b45";
+    button.style.color = "#ffffff";
+
+    button.style.fontFamily = "inherit";
+    button.style.fontSize = "11px";
+    button.style.fontWeight = "700";
+    button.style.lineHeight = "1";
+    button.style.whiteSpace = "nowrap";
+
+    button.style.boxShadow =
+      "0 2px 6px rgba(0,0,0,.15)";
+
+    button.style.position = "absolute";
+    button.style.left = "8px";
+    button.style.top = "50%";
+    button.style.transform =
+      "translateY(-50%)";
+
+    button.style.zIndex = "5";
+    button.style.overflow = "hidden";
+  }
+
+  function attachBackAction(button) {
+    if (!button) return;
+
+    if (
+      button.dataset.hisabBackAction === "1"
+    ) {
+      return;
+    }
+
+    button.dataset.hisabBackAction = "1";
+
+    button.addEventListener(
       "click",
       function (e) {
         e.preventDefault();
         e.stopPropagation();
-        goToParentPage();
-      }
+        e.stopImmediatePropagation();
+
+        if (
+          typeof window.goBack === "function"
+        ) {
+          window.goBack();
+        }
+      },
+      true
     );
-
-    document.body.appendChild(btn);
-
-    return btn;
   }
 
-  function updateBackButton() {
-    const btn = createBackButton();
-    const id = getPageId();
+  function prepareTitle(title) {
+    if (!title) return;
 
-    if (BACK_PAGES.includes(id)) {
-      btn.style.display = "flex";
-      btn.style.pointerEvents = "auto";
-    } else {
-      btn.style.display = "none";
-      btn.style.pointerEvents = "none";
+    const computed =
+      getComputedStyle(title);
+
+    if (computed.position === "static") {
+      title.style.position = "relative";
+    }
+
+    const paddingLeft =
+      parseFloat(
+        getComputedStyle(title)
+          .paddingLeft
+      ) || 0;
+
+    /*
+      Back button ke liye enough space.
+    */
+    if (paddingLeft < 76) {
+      title.style.paddingLeft = "76px";
     }
   }
 
-  /* Keep original HISAB navigation intact */
-  const originalShow = window.show;
+  function findExistingBack(title) {
+    if (!title) return null;
+
+    const buttons =
+      title.querySelectorAll("button");
+
+    for (const button of buttons) {
+      if (isBackButton(button)) {
+        return button;
+      }
+    }
+
+    return null;
+  }
+
+  function createBackButton(title) {
+    let button =
+      title.querySelector(
+        '[data-hisab-page-back="1"]'
+      );
+
+    if (!button) {
+      button =
+        document.createElement("button");
+
+      button.type = "button";
+      button.textContent = "← Back";
+
+      button.setAttribute(
+        "data-hisab-page-back",
+        "1"
+      );
+
+      title.insertBefore(
+        button,
+        title.firstChild
+      );
+    }
+
+    styleBackButton(button);
+    attachBackAction(button);
+
+    return button;
+  }
+
+  function repairPage(page) {
+    if (!page) return;
+
+    const id = page.id;
+
+    if (!BACK_PAGES.includes(id)) {
+      return;
+    }
+
+    const title = getPageTitle(page);
+
+    if (!title) {
+      return;
+    }
+
+    prepareTitle(title);
+
+    /*
+      Existing Back arrow ko reuse karo.
+      Duplicate button nahi banega.
+    */
+    let button =
+      findExistingBack(title);
+
+    if (!button) {
+      button = createBackButton(title);
+    }
+
+    styleBackButton(button);
+    attachBackAction(button);
+  }
+
+  function repairAll() {
+    const current =
+      getCurrentPage();
+
+    /*
+      Purane versions ka floating button
+      remove karo.
+    */
+    const oldGlobal =
+      document.getElementById(
+        "hisabGlobalBackButton"
+      );
+
+    if (oldGlobal) {
+      oldGlobal.remove();
+    }
+
+    BACK_PAGES.forEach(function (id) {
+      const page =
+        document.getElementById(id);
+
+      if (!page) return;
+
+      repairPage(page);
+
+      const title =
+        getPageTitle(page);
+
+      if (!title) return;
+
+      const button =
+        findExistingBack(title);
+
+      if (!button) return;
+
+      button.style.display =
+        current === page
+          ? "flex"
+          : "none";
+    });
+  }
+
+  /*
+    show() ke baad Back button update.
+  */
+  const originalShow =
+    window.show;
 
   if (
     typeof originalShow === "function" &&
-    !window.__hisabRepairShowWrapped
+    !window.__hisabFinalBackShowFix
   ) {
-    window.__hisabRepairShowWrapped = true;
+    window.__hisabFinalBackShowFix =
+      true;
 
-    window.show = function (id) {
-      const result = originalShow.apply(
-        this,
-        arguments
+    window.show = function () {
+      const result =
+        originalShow.apply(
+          this,
+          arguments
+        );
+
+      setTimeout(
+        repairAll,
+        0
       );
 
-      setTimeout(updateBackButton, 0);
-      setTimeout(updateBackButton, 100);
-      setTimeout(updateBackButton, 250);
+      setTimeout(
+        repairAll,
+        80
+      );
+
+      setTimeout(
+        repairAll,
+        200
+      );
 
       return result;
     };
   }
 
-  /* Android Back */
-  function handleDeviceBack() {
-    const id = getPageId();
+  /*
+    Android hardware Back.
+  */
+  function handleAndroidBack() {
+    const page =
+      getCurrentPage();
 
-    if (BACK_PAGES.includes(id)) {
-      goToParentPage();
+    const id =
+      page ? page.id : "";
+
+    if (
+      id === "home" ||
+      id === "welcome" ||
+      id === ""
+    ) {
       return;
     }
 
-    if (id === "home" || id === "welcome") {
-      return;
-    }
-
-    if (typeof window.show === "function") {
-      window.show("home");
+    if (
+      typeof window.goBack === "function"
+    ) {
+      window.goBack();
     }
   }
 
-  window.addEventListener(
-    "popstate",
-    handleDeviceBack
-  );
-
-  /* Capacitor Android Back */
-  function connectCapacitorBack() {
+  /*
+    Capacitor Android Back listener.
+  */
+  function connectAndroidBack() {
     try {
       const App =
         window.Capacitor &&
@@ -231,73 +370,61 @@
 
       if (
         App &&
-        typeof App.addListener === "function" &&
-        !window.__hisabCapBackConnected
+        typeof App.addListener ===
+          "function" &&
+        !window.__hisabFinalAndroidBackFix
       ) {
-        window.__hisabCapBackConnected = true;
+        window.__hisabFinalAndroidBackFix =
+          true;
 
         App.addListener(
           "backButton",
-          handleDeviceBack
+          handleAndroidBack
         );
       }
     } catch (e) {
       console.warn(
-        "HISAB Capacitor Back skipped:",
+        "HISAB Android Back:",
         e
       );
     }
   }
 
-  /* Existing header Back buttons */
-  function fixExistingBackButtons() {
-    document
-      .querySelectorAll(".page-title button")
-      .forEach(function (button) {
-        if (
-          button.dataset.hisabBackFixed === "1"
-        ) {
-          return;
-        }
+  /*
+    Browser/device history.
+  */
+  window.addEventListener(
+    "popstate",
+    handleAndroidBack
+  );
 
-        const text = (
-          button.innerText || ""
-        )
-          .trim()
-          .toLowerCase();
-
-        if (
-          text === "←" ||
-          text === "back" ||
-          text.includes("back")
-        ) {
-          button.dataset.hisabBackFixed = "1";
-
-          button.addEventListener(
-            "click",
-            function (e) {
-              e.preventDefault();
-              e.stopPropagation();
-              goToParentPage();
-            },
-            true
-          );
-        }
-      });
-  }
-
+  /*
+    Start.
+  */
   function startRepair() {
-    createBackButton();
-    connectCapacitorBack();
-    fixExistingBackButtons();
-    updateBackButton();
+    repairAll();
+    connectAndroidBack();
 
-    setTimeout(updateBackButton, 100);
-    setTimeout(updateBackButton, 300);
-    setTimeout(updateBackButton, 700);
+    setTimeout(
+      repairAll,
+      100
+    );
+
+    setTimeout(
+      repairAll,
+      300
+    );
+
+    setTimeout(
+      repairAll,
+      700
+    );
   }
 
-  if (document.readyState === "loading") {
+  if (
+    document.readyState ===
+    "loading"
+  ) {
     document.addEventListener(
       "DOMContentLoaded",
       startRepair
@@ -306,17 +433,25 @@
     startRepair();
   }
 
-  const observer = new MutationObserver(
-    function () {
-      fixExistingBackButtons();
-    }
-  );
+  /*
+    Page changes detect karo.
+    Data/features ko touch nahi karta.
+  */
+  const observer =
+    new MutationObserver(
+      function () {
+        repairAll();
+      }
+    );
 
   if (document.body) {
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    observer.observe(
+      document.body,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
   }
 
 })();
