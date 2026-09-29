@@ -880,7 +880,7 @@
 
         '<button type="button" onclick="deleteKhata(\'' +
         esc(k.id) +
-        "')\">Delete</button>' +
+        '\')">Delete</button>' +
 
         '</div>' +
 
