@@ -1,519 +1,477 @@
 name: HISAB Global V7 Android APK
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+workflow_dispatch:
+push:
+branches:
+- main
 
 permissions:
-  contents: read
+contents: read
 
 jobs:
-  build:
-    name: Build HISAB Android
-    runs-on: ubuntu-latest
-
-    steps:
-
-      # =====================================================
-      # 1. CHECKOUT
-      # =====================================================
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      # =====================================================
-      # 2. NODE 22
-      # =====================================================
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '22'
-
-      # =====================================================
-      # 3. JAVA 21
-      # =====================================================
-      - name: Setup Java 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      # =====================================================
-      # 4. CHECK SOURCE FILES
-      # =====================================================
-      - name: Check HISAB source files
-        shell: bash
-        run: |
-          set -e
-
-          echo "Checking HISAB source files..."
-
-          test -f index.html
-          test -f app.js
-          test -f style.css
-          test -f package.json
-
-          echo "All required source files found."
-
-          node --version
-          npm --version
-
-      # =====================================================
-      # 5. VALIDATE JAVASCRIPT
-      # =====================================================
-      - name: Validate app.js
-        shell: bash
-        run: |
-          set -e
-
-          node --check app.js
-
-          echo "app.js syntax check PASSED."
-
-      # =====================================================
-      # 6. VALIDATE HTML
-      # =====================================================
-      - name: Validate index.html
-        shell: bash
-        run: |
-          set -e
-
-          grep -qi '<html' index.html
-          grep -qi 'app.js' index.html
-          grep -qi 'style.css' index.html
-
-          if grep -qi 'repair.js' index.html; then
-            echo "ERROR: repair.js reference found in index.html"
-            exit 1
-          fi
-
-          echo "index.html validation PASSED."
-
-      # =====================================================
-      # 7. CHECK UNWANTED repair.js
-      # =====================================================
-      - name: Check JavaScript references
-        shell: bash
-        run: |
-          set -e
-
-          if grep -Rni \
-            --exclude-dir=.git \
-            --exclude-dir=node_modules \
-            --exclude-dir=android \
-            'repair.js' .; then
-
-            echo ""
-            echo "ERROR: repair.js reference found."
-            echo "Remove repair.js references from the web app."
-            exit 1
-          fi
-
-          echo "No repair.js references found."
-
-      # =====================================================
-      # 8. INSTALL DEPENDENCIES
-      # =====================================================
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -e
-
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-          echo "Dependencies installed."
-
-      # =====================================================
-      # 9. CHECK CAPACITOR
-      # =====================================================
-      - name: Check Capacitor
-        shell: bash
-        run: |
-          set -e
-
-          npx cap --version
-
-          echo "Capacitor check PASSED."
-
-      # =====================================================
-      # 10. CLEAN OLD WEB BUILD
-      # IMPORTANT:
-      # Prevent stale app.js / index.html from entering APK.
-      # =====================================================
-      - name: Clean old web build
-        shell: bash
-        run: |
-          set -e
-
-          rm -rf www
-
-          mkdir -p www
-
-          echo "Old www folder removed."
-
-      # =====================================================
-      # 11. BUILD WEB APP
-      # =====================================================
-      - name: Build HISAB web files
-        shell: bash
-        run: |
-          set -e
-
-          npm run build
-
-          echo "Web build completed."
-
-      # =====================================================
-      # 12. VERIFY WWW
-      # =====================================================
-      - name: Verify www files
-        shell: bash
-        run: |
-          set -e
-
-          test -d www
-          test -f www/index.html
-          test -f www/app.js
-          test -f www/style.css
-
-          node --check www/app.js
-
-          if grep -qi 'repair.js' www/index.html; then
-            echo "ERROR: www/index.html references repair.js"
-            exit 1
-          fi
-
-          echo "www verification PASSED."
-
-      # =====================================================
-      # 13. CHECK CAPACITOR CONFIG
-      # =====================================================
-      - name: Check Capacitor configuration
-        shell: bash
-        run: |
-          set -e
-
-          if [ -f capacitor.config.ts ]; then
-            echo "capacitor.config.ts found"
-            cat capacitor.config.ts
-
-          elif [ -f capacitor.config.json ]; then
-            echo "capacitor.config.json found"
-            cat capacitor.config.json
-
-          else
-            echo "ERROR: No Capacitor configuration found."
-            exit 1
-          fi
-
-      # =====================================================
-      # 14. VERIFY ANDROID PROJECT
-      # IMPORTANT:
-      # Existing Android project is preserved.
-      # =====================================================
-      - name: Verify Android project
-        shell: bash
-        run: |
-          set -e
-
-          test -d android
-          test -f android/gradlew
-
-          chmod +x android/gradlew
-
-          echo "Existing Android project found."
-
-      # =====================================================
-      # 15. CAPACITOR SYNC
-      # =====================================================
-      - name: Sync Capacitor Android
-        shell: bash
-        run: |
-          set -e
-
-          npx cap sync android
-
-          echo "Capacitor sync PASSED."
-
-      # =====================================================
-      # 16. VERIFY ANDROID WEB ASSETS
-      # =====================================================
-      - name: Verify Android web assets
-        shell: bash
-        run: |
-          set -e
-
-          PUBLIC_DIR="android/app/src/main/assets/public"
-
-          test -d "$PUBLIC_DIR"
-          test -f "$PUBLIC_DIR/index.html"
-          test -f "$PUBLIC_DIR/app.js"
-          test -f "$PUBLIC_DIR/style.css"
-
-          node --check "$PUBLIC_DIR/app.js"
-
-          if grep -qi 'repair.js' "$PUBLIC_DIR/index.html"; then
-            echo "ERROR: Android index.html references repair.js"
-            exit 1
-          fi
-
-          echo "Android web assets verification PASSED."
-
-      # =====================================================
-      # 17. CONFIGURE ADMOB
-      # =====================================================
-      - name: Configure AdMob
-        shell: bash
-        env:
-          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
-        run: |
-          set -e
-
-          if [ -z "$ADMOB_APP_ID" ]; then
-            echo "ADMOB_APP_ID secret not configured."
-            echo "Keeping existing AdMob configuration."
-            exit 0
-          fi
-
-          STRINGS_FILE="android/app/src/main/res/values/strings.xml"
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-
-          test -f "$MANIFEST_FILE"
-
-          mkdir -p "$(dirname "$STRINGS_FILE")"
-
-          python3 - "$STRINGS_FILE" "$ADMOB_APP_ID" <<'PY'
-          import sys
-          import xml.etree.ElementTree as ET
-
-          file_path = sys.argv[1]
-          app_id = sys.argv[2]
-
-          try:
-              tree = ET.parse(file_path)
-              root = tree.getroot()
-          except Exception:
-              root = ET.Element("resources")
-              tree = ET.ElementTree(root)
-
-          found = False
-
-          for item in root.findall("string"):
-              if item.get("name") == "admob_app_id":
-                  item.text = app_id
-                  found = True
-                  break
-
-          if not found:
-              item = ET.SubElement(root, "string")
-              item.set("name", "admob_app_id")
-              item.text = app_id
-
-          tree.write(
-              file_path,
-              encoding="utf-8",
-              xml_declaration=True
-          )
-          PY
-
-          python3 - "$MANIFEST_FILE" <<'PY'
-          import sys
-          import xml.etree.ElementTree as ET
-
-          file_path = sys.argv[1]
-
-          ANDROID_NS = "http://schemas.android.com/apk/res/android"
-
-          ET.register_namespace("android", ANDROID_NS)
-
+build:
+name: Build HISAB Android
+runs-on: ubuntu-latest
+
+steps:
+
+  # =====================================================
+  # 1. CHECKOUT
+  # =====================================================
+  - name: Checkout repository
+    uses: actions/checkout@v5
+
+  # =====================================================
+  # 2. NODE 22
+  # =====================================================
+  - name: Setup Node.js
+    uses: actions/setup-node@v5
+    with:
+      node-version: '22'
+
+  # =====================================================
+  # 3. JAVA 21
+  # =====================================================
+  - name: Setup Java 21
+    uses: actions/setup-java@v5
+    with:
+      distribution: temurin
+      java-version: '21'
+
+  # =====================================================
+  # 4. CHECK SOURCE FILES
+  # =====================================================
+  - name: Check HISAB source files
+    shell: bash
+    run: |
+      set -e
+
+      echo "Checking HISAB source files..."
+
+      test -f index.html
+      test -f app.js
+      test -f style.css
+      test -f package.json
+
+      echo "All required source files found."
+
+      node --version
+      npm --version
+
+  # =====================================================
+  # 5. VALIDATE JAVASCRIPT
+  # =====================================================
+  - name: Validate app.js
+    shell: bash
+    run: |
+      set -e
+
+      node --check app.js
+
+      echo "app.js syntax check PASSED."
+
+  # =====================================================
+  # 6. VALIDATE HTML
+  # =====================================================
+  - name: Validate index.html
+    shell: bash
+    run: |
+      set -e
+
+      grep -qi '<html' index.html
+      grep -qi 'app.js' index.html
+      grep -qi 'style.css' index.html
+
+      echo "index.html validation PASSED."
+
+  # =====================================================
+  # 7. INSTALL DEPENDENCIES
+  # =====================================================
+  - name: Install dependencies
+    shell: bash
+    run: |
+      set -e
+
+      if [ -f package-lock.json ]; then
+        npm ci
+      else
+        npm install
+      fi
+
+      echo "Dependencies installed."
+
+  # =====================================================
+  # 8. CHECK CAPACITOR
+  # =====================================================
+  - name: Check Capacitor
+    shell: bash
+    run: |
+      set -e
+
+      npx cap --version
+
+      echo "Capacitor check PASSED."
+
+  # =====================================================
+  # 9. CLEAN OLD WEB BUILD
+  # =====================================================
+  - name: Clean old web build
+    shell: bash
+    run: |
+      set -e
+
+      rm -rf www
+      mkdir -p www
+
+      echo "Old www folder removed."
+
+  # =====================================================
+  # 10. BUILD WEB APP
+  # =====================================================
+  - name: Build HISAB web files
+    shell: bash
+    run: |
+      set -e
+
+      npm run build
+
+      echo "Web build completed."
+
+  # =====================================================
+  # 11. VERIFY WWW
+  # =====================================================
+  - name: Verify www files
+    shell: bash
+    run: |
+      set -e
+
+      test -d www
+      test -f www/index.html
+      test -f www/app.js
+      test -f www/style.css
+
+      node --check www/app.js
+
+      echo "www verification PASSED."
+
+  # =====================================================
+  # 12. CHECK CAPACITOR CONFIG
+  # =====================================================
+  - name: Check Capacitor configuration
+    shell: bash
+    run: |
+      set -e
+
+      if [ -f capacitor.config.ts ]; then
+        echo "capacitor.config.ts found"
+        cat capacitor.config.ts
+
+      elif [ -f capacitor.config.json ]; then
+        echo "capacitor.config.json found"
+        cat capacitor.config.json
+
+      else
+        echo "ERROR: No Capacitor configuration found."
+        exit 1
+      fi
+
+  # =====================================================
+  # 13. VERIFY ANDROID PROJECT
+  # =====================================================
+  - name: Verify Android project
+    shell: bash
+    run: |
+      set -e
+
+      test -d android
+      test -f android/gradlew
+
+      chmod +x android/gradlew
+
+      echo "Existing Android project found."
+
+  # =====================================================
+  # 14. CAPACITOR SYNC
+  # =====================================================
+  - name: Sync Capacitor Android
+    shell: bash
+    run: |
+      set -e
+
+      npx cap sync android
+
+      echo "Capacitor sync PASSED."
+
+  # =====================================================
+  # 15. VERIFY ANDROID WEB ASSETS
+  # =====================================================
+  - name: Verify Android web assets
+    shell: bash
+    run: |
+      set -e
+
+      PUBLIC_DIR="android/app/src/main/assets/public"
+
+      test -d "$PUBLIC_DIR"
+      test -f "$PUBLIC_DIR/index.html"
+      test -f "$PUBLIC_DIR/app.js"
+      test -f "$PUBLIC_DIR/style.css"
+
+      node --check "$PUBLIC_DIR/app.js"
+
+      echo "Android web assets verification PASSED."
+
+  # =====================================================
+  # 16. CONFIGURE ADMOB
+  # =====================================================
+  - name: Configure AdMob
+    shell: bash
+    env:
+      ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+    run: |
+      set -e
+
+      if [ -z "$ADMOB_APP_ID" ]; then
+        echo "ADMOB_APP_ID secret not configured."
+        echo "Keeping existing AdMob configuration."
+        exit 0
+      fi
+
+      STRINGS_FILE="android/app/src/main/res/values/strings.xml"
+      MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+
+      test -f "$MANIFEST_FILE"
+
+      mkdir -p "$(dirname "$STRINGS_FILE")"
+
+      python3 - "$STRINGS_FILE" "$ADMOB_APP_ID" <<'PY'
+      import sys
+      import xml.etree.ElementTree as ET
+
+      file_path = sys.argv[1]
+      app_id = sys.argv[2]
+
+      try:
           tree = ET.parse(file_path)
           root = tree.getroot()
+      except Exception:
+          root = ET.Element("resources")
+          tree = ET.ElementTree(root)
 
-          application = root.find("application")
+      found = False
 
-          if application is None:
-              raise SystemExit(
-                  "ERROR: <application> not found in AndroidManifest.xml"
-              )
+      for item in root.findall("string"):
+          if item.get("name") == "admob_app_id":
+              item.text = app_id
+              found = True
+              break
 
-          name_key = "{" + ANDROID_NS + "}name"
-          value_key = "{" + ANDROID_NS + "}value"
+      if not found:
+          item = ET.SubElement(root, "string")
+          item.set("name", "admob_app_id")
+          item.text = app_id
 
-          target_name = "com.google.android.gms.ads.APPLICATION_ID"
+      tree.write(
+          file_path,
+          encoding="utf-8",
+          xml_declaration=True
+      )
+      PY
 
-          found = False
+      python3 - "$MANIFEST_FILE" <<'PY'
+      import sys
+      import xml.etree.ElementTree as ET
 
-          for meta in application.findall("meta-data"):
-              if meta.get(name_key) == target_name:
-                  meta.set(value_key, "@string/admob_app_id")
-                  found = True
-                  break
+      file_path = sys.argv[1]
 
-          if not found:
-              meta = ET.SubElement(application, "meta-data")
-              meta.set(name_key, target_name)
-              meta.set(value_key, "@string/admob_app_id")
+      ANDROID_NS = "http://schemas.android.com/apk/res/android"
 
-          tree.write(
-              file_path,
-              encoding="utf-8",
-              xml_declaration=True
+      ET.register_namespace("android", ANDROID_NS)
+
+      tree = ET.parse(file_path)
+      root = tree.getroot()
+
+      application = root.find("application")
+
+      if application is None:
+          raise SystemExit(
+              "ERROR: <application> not found in AndroidManifest.xml"
           )
-          PY
 
-          echo "AdMob configuration completed."
+      name_key = "{" + ANDROID_NS + "}name"
+      value_key = "{" + ANDROID_NS + "}value"
 
-      # =====================================================
-      # 18. VERIFY ADMOB
-      # =====================================================
-      - name: Verify AdMob
-        shell: bash
-        env:
-          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
-        run: |
-          set -e
+      target_name = "com.google.android.gms.ads.APPLICATION_ID"
 
-          if [ -z "$ADMOB_APP_ID" ]; then
-            echo "No AdMob secret supplied."
-            exit 0
-          fi
+      found = False
 
-          STRINGS_FILE="android/app/src/main/res/values/strings.xml"
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+      for meta in application.findall("meta-data"):
+          if meta.get(name_key) == target_name:
+              meta.set(value_key, "@string/admob_app_id")
+              found = True
+              break
 
-          test -f "$STRINGS_FILE"
-          test -f "$MANIFEST_FILE"
+      if not found:
+          meta = ET.SubElement(application, "meta-data")
+          meta.set(name_key, target_name)
+          meta.set(value_key, "@string/admob_app_id")
 
-          grep -q 'name="admob_app_id"' "$STRINGS_FILE"
-          grep -q 'com.google.android.gms.ads.APPLICATION_ID' "$MANIFEST_FILE"
-          grep -q '@string/admob_app_id' "$MANIFEST_FILE"
+      tree.write(
+          file_path,
+          encoding="utf-8",
+          xml_declaration=True
+      )
+      PY
 
-          echo "AdMob verification PASSED."
+      echo "AdMob configuration completed."
 
-      # =====================================================
-      # 19. GRADLE CHECK
-      # =====================================================
-      - name: Check Gradle
-        shell: bash
-        working-directory: android
-        run: |
-          set -e
+  # =====================================================
+  # 17. VERIFY ADMOB
+  # =====================================================
+  - name: Verify AdMob
+    shell: bash
+    env:
+      ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+    run: |
+      set -e
 
-          ./gradlew --version
+      if [ -z "$ADMOB_APP_ID" ]; then
+        echo "No AdMob secret supplied."
+        exit 0
+      fi
 
-      # =====================================================
-      # 20. CLEAN ANDROID
-      # =====================================================
-      - name: Clean Android project
-        shell: bash
-        working-directory: android
-        run: |
-          set -e
+      STRINGS_FILE="android/app/src/main/res/values/strings.xml"
+      MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
 
-          ./gradlew clean --no-daemon
+      test -f "$STRINGS_FILE"
+      test -f "$MANIFEST_FILE"
 
-      # =====================================================
-      # 21. BUILD DEBUG APK
-      # =====================================================
-      - name: Build Debug APK
-        shell: bash
-        working-directory: android
-        run: |
-          set -e
+      grep -q 'name="admob_app_id"' "$STRINGS_FILE"
+      grep -q 'com.google.android.gms.ads.APPLICATION_ID' "$MANIFEST_FILE"
+      grep -q '@string/admob_app_id' "$MANIFEST_FILE"
 
-          ./gradlew assembleDebug \
-            --stacktrace \
-            --no-daemon
+      echo "AdMob verification PASSED."
 
-      # =====================================================
-      # 22. VERIFY DEBUG APK
-      # =====================================================
-      - name: Verify Debug APK
-        shell: bash
-        run: |
-          set -e
+  # =====================================================
+  # 18. GRADLE CHECK
+  # =====================================================
+  - name: Check Gradle
+    shell: bash
+    working-directory: android
+    run: |
+      set -e
 
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+      ./gradlew --version
 
-          test -f "$APK"
+  # =====================================================
+  # 19. CLEAN ANDROID
+  # =====================================================
+  - name: Clean Android project
+    shell: bash
+    working-directory: android
+    run: |
+      set -e
 
-          ls -lh "$APK"
+      ./gradlew clean --no-daemon
 
-          unzip -t "$APK" >/dev/null
+  # =====================================================
+  # 20. BUILD DEBUG APK
+  # =====================================================
+  - name: Build Debug APK
+    shell: bash
+    working-directory: android
+    run: |
+      set -e
 
-          echo "APK integrity check PASSED."
+      ./gradlew assembleDebug \
+        --stacktrace \
+        --no-daemon
 
-      # =====================================================
-      # 23. BUILD RELEASE AAB
-      # =====================================================
-      - name: Build Release AAB
-        shell: bash
-        working-directory: android
-        run: |
-          set -e
+  # =====================================================
+  # 21. VERIFY DEBUG APK
+  # =====================================================
+  - name: Verify Debug APK
+    shell: bash
+    run: |
+      set -e
 
-          ./gradlew bundleRelease \
-            --stacktrace \
-            --no-daemon
+      APK="android/app/build/outputs/apk/debug/app-debug.apk"
 
-      # =====================================================
-      # 24. VERIFY RELEASE AAB
-      # =====================================================
-      - name: Verify Release AAB
-        shell: bash
-        run: |
-          set -e
+      test -f "$APK"
 
-          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+      ls -lh "$APK"
 
-          test -f "$AAB"
+      unzip -t "$APK" >/dev/null
 
-          ls -lh "$AAB"
+      echo "APK integrity check PASSED."
 
-          unzip -t "$AAB" >/dev/null
+  # =====================================================
+  # 22. BUILD RELEASE AAB
+  # =====================================================
+  - name: Build Release AAB
+    shell: bash
+    working-directory: android
+    run: |
+      set -e
 
-          echo "AAB integrity check PASSED."
+      ./gradlew bundleRelease \
+        --stacktrace \
+        --no-daemon
 
-      # =====================================================
-      # 25. UPLOAD DEBUG APK
-      # =====================================================
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: HISAB-GLOBAL-V7-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+  # =====================================================
+  # 23. VERIFY RELEASE AAB
+  # =====================================================
+  - name: Verify Release AAB
+    shell: bash
+    run: |
+      set -e
 
-      # =====================================================
-      # 26. UPLOAD RELEASE AAB
-      # =====================================================
-      - name: Upload Release AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: HISAB-GLOBAL-V7-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
-          if-no-files-found: error
+      AAB="android/app/build/outputs/bundle/release/app-release.aab"
 
-      # =====================================================
-      # 27. FINAL RESULT
-      # =====================================================
-      - name: Build Summary
-        shell: bash
-        run: |
-          echo ""
-          echo "================================================"
-          echo "       HISAB GLOBAL V7 BUILD SUCCESS"
-          echo "================================================"
-          echo ""
-          echo "APK:"
-          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
-          echo ""
-          echo "AAB:"
-          ls -lh android/app/build/outputs/bundle/release/app-release.aab
-          echo ""
-          echo "================================================"
+      test -f "$AAB"
+
+      ls -lh "$AAB"
+
+      unzip -t "$AAB" >/dev/null
+
+      echo "AAB integrity check PASSED."
+
+  # =====================================================
+  # 24. UPLOAD DEBUG APK
+  # =====================================================
+  - name: Upload Debug APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: HISAB-GLOBAL-V7-debug
+      path: android/app/build/outputs/apk/debug/app-debug.apk
+      if-no-files-found: error
+
+  # =====================================================
+  # 25. UPLOAD RELEASE AAB
+  # =====================================================
+  - name: Upload Release AAB
+    uses: actions/upload-artifact@v4
+    with:
+      name: HISAB-GLOBAL-V7-release-aab
+      path: android/app/build/outputs/bundle/release/app-release.aab
+      if-no-files-found: error
+
+  # =====================================================
+  # 26. FINAL RESULT
+  # =====================================================
+  - name: Build Summary
+    shell: bash
+    run: |
+      echo ""
+      echo "================================================"
+      echo "       HISAB GLOBAL V7 BUILD SUCCESS"
+      echo "================================================"
+      echo ""
+      echo "APK:"
+      ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+      echo ""
+      echo "AAB:"
+      ls -lh android/app/build/outputs/bundle/release/app-release.aab
+      echo ""
+      echo "================================================"
