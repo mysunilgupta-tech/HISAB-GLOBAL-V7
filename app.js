@@ -417,416 +417,7 @@
     localStorage.removeItem(GUEST_KEY);
 
     var gate = $("guestGate");
-    var shell = $("appShell");
-
-    if (shell) shell.style.display = "none";
-    if (gate) gate.style.display = "";
-
-    alert("App locked.");
-  }
-
-  /* =========================================================
-     NAVIGATION
-     ========================================================= */
-
-  var pages = [
-    "home",
-    "personal",
-    "business",
-    "khataEntry",
-    "khataDetail",
-    "transactions",
-    "planning",
-    "credit",
-    "reports",
-    "reminders",
-    "privacy",
-    "family",
-    "ads",
-    "familytools",
-    "tools13",
-    "final"
-  ];
-
-  function removeBackButtons() {
-    document.querySelectorAll(".hisab-auto-back")
-      .forEach(function (el) {
-        el.remove();
-      });
-  }
-
-  function addBackButton(page) {
-    if (
-      page === "home" ||
-      page === "khataEntry" ||
-      page === "khataDetail"
-    ) {
-      return;
-    }
-
-    var root = $(page);
-    if (!root) return;
-
-    var title = root.querySelector(".page-title");
-    if (!title) return;
-
-    if (title.querySelector(".hisab-auto-back")) return;
-
-    var btn = document.createElement("button");
-
-    btn.className = "hisab-auto-back";
-    btn.type = "button";
-    btn.textContent = "← " + L("Back");
-
-    btn.style.marginRight = "8px";
-    btn.style.padding = "8px 12px";
-    btn.style.borderRadius = "10px";
-    btn.style.border = "0";
-    btn.style.cursor = "pointer";
-
-    btn.onclick = function () {
-      show("home");
-    };
-
-    title.prepend(btn);
-  }
-
-  function show(page) {
-    if (!page || pages.indexOf(page) === -1) {
-      page = "home";
-    }
-
-    pages.forEach(function (p) {
-      var el = $(p);
-
-      if (el) {
-        el.style.display =
-          p === page ? "" : "none";
-      }
-    });
-
-    D.ui.page = page;
-
-    removeBackButtons();
-    addBackButton(page);
-
-    if (page === "home") renderHome();
-    if (page === "personal") renderPersonal();
-    if (page === "business") renderBusiness();
-    if (page === "transactions") renderTransactions();
-    if (page === "planning") renderPlanning();
-    if (page === "credit") renderCredit();
-    if (page === "reports") renderReports();
-    if (page === "reminders") renderReminders();
-    if (page === "privacy") renderPrivacy();
-    if (page === "family") renderFamily();
-    if (page === "tools13") renderTools();
-    if (page === "final") renderFinal();
-
-    window.scrollTo(0, 0);
-  }
-
-  /* =========================================================
-     MODE / HOME
-     ========================================================= */
-
-  function setMode(mode) {
-    D.mode =
-      mode === "business"
-        ? "business"
-        : "personal";
-
-    save();
-
-    if (D.mode === "business") {
-      show("business");
-    } else {
-      show("personal");
-    }
-  }
-
-  function renderHome() {
-    var income = 0;
-    var expense = 0;
-    var give = 0;
-    var receive = 0;
-
-    D.transactions.forEach(function (t) {
-      if (t.mode !== D.mode) return;
-
-      if (t.type === "income") {
-        income += num(t.amount);
-      }
-
-      if (t.type === "expense") {
-        expense += num(t.amount);
-      }
-    });
-
-    D.khata.forEach(function (k) {
-      if (k.mode !== D.mode) return;
-
-      if (k.type === "give") {
-        give += num(k.amount);
-      }
-
-      if (k.type === "receive") {
-        receive += num(k.amount);
-      }
-    });
-
-    var balance =
-      income - expense + receive - give;
-
-    if ($("modeLabel")) {
-      $("modeLabel").textContent =
-        D.mode === "business"
-          ? "Business"
-          : "Personal";
-    }
-
-    if ($("receivable")) {
-      $("receivable").textContent =
-        money(receive);
-    }
-
-    if ($("payable")) {
-      $("payable").textContent =
-        money(give);
-    }
-
-    if ($("homeBalance")) {
-      $("homeBalance").textContent =
-        money(balance);
-    }
-  }
-
-  /* =========================================================
-     KHATA
-     ========================================================= */
-
-  function openKhataForm(mode) {
-    D.mode =
-      mode === "business"
-        ? "business"
-        : "personal";
-
-    D.ui.khataEditId = null;
-
-    if ($("khataPerson")) $("khataPerson").value = "";
-    if ($("khataType")) $("khataType").value = "give";
-    if ($("khataAmount")) $("khataAmount").value = "";
-    if ($("khataDate")) $("khataDate").value = today();
-    if ($("khataMethod")) $("khataMethod").value = "Cash";
-    if ($("khataStatus")) $("khataStatus").value = "pending";
-    if ($("khataNote")) $("khataNote").value = "";
-
-    show("khataEntry");
-  }
-
-  function closeKhataForm() {
-    D.ui.khataEditId = null;
-
-    show(
-      D.mode === "business"
-        ? "business"
-        : "personal"
-    );
-  }
-
-  function saveKhataEntry() {
-    var name =
-      $("khataPerson")
-        ? $("khataPerson").value.trim()
-        : "";
-
-    var amount =
-      $("khataAmount")
-        ? num($("khataAmount").value)
-        : 0;
-
-    if (!name) {
-      alert("Person / Customer name enter karein.");
-      return;
-    }
-
-    if (amount <= 0) {
-      alert("Valid amount enter karein.");
-      return;
-    }
-
-    var item = {
-      id:
-        D.ui.khataEditId ||
-        uid("khata"),
-
-      mode: D.mode,
-
-      person: name,
-
-      type:
-        $("khataType")
-          ? $("khataType").value
-          : "give",
-
-      amount: amount,
-
-      date:
-        $("khataDate")
-          ? safeDate($("khataDate").value)
-          : today(),
-
-      method:
-        $("khataMethod")
-          ? $("khataMethod").value
-          : "Cash",
-
-      status:
-        $("khataStatus")
-          ? $("khataStatus").value
-          : "pending",
-
-      note:
-        $("khataNote")
-          ? $("khataNote").value.trim()
-          : ""
-    };
-
-    if (D.ui.khataEditId) {
-      D.khata = D.khata.map(function (x) {
-        return x.id === D.ui.khataEditId
-          ? item
-          : x;
-      });
-    } else {
-      D.khata.push(item);
-    }
-
-    D.ui.khataEditId = null;
-
-    save();
-
-    show(
-      D.mode === "business"
-        ? "business"
-        : "personal"
-    );
-  }
-
-  function getKhata(mode) {
-    return D.khata.filter(function (k) {
-      return k.mode === mode;
-    });
-  }
-
-  function renderPersonal() {
-    renderKhata("personal");
-  }
-
-  function renderKhata(mode) {
-    var list =
-      mode === "business"
-        ? $("businessList")
-        : $("personalList");
-
-    if (!list) return;
-
-    var data = getKhata(mode);
-
-    var filter =
-      D.ui.khataFilter || "all";
-
-    if (filter !== "all") {
-      data = data.filter(function (k) {
-        return k.type === filter;
-      });
-    }
-
-    var root =
-      mode === "business"
-        ? $("business")
-        : $("personal");
-
-    var input =
-      root
-        ? root.querySelector(
-            'input[type="search"],input[placeholder*="Search"]'
-          )
-        : null;
-
-    var q =
-      input
-        ? input.value.trim().toLowerCase()
-        : "";
-
-    if (q) {
-      data = data.filter(function (k) {
-        return (
-          String(k.person || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(k.note || "")
-            .toLowerCase()
-            .includes(q)
-        );
-      });
-    }
-
-    data.sort(function (a, b) {
-      return String(b.date)
-        .localeCompare(String(a.date));
-    });
-
-    var give = 0;
-    var receive = 0;
-
-    getKhata(mode).forEach(function (k) {
-      if (k.type === "give") {
-        give += num(k.amount);
-      }
-
-      if (k.type === "receive") {
-        receive += num(k.amount);
-      }
-    });
-
-    var givenId =
-      mode === "personal"
-        ? "ledgerGiven"
-        : "businessGiven";
-
-    var receivedId =
-      mode === "personal"
-        ? "ledgerReceived"
-        : "businessReceived";
-
-    var netId =
-      mode === "personal"
-        ? "ledgerNet"
-        : "businessNet";
-
-    if ($(givenId)) {
-      $(givenId).textContent =
-        money(give);
-    }
-
-    if ($(receivedId)) {
-      $(receivedId).textContent =
-        money(receive);
-    }
-
-    if ($(netId)) {
-      $(netId).textContent =
-        money(give - receive);
-    }
-
-    if (!data.length) {
-      list.innerHTML =
-        '<div class="empty-state">No entries yet.</div>';
-      return;
-    }
-
-    list.innerHTML = data.map(function (k) {
+     list.innerHTML = data.map(function (k) {
       var isGive = k.type === "give";
 
       return (
@@ -849,24 +440,24 @@
             '</div>'
           : "") +
 
-        '</div>' +
-
-        '<div style="text-align:right;">' +
-
-        '<strong style="color:' +
-        (isGive ? "#d93025" : "#168a45") +
+        '<div style="margin-top:6px;font-weight:700;color:' +
+        (isGive ? "#d32f2f" : "#168a45") +
         ';">' +
 
-        (isGive ? "Give " : "Receive ") +
+        (isGive ? "Give" : "Receive") +
+        " • " +
         money(k.amount) +
 
-        '</strong>' +
+        '</div>' +
 
-        '<div style="font-size:12px;">' +
+        '<div style="font-size:12px;margin-top:4px;">' +
+        'Status: ' +
         esc(k.status || "pending") +
         '</div>' +
 
-                '<div style="margin-top:6px;">' +
+        '</div>' +
+
+        '<div style="margin-top:8px;">' +
 
         '<button type="button" onclick="openKhataDetail(\'' +
         esc(k.person).replace(/'/g, "\\'") +
@@ -884,74 +475,93 @@
 
         '</div>' +
 
-        '</div>' +
         '</div>'
       );
     }).join("");
   }
 
-  function searchKhata(mode) {
-    renderKhata(mode);
+  function searchKhata() {
+    renderKhata(D.mode);
   }
-  function filterKhata(mode, filter) {
-    D.ui.khataFilter =
-      filter || "all";
 
-    renderKhata(mode);
+  function filterKhata(type) {
+    D.ui.khataFilter = type || "all";
+    save();
+    renderKhata(D.mode);
   }
 
   function editKhata(id) {
-    var item = D.khata.find(function (k) {
-      return k.id === id;
+    var item = D.khata.find(function (x) {
+      return x.id === id;
     });
 
     if (!item) return;
 
-    D.mode = item.mode;
-    D.ui.khataEditId = id;
+    D.mode = item.mode || "personal";
+    D.ui.khataEditId = item.id;
 
-    if ($("khataPerson"))
-      $("khataPerson").value =
-        item.person || "";
+    if ($("khataPerson")) {
+      $("khataPerson").value = item.person || "";
+    }
 
-    if ($("khataType"))
-      $("khataType").value =
-        item.type || "give";
+    if ($("khataType")) {
+      $("khataType").value = item.type || "give";
+    }
 
-    if ($("khataAmount"))
-      $("khataAmount").value =
-        item.amount || "";
+    if ($("khataAmount")) {
+      $("khataAmount").value = item.amount || "";
+    }
 
-    if ($("khataDate"))
+    if ($("khataDate")) {
       $("khataDate").value =
         item.date || today();
+    }
 
-    if ($("khataMethod"))
+    if ($("khataMethod")) {
       $("khataMethod").value =
         item.method || "Cash";
+    }
 
-    if ($("khataStatus"))
+    if ($("khataStatus")) {
       $("khataStatus").value =
         item.status || "pending";
+    }
 
-    if ($("khataNote"))
+    if ($("khataNote")) {
       $("khataNote").value =
         item.note || "";
+    }
 
     show("khataEntry");
   }
 
   function deleteKhata(id) {
-    if (!confirm("Is entry ko delete karein?")) {
+    if (!confirm("Delete this entry?")) {
       return;
     }
 
-    D.khata = D.khata.filter(function (k) {
-      return k.id !== id;
+    D.khata = D.khata.filter(function (x) {
+      return x.id !== id;
     });
 
     save();
 
+    renderKhata(D.mode);
+    renderHome();
+  }
+
+  function openKhataDetail(person, mode) {
+    D.ui.detailPerson = person || "";
+    D.ui.detailFilter = "all";
+
+    if (mode) {
+      D.mode = mode;
+    }
+
+    show("khataDetail");
+  }
+
+  function closeKhataDetail() {
     show(
       D.mode === "business"
         ? "business"
@@ -959,964 +569,487 @@
     );
   }
 
-  /* =========================================================
-     KHATA DETAIL / SHARE / PDF
-     ========================================================= */
-
-  function openKhataDetail(person, mode) {
-    D.mode =
-      mode === "business"
-        ? "business"
-        : "personal";
-
-    D.ui.detailPerson = person;
-    D.ui.detailFilter = "all";
-
-    if ($("detailPersonName")) {
-      $("detailPersonName").textContent =
-        person;
-    }
-
-    show("khataDetail");
+  function detailFilter(type) {
+    D.ui.detailFilter = type || "all";
+    renderKhataDetail();
   }
 
   function renderKhataDetail() {
-    var person = D.ui.detailPerson;
+    var root = $("khataDetail");
+    if (!root) return;
 
-    var entries = D.khata.filter(function (k) {
-      return (
-        k.mode === D.mode &&
-        k.person === person
-      );
+    var person = D.ui.detailPerson || "";
+    var mode = D.mode;
+
+    var data = getKhata(mode).filter(function (k) {
+      return String(k.person || "").toLowerCase() ===
+        String(person).toLowerCase();
+    });
+
+    var filter =
+      D.ui.detailFilter || "all";
+
+    if (filter !== "all") {
+      data = data.filter(function (k) {
+        return k.type === filter;
+      });
+    }
+
+    data.sort(function (a, b) {
+      return String(b.date)
+        .localeCompare(String(a.date));
     });
 
     var give = 0;
     var receive = 0;
 
-    entries.forEach(function (k) {
-      if (k.type === "give")
+    data.forEach(function (k) {
+      if (k.type === "give") {
         give += num(k.amount);
+      }
 
-      if (k.type === "receive")
+      if (k.type === "receive") {
         receive += num(k.amount);
+      }
     });
 
-    if ($("detailGive"))
-      $("detailGive").textContent =
-        money(give);
+    var title = root.querySelector(".page-title");
 
-    if ($("detailReceive"))
-      $("detailReceive").textContent =
-        money(receive);
-
-    if ($("detailBalance"))
-      $("detailBalance").textContent =
-        money(give - receive);
-
-    var list = $("khataHistory");
-    if (!list) return;
-
-    if (D.ui.detailFilter !== "all") {
-      entries = entries.filter(function (k) {
-        return k.type === D.ui.detailFilter;
-      });
+    if (title) {
+      title.textContent =
+        person || "Udhar Detail";
     }
 
-    entries.sort(function (a, b) {
-      return String(b.date)
-        .localeCompare(String(a.date));
-    });
+    var summary = root.querySelector(
+      ".khata-detail-summary"
+    );
 
-    if (!entries.length) {
+    if (summary) {
+      summary.innerHTML =
+        '<div><strong>Give</strong><br>' +
+        money(give) +
+        '</div>' +
+
+        '<div><strong>Receive</strong><br>' +
+        money(receive) +
+        '</div>' +
+
+        '<div><strong>Net</strong><br>' +
+        money(give - receive) +
+        '</div>';
+    }
+
+    var list =
+      $("khataDetailList") ||
+      root.querySelector(".khata-detail-list");
+
+    if (!list) return;
+
+    if (!data.length) {
       list.innerHTML =
-        '<div class="empty-state">No history.</div>';
+        '<div class="empty-state">No entries found.</div>';
       return;
     }
 
-    list.innerHTML = entries.map(function (k) {
-      var giveType =
-        k.type === "give";
+    list.innerHTML = data.map(function (k) {
+      var isGive = k.type === "give";
 
       return (
-        '<div class="hisab-history-row">' +
+        '<div class="hisab-entry-card">' +
 
         '<strong>' +
-        esc(k.date) +
-        '</strong> ' +
+        (isGive ? "Give" : "Receive") +
+        '</strong>' +
 
-        '<span style="color:' +
-        (giveType ? "#d93025" : "#168a45") +
-        ';">' +
-
-        (giveType ? "Give " : "Receive ") +
+        '<div style="color:' +
+        (isGive ? "#d32f2f" : "#168a45") +
+        ';font-weight:700;margin-top:4px;">' +
         money(k.amount) +
+        '</div>' +
 
-        '</span> • ' +
-
+        '<div style="font-size:12px;opacity:.7;margin-top:4px;">' +
+        esc(k.date) +
+        ' • ' +
         esc(k.method || "Cash") +
         ' • ' +
         esc(k.status || "pending") +
+        '</div>' +
 
         (k.note
-          ? "<br>" + esc(k.note)
+          ? '<div style="margin-top:5px;">' +
+            esc(k.note) +
+            '</div>'
           : "") +
+
+        '<div style="margin-top:8px;">' +
+
+        '<button type="button" onclick="editKhata(\'' +
+        esc(k.id) +
+        '\')">Edit</button> ' +
+
+        '<button type="button" onclick="deleteKhata(\'' +
+        esc(k.id) +
+        '\')">Delete</button>' +
+
+        '</div>' +
 
         '</div>'
       );
     }).join("");
   }
 
-  function detailFilter(filter) {
-    D.ui.detailFilter =
-      filter || "all";
-
-    renderKhataDetail();
-  }
-
-  function closeKhataDetail() {
-    D.ui.detailPerson = "";
-
-    show(
-      D.mode === "business"
-        ? "business"
-        : "personal"
-    );
-  }
-
-  function openPaymentEntry() {
-    openKhataForm(D.mode);
-
-    if (
-      D.ui.detailPerson &&
-      $("khataPerson")
-    ) {
-      $("khataPerson").value =
-        D.ui.detailPerson;
-    }
-
-    if ($("khataType")) {
-      $("khataType").value =
-        "receive";
-    }
-  }
-
-  function makeKhataText() {
-    var person =
-      D.ui.detailPerson || "Khata";
-
-    var entries = D.khata.filter(function (k) {
-      return (
-        k.mode === D.mode &&
-        k.person === person
-      );
+  function openPaymentEntry(id) {
+    var item = D.khata.find(function (x) {
+      return x.id === id;
     });
 
-    var give = 0;
-    var receive = 0;
+    if (!item) return;
 
-    entries.forEach(function (k) {
-      if (k.type === "give")
-        give += num(k.amount);
-
-      if (k.type === "receive")
-        receive += num(k.amount);
-    });
-
-    var text =
-      "HISAB - " + person + "\n\n" +
-
-      "Total Give: " +
-      money(give) + "\n" +
-
-      "Total Receive: " +
-      money(receive) + "\n" +
-
-      "Balance: " +
-      money(give - receive) +
-      "\n\n";
-
-    entries.forEach(function (k) {
-      text +=
-        k.date +
-        " | " +
-        (k.type === "give"
-          ? "Give"
-          : "Receive") +
-        " | " +
-        money(k.amount) +
-        " | " +
-        (k.method || "Cash") +
-        " | " +
-        (k.status || "pending") +
-        (k.note
-          ? " | " + k.note
-          : "") +
-        "\n";
-    });
-
-    return text;
-  }
-
-  function shareKhata() {
-    var text = makeKhataText();
-    var person =
-      D.ui.detailPerson || "Khata";
-
-    if (navigator.share) {
-      navigator.share({
-        title: "HISAB - " + person,
-        text: text
-      }).catch(function () {});
-      return;
-    }
-
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(text)
-        .then(function () {
-          alert("Khata details copied.");
-        });
-      return;
-    }
-
-    alert(text);
-  }
-
-  function exportKhataPDF() {
-    var person =
-      D.ui.detailPerson || "Khata";
-
-    var entries = D.khata.filter(function (k) {
-      return (
-        k.mode === D.mode &&
-        k.person === person
-      );
-    });
-
-    var give = 0;
-    var receive = 0;
-
-    entries.forEach(function (k) {
-      if (k.type === "give")
-        give += num(k.amount);
-
-      if (k.type === "receive")
-        receive += num(k.amount);
-    });
-
-    var w = window.open("", "_blank");
-
-    if (!w) {
-      alert("Popup blocked.");
-      return;
-    }
-
-    var html =
-      "<html><head>" +
-      "<title>HISAB - " +
-      esc(person) +
-      "</title>" +
-
-      "<style>" +
-      "body{font-family:Arial;padding:20px;color:#111}" +
-      "h2{margin-bottom:4px}" +
-      ".summary{margin:15px 0;padding:12px;border:1px solid #ddd;border-radius:10px}" +
-      "table{width:100%;border-collapse:collapse}" +
-      "th,td{border:1px solid #ccc;padding:8px;text-align:left}" +
-      "@media print{button{display:none}}" +
-      "</style>" +
-
-      "</head><body>" +
-
-      "<h2>HISAB - " +
-      esc(person) +
-      "</h2>" +
-
-      "<div class='summary'>" +
-      "<b>Total Give:</b> " +
-      esc(money(give)) +
-      "<br><b>Total Receive:</b> " +
-      esc(money(receive)) +
-      "<br><b>Balance:</b> " +
-      esc(money(give - receive)) +
-      "</div>" +
-
-      "<table>" +
-      "<tr><th>Date</th><th>Type</th><th>Amount</th><th>Method</th><th>Status</th><th>Note</th></tr>" +
-
-      entries.map(function (k) {
-        return (
-          "<tr>" +
-          "<td>" + esc(k.date) + "</td>" +
-          "<td>" + esc(k.type) + "</td>" +
-          "<td>" + esc(money(k.amount)) + "</td>" +
-          "<td>" + esc(k.method || "") + "</td>" +
-          "<td>" + esc(k.status || "") + "</td>" +
-          "<td>" + esc(k.note || "") + "</td>" +
-          "</tr>"
-        );
-      }).join("") +
-
-      "</table>" +
-
-      "</body></html>";
-
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-
-    setTimeout(function () {
-      w.print();
-    }, 400);
-  }
-
-  /* =========================================================
-     BUSINESS
-     ========================================================= */
-
-  function businessFilter(filter) {
-    D.ui.businessFilter =
-      filter || "customer";
-
-    renderBusiness();
-  }
-
-  function addBusinessCustomer() {
-    addBusinessMaster("customer");
-  }
-
-  function addBusinessSupplier() {
-    addBusinessMaster("supplier");
-  }
-
-  function addBusinessMaster(type) {
-    var name = prompt(
-      type === "customer"
-        ? "Customer name:"
-        : "Supplier name:"
+    var amount = prompt(
+      "Payment amount:",
+      String(item.amount || "")
     );
 
-    if (!name || !name.trim()) return;
+    if (amount === null) return;
 
-    var phone =
-      prompt("Phone (optional):") || "";
-
-    D.business.push({
-      id: uid("business"),
-      type: type,
-      name: name.trim(),
-      phone: phone.trim(),
-      date: today(),
-      mode: "business"
-    });
-
-    save();
-    renderBusiness();
-  }
-
-  function deleteBusinessMaster(id) {
-    if (!confirm("Record delete karein?")) {
-      return;
-    }
-
-    D.business = D.business.filter(function (b) {
-      return b.id !== id;
-    });
-
-    save();
-    renderBusiness();
-  }
-
-  function addBusinessSales() {
-    addBusinessEntry("sale");
-  }
-
-  function addBusinessPurchase() {
-    addBusinessEntry("purchase");
-  }
-
-  function addBusinessEntry(type) {
-    var name = prompt(
-      type === "sale"
-        ? "Customer name:"
-        : "Supplier name:"
-    );
-
-    if (!name || !name.trim()) return;
-
-    var amount =
-      num(prompt("Amount:"));
+    amount = num(amount);
 
     if (amount <= 0) {
       alert("Valid amount enter karein.");
       return;
     }
 
-    var date =
-      prompt(
-        "Date (YYYY-MM-DD):",
-        today()
-      ) || today();
-
-    var note =
-      prompt("Note (optional):") || "";
-
-    var method =
-      prompt(
-        "Payment method:",
-        "Cash"
-      ) || "Cash";
-
-    var item = {
-      id: uid(type),
-      mode: "business",
-      date: safeDate(date),
-      amount: amount,
-      note: note.trim(),
-      method: method.trim(),
-      paid: 0,
-      status: "pending",
-      history: []
-    };
-
-    if (type === "sale") {
-      item.customer = name.trim();
-      D.sales.push(item);
-      D.ui.businessFilter = "sales";
-    } else {
-      item.supplier = name.trim();
-      D.purchases.push(item);
-      D.ui.businessFilter = "purchase";
-    }
+    item.status = "settled";
+    item.paid = amount;
 
     save();
-    renderBusiness();
+
+    renderKhata(D.mode);
+    renderKhataDetail();
   }
 
-  function getBusinessSales() {
-    return D.sales.filter(function (x) {
-      return !x.mode || x.mode === "business";
-    });
-  }
-
-  function getBusinessPurchases() {
-    return D.purchases.filter(function (x) {
-      return !x.mode || x.mode === "business";
-    });
-  }
-
-  function editBusinessEntry(type, id) {
-    var arr =
-      type === "sale"
-        ? D.sales
-        : D.purchases;
-
-    var item = arr.find(function (x) {
-      return x.id === id;
+  function shareKhata(person, mode) {
+    var data = getKhata(mode || D.mode).filter(function (k) {
+      return String(k.person || "").toLowerCase() ===
+        String(person || "").toLowerCase();
     });
 
-    if (!item) return;
+    var text =
+      "HISAB - Udhar Statement\n\n" +
+      "Name: " +
+      (person || "") +
+      "\n\n";
 
-    var oldName =
-      type === "sale"
-        ? item.customer
-        : item.supplier;
+    data.forEach(function (k) {
+      text +=
+        (k.type === "give" ? "Give" : "Receive") +
+        ": " +
+        money(k.amount) +
+        "\nDate: " +
+        k.date +
+        "\nStatus: " +
+        (k.status || "pending") +
+        "\n\n";
+    });
 
-    var name =
-      prompt(
-        type === "sale"
-          ? "Customer name:"
-          : "Supplier name:",
-        oldName || ""
-      );
-
-    if (!name || !name.trim()) return;
-
-    var amount =
-      num(
-        prompt(
-          "Amount:",
-          String(item.amount || "")
-        )
-      );
-
-    if (amount <= 0) return;
-
-    var date =
-      prompt(
-        "Date:",
-        item.date || today()
-      ) || item.date;
-
-    var note =
-      prompt(
-        "Note:",
-        item.note || ""
-      ) || "";
-
-    item.mode = "business";
-    item.amount = amount;
-    item.date = safeDate(date);
-    item.note = note.trim();
-
-    if (type === "sale") {
-      item.customer = name.trim();
+    if (
+      navigator.share &&
+      window.isSecureContext
+    ) {
+      navigator.share({
+        title: "HISAB Udhar Statement",
+        text: text
+      }).catch(function () {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+        .then(function () {
+          alert("Statement copied.");
+        })
+        .catch(function () {
+          alert(text);
+        });
     } else {
-      item.supplier = name.trim();
+      alert(text);
     }
-
-    save();
-    renderBusiness();
   }
 
-  function deleteBusinessEntry(type, id) {
-    if (!confirm("Entry delete karein?")) {
+  function exportKhataPDF(person, mode) {
+    var data = getKhata(mode || D.mode).filter(function (k) {
+      return String(k.person || "").toLowerCase() ===
+        String(person || "").toLowerCase();
+    });
+
+    var html =
+      '<!doctype html>' +
+      '<html><head><meta charset="utf-8">' +
+      '<title>HISAB Udhar Statement</title>' +
+      '<style>' +
+      'body{font-family:Arial;padding:20px;}' +
+      'table{width:100%;border-collapse:collapse;}' +
+      'th,td{border:1px solid #ccc;padding:8px;text-align:left;}' +
+      '</style></head><body>' +
+
+      '<h2>HISAB Udhar Statement</h2>' +
+      '<p><b>Name:</b> ' +
+      esc(person) +
+      '</p>' +
+
+      '<table>' +
+      '<tr>' +
+      '<th>Type</th>' +
+      '<th>Amount</th>' +
+      '<th>Date</th>' +
+      '<th>Status</th>' +
+      '</tr>' +
+
+      data.map(function (k) {
+        return (
+          '<tr>' +
+          '<td>' +
+          (k.type === "give" ? "Give" : "Receive") +
+          '</td>' +
+          '<td>' +
+          money(k.amount) +
+          '</td>' +
+          '<td>' +
+          esc(k.date) +
+          '</td>' +
+          '<td>' +
+          esc(k.status || "pending") +
+          '</td>' +
+          '</tr>'
+        );
+      }).join("") +
+
+      '</table>' +
+      '</body></html>';
+
+    var win =
+      window.open("", "_blank");
+
+    if (!win) {
+      alert("PDF window open nahi ho saki.");
       return;
     }
 
-    if (type === "sale") {
-      D.sales = D.sales.filter(function (x) {
-        return x.id !== id;
-      });
-    } else {
-      D.purchases = D.purchases.filter(function (x) {
-        return x.id !== id;
-      });
-    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
 
-    save();
-    renderBusiness();
+    setTimeout(function () {
+      win.print();
+    }, 400);
   }
-
-  function payBusinessEntry(type, id) {
-    var arr =
-      type === "sale"
-        ? D.sales
-        : D.purchases;
-
-    var item = arr.find(function (x) {
-      return x.id === id;
-    });
-
-    if (!item) return;
-
-    var total = num(item.amount);
-    var paid = num(item.paid);
-    var remaining = Math.max(
-      0,
-      total - paid
-    );
-
-    if (remaining <= 0) {
-      item.status = "paid";
-      save();
-      renderBusiness();
-      return;
-    }
-
-    var amount =
-      num(
-        prompt(
-          "Payment amount:",
-          String(remaining)
-        )
-      );
-
-    if (amount <= 0) return;
-
-    if (amount > remaining) {
-      amount = remaining;
-    }
-
-    var method =
-      prompt(
-        "Payment method:",
-        item.method || "Cash"
-      ) || "Cash";
-
-    item.paid = paid + amount;
-
-    if (!Array.isArray(item.history)) {
-      item.history = [];
-    }
-
-    item.history.push({
-      id: uid("bizpay"),
-      date: today(),
-      amount: amount,
-      method: method
-    });
-
-    if (item.paid >= total) {
+   if (item.paid >= total) {
       item.paid = total;
       item.status = "paid";
     } else {
-      item.status = "partial";
+      item.status = "pending";
     }
 
     save();
     renderBusiness();
-  }
-
-  function businessHistory(type, id) {
-    var arr =
-      type === "sale"
-        ? D.sales
-        : D.purchases;
-
-    var item = arr.find(function (x) {
-      return x.id === id;
-    });
-
-    if (!item) return;
-
-    var history =
-      Array.isArray(item.history)
-        ? item.history
-        : [];
-
-    if (!history.length) {
-      alert("No payment history.");
-      return;
-    }
-
-    var text =
-      (type === "sale"
-        ? "Sale"
-        : "Purchase") +
-      " History\n\n";
-
-    history.forEach(function (h) {
-      text +=
-        h.date +
-        " | " +
-        money(h.amount) +
-        " | " +
-        (h.method || "Cash") +
-        "\n";
-    });
-
-    alert(text);
   }
 
   function renderBusiness() {
     var list = $("businessList");
     if (!list) return;
 
-    var tab =
-      D.ui.businessFilter ||
-      "customer";
+    var filter =
+      D.ui.businessFilter || "customer";
 
-    var khata =
-      getKhata("business");
-
-    var master =
-      D.business.filter(function (b) {
-        return b.type === tab;
-      });
-
-    var sales =
-      getBusinessSales();
-
-    var purchases =
-      getBusinessPurchases();
-
-    var give = 0;
-    var receive = 0;
-
-    khata.forEach(function (k) {
-      if (k.type === "give")
-        give += num(k.amount);
-
-      if (k.type === "receive")
-        receive += num(k.amount);
-    });
-
-    if ($("businessGiven"))
-      $("businessGiven").textContent =
-        money(give);
-
-    if ($("businessReceived"))
-      $("businessReceived").textContent =
-        money(receive);
-
-    if ($("businessNet"))
-      $("businessNet").textContent =
-        money(give - receive);
-
-    var html =
-      '<div class="business-actions" ' +
-      'style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' +
-
-      '<button type="button" onclick="addBusinessCustomer()">+ Customer</button>' +
-      '<button type="button" onclick="addBusinessSupplier()">+ Supplier</button>' +
-      '<button type="button" onclick="addBusinessSales()">+ Sale</button>' +
-      '<button type="button" onclick="addBusinessPurchase()">+ Purchase</button>' +
-
-      '</div>';
-
-    /* CUSTOMER / SUPPLIER */
+    var html = "";
 
     if (
-      tab === "customer" ||
-      tab === "supplier"
+      filter === "sales" ||
+      filter === "customer"
     ) {
-      if (!master.length) {
+      var sales = getBusinessSales();
+
+      if (filter === "sales") {
         html +=
-          '<div class="empty-state">No ' +
-          esc(tab) +
-          " records.</div>";
-      } else {
-        html += master.map(function (b) {
+          '<div class="section-title">Sales</div>';
+      }
+
+      sales.forEach(function (x) {
+        var paid = num(x.paid);
+        var remaining =
+          Math.max(0, num(x.amount) - paid);
+
+        html +=
+          '<div class="hisab-entry-card">' +
+
+          '<strong>' +
+          esc(x.customer || "Customer") +
+          '</strong>' +
+
+          '<div style="margin-top:5px;">' +
+          "Sale • " +
+          money(x.amount) +
+          '</div>' +
+
+          '<div style="font-size:12px;opacity:.7;">' +
+          esc(x.date) +
+          " • " +
+          esc(x.method || "Cash") +
+          '</div>' +
+
+          '<div style="margin-top:5px;">' +
+          "Paid: " +
+          money(paid) +
+          " • Remaining: " +
+          money(remaining) +
+          '</div>' +
+
+          '<div style="color:' +
+          (x.status === "paid"
+            ? "#168a45"
+            : "#d93025") +
+          ';font-weight:700;margin-top:4px;">' +
+          esc(x.status || "pending") +
+          '</div>' +
+
+          (x.note
+            ? '<div style="margin-top:5px;">' +
+              esc(x.note) +
+              '</div>'
+            : "") +
+
+          '<div style="margin-top:8px;">' +
+
+          '<button type="button" onclick="payBusinessEntry(\'sale\',\'' +
+          esc(x.id) +
+          '\')">Payment</button> ' +
+
+          '<button type="button" onclick="editBusinessEntry(\'sale\',\'' +
+          esc(x.id) +
+          '\')">Edit</button> ' +
+
+          '<button type="button" onclick="deleteBusinessEntry(\'sale\',\'' +
+          esc(x.id) +
+          '\')">Delete</button>' +
+
+          '</div>' +
+
+          '</div>';
+      });
+    }
+
+    if (
+      filter === "purchase" ||
+      filter === "supplier"
+    ) {
+      var purchases =
+        getBusinessPurchases();
+
+      if (filter === "purchase") {
+        html +=
+          '<div class="section-title">Purchase</div>';
+      }
+
+      purchases.forEach(function (x) {
+        var paid = num(x.paid);
+        var remaining =
+          Math.max(0, num(x.amount) - paid);
+
+        html +=
+          '<div class="hisab-entry-card">' +
+
+          '<strong>' +
+          esc(x.supplier || "Supplier") +
+          '</strong>' +
+
+          '<div style="margin-top:5px;">' +
+          "Purchase • " +
+          money(x.amount) +
+          '</div>' +
+
+          '<div style="font-size:12px;opacity:.7;">' +
+          esc(x.date) +
+          " • " +
+          esc(x.method || "Cash") +
+          '</div>' +
+
+          '<div style="margin-top:5px;">' +
+          "Paid: " +
+          money(paid) +
+          " • Remaining: " +
+          money(remaining) +
+          '</div>' +
+
+          '<div style="color:' +
+          (x.status === "paid"
+            ? "#168a45"
+            : "#d93025") +
+          ';font-weight:700;margin-top:4px;">' +
+          esc(x.status || "pending") +
+          '</div>' +
+
+          (x.note
+            ? '<div style="margin-top:5px;">' +
+              esc(x.note) +
+              '</div>'
+            : "") +
+
+          '<div style="margin-top:8px;">' +
+
+          '<button type="button" onclick="payBusinessEntry(\'purchase\',\'' +
+          esc(x.id) +
+          '\')">Payment</button> ' +
+
+          '<button type="button" onclick="editBusinessEntry(\'purchase\',\'' +
+          esc(x.id) +
+          '\')">Edit</button> ' +
+
+          '<button type="button" onclick="deleteBusinessEntry(\'purchase\',\'' +
+          esc(x.id) +
+          '\')">Delete</button>' +
+
+          '</div>' +
+
+          '</div>';
+      });
+    }
+
+    if (
+      filter === "customer" ||
+      filter === "supplier"
+    ) {
+      var masters =
+        D.business.filter(function (b) {
           return (
-            '<div class="hisab-entry-card">' +
-
-            '<div>' +
-            '<strong>' +
-            esc(b.name) +
-            '</strong>' +
-
-            '<div>' +
-            esc(b.phone || "") +
-            '</div>' +
-
-            '</div>' +
-
-            '<div>' +
-            '<button type="button" onclick="deleteBusinessMaster(\'' +
-            esc(b.id) +
-            "')\">Delete</button>" +
-            '</div>' +
-
-            '</div>'
+            b.type === filter &&
+            b.mode === "business"
           );
-        }).join("");
-      }
+        });
 
-      if (khata.length) {
+      masters.forEach(function (b) {
         html +=
-          '<h4 style="margin-top:18px;">Business Udhaar</h4>';
+          '<div class="hisab-entry-card">' +
 
-        html += khata
-          .slice()
-          .sort(function (a, b) {
-            return String(b.date)
-              .localeCompare(String(a.date));
-          })
-          .map(function (k) {
-            return (
-              '<div class="hisab-entry-card">' +
+          '<strong>' +
+          esc(b.name) +
+          '</strong>' +
 
-              '<div>' +
-              '<strong>' +
-              esc(k.person) +
-              '</strong>' +
+          '<div style="font-size:12px;opacity:.7;">' +
+          esc(b.phone || "") +
+          '</div>' +
 
-              '<div>' +
-              esc(k.date) +
-              '</div>' +
+          '<div style="margin-top:8px;">' +
 
-              '</div>' +
+          '<button type="button" onclick="deleteBusinessMaster(\'' +
+          esc(b.id) +
+          '\')">Delete</button>' +
 
-              '<div style="text-align:right;color:' +
-              (k.type === "give"
-                ? "#d93025"
-                : "#168a45") +
-              ';">' +
+          '</div>' +
 
-              (k.type === "give"
-                ? "Give "
-                : "Receive ") +
-
-              money(k.amount) +
-
-              '</div>' +
-
-              '</div>'
-            );
-          })
-          .join("");
-      }
+          '</div>';
+      });
     }
 
-    /* SALES */
-
-    if (tab === "sales") {
-      if (!sales.length) {
-        html +=
-          '<div class="empty-state">No sales yet.</div>';
-      } else {
-        html += sales
-          .slice()
-          .sort(function (a, b) {
-            return String(b.date)
-              .localeCompare(String(a.date));
-          })
-          .map(function (s) {
-            var remaining =
-              Math.max(
-                0,
-                num(s.amount) -
-                num(s.paid)
-              );
-
-            return (
-              '<div class="hisab-entry-card">' +
-
-              '<div>' +
-
-              '<strong>' +
-              esc(s.customer || "Customer") +
-              '</strong>' +
-
-              '<div>' +
-              esc(s.date) +
-              (s.note
-                ? " • " + esc(s.note)
-                : "") +
-              '</div>' +
-
-              '<div style="font-size:12px;margin-top:4px;">' +
-              'Total: ' +
-              money(s.amount) +
-              ' • Paid: ' +
-              money(s.paid) +
-              ' • Remaining: ' +
-              money(remaining) +
-              '</div>' +
-
-              '<div style="font-size:12px;">' +
-              'Status: ' +
-              esc(s.status || "pending") +
-              '</div>' +
-
-              '</div>' +
-
-              '<div style="text-align:right;">' +
-
-              '<strong style="color:#168a45;">' +
-              money(s.amount) +
-              '</strong>' +
-
-              '<div style="margin-top:6px;">' +
-
-              (remaining > 0
-                ? '<button type="button" onclick="payBusinessEntry(\'sale\',\'' +
-                  esc(s.id) +
-                  "')\">Pay</button> "
-                : "") +
-
-              '<button type="button" onclick="editBusinessEntry(\'sale\',\'' +
-              esc(s.id) +
-              "')\">Edit</button> " +
-
-              '<button type="button" onclick="businessHistory(\'sale\',\'' +
-              esc(s.id) +
-              "')\">History</button> " +
-
-              '<button type="button" onclick="deleteBusinessEntry(\'sale\',\'' +
-              esc(s.id) +
-              "')\">Delete</button>' +
-
-              '</div>' +
-
-              '</div>' +
-
-              '</div>'
-            );
-          })
-          .join("");
-      }
-    }
-
-    /* PURCHASE */
-
-    if (tab === "purchase") {
-      if (!purchases.length) {
-        html +=
-          '<div class="empty-state">No purchases yet.</div>';
-      } else {
-        html += purchases
-          .slice()
-          .sort(function (a, b) {
-            return String(b.date)
-              .localeCompare(String(a.date));
-          })
-          .map(function (p) {
-            var remaining =
-              Math.max(
-                0,
-                num(p.amount) -
-                num(p.paid)
-              );
-
-            return (
-              '<div class="hisab-entry-card">' +
-
-              '<div>' +
-
-              '<strong>' +
-              esc(p.supplier || "Supplier") +
-              '</strong>' +
-
-              '<div>' +
-              esc(p.date) +
-              (p.note
-                ? " • " + esc(p.note)
-                : "") +
-              '</div>' +
-
-              '<div style="font-size:12px;margin-top:4px;">' +
-              'Total: ' +
-              money(p.amount) +
-              ' • Paid: ' +
-              money(p.paid) +
-              ' • Remaining: ' +
-              money(remaining) +
-              '</div>' +
-
-              '<div style="font-size:12px;">' +
-              'Status: ' +
-              esc(p.status || "pending") +
-              '</div>' +
-
-              '</div>' +
-
-              '<div style="text-align:right;">' +
-
-              '<strong style="color:#d93025;">' +
-              money(p.amount) +
-              '</strong>' +
-
-              '<div style="margin-top:6px;">' +
-
-              (remaining > 0
-                ? '<button type="button" onclick="payBusinessEntry(\'purchase\',\'' +
-                  esc(p.id) +
-                  "')\">Pay</button> "
-                : "") +
-
-              '<button type="button" onclick="editBusinessEntry(\'purchase\',\'' +
-              esc(p.id) +
-              "')\">Edit</button> " +
-
-              '<button type="button" onclick="businessHistory(\'purchase\',\'' +
-              esc(p.id) +
-              "')\">History</button> " +
-
-              '<button type="button" onclick="deleteBusinessEntry(\'purchase\',\'' +
-              esc(p.id) +
-              "')\">Delete</button>' +
-
-              '</div>' +
-
-              '</div>' +
-
-              '</div>'
-            );
-          })
-          .join("");
-      }
+    if (!html) {
+      html =
+        '<div class="empty-state">No business entries yet.</div>';
     }
 
     list.innerHTML = html;
@@ -1926,58 +1059,57 @@
      TRANSACTIONS
      ========================================================= */
 
-  function addTransaction() {
+  function addTransaction(type) {
     var amount =
-      $("transactionAmount")
-        ? num($("transactionAmount").value)
-        : 0;
+      num(prompt(
+        type === "income"
+          ? "Income amount:"
+          : "Expense amount:"
+      ));
 
     if (amount <= 0) {
       alert("Valid amount enter karein.");
       return;
     }
 
+    var category =
+      prompt("Category:") || "";
+
+    var note =
+      prompt("Note (optional):") || "";
+
+    var date =
+      prompt(
+        "Date (YYYY-MM-DD):",
+        today()
+      ) || today();
+
     D.transactions.push({
       id: uid("txn"),
       mode: D.mode,
-
-      type:
-        $("transactionType")
-          ? $("transactionType").value
-          : "expense",
-
+      type: type,
       amount: amount,
-
-      category:
-        $("transactionCategory")
-          ? $("transactionCategory").value.trim()
-          : "",
-
-      note:
-        $("transactionNote")
-          ? $("transactionNote").value.trim()
-          : "",
-
-      date:
-        $("transactionDate")
-          ? safeDate($("transactionDate").value)
-          : today()
+      category: category.trim(),
+      note: note.trim(),
+      date: safeDate(date)
     });
 
-    if ($("transactionAmount"))
-      $("transactionAmount").value = "";
+    save();
+    renderTransactions();
+    renderHome();
+  }
 
-    if ($("transactionCategory"))
-      $("transactionCategory").value = "";
+  function deleteTransaction(id) {
+    if (!confirm("Transaction delete karein?")) {
+      return;
+    }
 
-    if ($("transactionNote"))
-      $("transactionNote").value = "";
-
-    if ($("transactionDate"))
-      $("transactionDate").value = today();
+    D.transactions =
+      D.transactions.filter(function (t) {
+        return t.id !== id;
+      });
 
     save();
-
     renderTransactions();
     renderHome();
   }
@@ -1987,15 +1119,14 @@
     if (!list) return;
 
     var data =
-      D.transactions
-        .filter(function (t) {
-          return t.mode === D.mode;
-        })
-        .slice()
-        .sort(function (a, b) {
-          return String(b.date)
-            .localeCompare(String(a.date));
-        });
+      D.transactions.filter(function (t) {
+        return t.mode === D.mode;
+      });
+
+    data.sort(function (a, b) {
+      return String(b.date)
+        .localeCompare(String(a.date));
+    });
 
     if (!data.length) {
       list.innerHTML =
@@ -2003,241 +1134,138 @@
       return;
     }
 
-    list.innerHTML =
-      data.map(function (t) {
-        var income =
-          t.type === "income";
+    list.innerHTML = data.map(function (t) {
+      var income =
+        t.type === "income";
 
-        return (
-          '<div class="hisab-entry-card">' +
+      return (
+        '<div class="hisab-entry-card">' +
 
-          '<div>' +
-          '<strong>' +
-          esc(
-            t.category ||
-            (income
-              ? "Income"
-              : "Expense")
-          ) +
-          '</strong>' +
+        '<strong>' +
+        (income ? "Income" : "Expense") +
+        '</strong>' +
 
-          '<div>' +
-          esc(t.date) +
-          (t.note
-            ? " • " + esc(t.note)
-            : "") +
-          '</div>' +
+        '<div style="color:' +
+        (income ? "#168a45" : "#d93025") +
+        ';font-weight:700;margin-top:5px;">' +
+        money(t.amount) +
+        '</div>' +
 
-          '</div>' +
+        '<div style="font-size:12px;opacity:.7;">' +
+        esc(t.date) +
+        (t.category
+          ? " • " + esc(t.category)
+          : "") +
+        '</div>' +
 
-          '<strong style="color:' +
-          (income
-            ? "#168a45"
-            : "#d93025") +
-          ';">' +
+        (t.note
+          ? '<div style="margin-top:5px;">' +
+            esc(t.note) +
+            '</div>'
+          : "") +
 
-          (income ? "+" : "-") +
-          money(t.amount) +
+        '<div style="margin-top:8px;">' +
 
-          '</strong>' +
+        '<button type="button" onclick="deleteTransaction(\'' +
+        esc(t.id) +
+        '\')">Delete</button>' +
 
-          '</div>'
-        );
-      }).join("");
+        '</div>' +
+
+        '</div>'
+      );
+    }).join("");
   }
 
   /* =========================================================
-     BUDGET / GOALS
+     PLANNING / BUDGET
      ========================================================= */
 
-  function calcBudget() {
-    var amount =
-      $("budgetAmount")
-        ? num($("budgetAmount").value)
-        : 0;
+  function setBudget() {
+    var current =
+      D.mode === "business"
+        ? num(D.budget.business)
+        : num(D.budget.personal);
 
-    if (amount < 0) amount = 0;
+    var value =
+      num(
+        prompt(
+          "Budget amount:",
+          String(current || "")
+        )
+      );
 
-    D.budget[D.mode] = amount;
+    if (value < 0) return;
+
+    if (D.mode === "business") {
+      D.budget.business = value;
+    } else {
+      D.budget.personal = value;
+    }
 
     save();
     renderPlanning();
+    renderHome();
   }
 
-  function calcGoal() {
+  function addGoal() {
     var name =
-      $("goalName")
-        ? $("goalName").value.trim()
-        : "";
+      prompt("Goal name:");
+
+    if (!name || !name.trim()) return;
 
     var target =
-      $("goalTarget")
-        ? num($("goalTarget").value)
-        : 0;
+      num(prompt("Target amount:"));
 
-    var saved =
-      $("goalSaved")
-        ? num($("goalSaved").value)
-        : 0;
-
-    if (!name || target <= 0) {
-      alert("Goal name aur target amount enter karein.");
-      return;
-    }
+    if (target <= 0) return;
 
     D.goals.push({
       id: uid("goal"),
       mode: D.mode,
-      name: name,
+      name: name.trim(),
       target: target,
-      saved: saved,
-      date:
-        $("goalDate")
-          ? safeDate($("goalDate").value)
-          : today()
+      saved: 0,
+      date: today()
     });
-
-    if ($("goalName"))
-      $("goalName").value = "";
-
-    if ($("goalTarget"))
-      $("goalTarget").value = "";
-
-    if ($("goalSaved"))
-      $("goalSaved").value = "";
-
-    if ($("goalDate"))
-      $("goalDate").value = "";
 
     save();
     renderPlanning();
   }
 
-  function renderPlanning() {
-    var page = $("planning");
-    if (!page) return;
-
-    var budget =
-      num(D.budget[D.mode]);
-
-    var spent =
-      D.transactions
-        .filter(function (t) {
-          return (
-            t.mode === D.mode &&
-            t.type === "expense"
-          );
-        })
-        .reduce(function (sum, t) {
-          return sum + num(t.amount);
-        }, 0);
-
-    var remaining =
-      budget - spent;
-
-    var percent =
-      budget > 0
-        ? (spent / budget) * 100
-        : 0;
-
-    var displayPercent =
-      Math.min(100, Math.max(0, percent));
-
-    var old =
-      page.querySelector(
-        ".hisab-budget-info"
-      );
-
-    if (old) old.remove();
-
-    var info =
-      document.createElement("div");
-
-    info.className =
-      "hisab-budget-info";
-
-    info.style.marginBottom =
-      "15px";
-
-    info.innerHTML =
-      "<strong>Budget:</strong> " +
-      money(budget) +
-
-      "<br><strong>Spent:</strong> " +
-      money(spent) +
-
-      "<br><strong>Remaining:</strong> " +
-      money(remaining) +
-
-      "<br><strong>Progress:</strong> " +
-      displayPercent.toFixed(1) +
-      "%" +
-
-      (budget > 0 && spent > budget
-        ? '<div style="margin-top:6px;color:#d93025;font-weight:bold;">Budget exceeded by ' +
-          money(spent - budget) +
-          "</div>"
-        : "");
-
-    page.prepend(info);
-
-    var goalList = $("goalList");
-    if (!goalList) return;
-
-    var goals =
-      D.goals.filter(function (g) {
-        return g.mode === D.mode;
+  function addGoalSaving(id) {
+    var goal =
+      D.goals.find(function (g) {
+        return g.id === id;
       });
 
-    if (!goals.length) {
-      goalList.innerHTML =
-        '<div class="empty-state">No goals yet.</div>';
+    if (!goal) return;
+
+    var amount =
+      num(prompt("Saving amount:"));
+
+    if (amount <= 0) return;
+
+    goal.saved =
+      num(goal.saved) + amount;
+
+    save();
+    renderPlanning();
+  }
+
+  function deleteGoal(id) {
+    if (!confirm("Goal delete karein?")) {
       return;
     }
 
-    goalList.innerHTML =
-      goals.map(function (g) {
-        var p =
-          num(g.target) > 0
-            ? Math.min(
-                100,
-                (num(g.saved) /
-                  num(g.target)) *
-                  100
-              )
-            : 0;
+    D.goals =
+      D.goals.filter(function (g) {
+        return g.id !== id;
+      });
 
-        return (
-          '<div class="hisab-entry-card">' +
-
-          '<div>' +
-          '<strong>' +
-          esc(g.name) +
-          '</strong>' +
-
-          '<div>' +
-          money(g.saved) +
-          " / " +
-          money(g.target) +
-          '</div>' +
-
-          '</div>' +
-
-          '<strong>' +
-          p.toFixed(0) +
-          "%" +
-          '</strong>' +
-
-          '</div>'
-        );
-      }).join("");
+    save();
+    renderPlanning();
   }
-
-  /* =========================================================
-     BILLS
-     ========================================================= */
-
-  function addBill(type) {
+function addBill(type) {
     var name = "";
     var amount = 0;
     var due = "";
@@ -2259,49 +1287,22 @@
           : today();
     }
 
-    if (type === "Credit Card") {
-      name = "Credit Card";
-
-      amount =
-        $("cardBill")
-          ? num($("cardBill").value)
-          : 0;
-
-      due =
-        $("cardDue")
-          ? safeDate($("cardDue").value)
-          : today();
-    }
-
-    if (!name) {
-      name =
-        prompt("Bill name:");
-    }
-
-    if (!name) return;
-
-    if (amount <= 0) {
-      amount =
-        num(prompt("Amount:"));
-    }
-
-    if (amount <= 0) {
-      alert("Valid amount enter karein.");
+    if (!name || amount <= 0) {
+      alert("Bill name aur amount enter karein.");
       return;
     }
 
     D.bills.push({
       id: uid("bill"),
       mode: D.mode,
-      type: type || "Bill",
-      name: name.trim(),
+      name: name,
       amount: amount,
-      due: due || today(),
+      due: due,
       status: "pending",
-      history: []
+      paid: 0,
+      history: [],
+      date: today()
     });
-
-    save();
 
     if ($("billName"))
       $("billName").value = "";
@@ -2309,9 +1310,7 @@
     if ($("billAmount"))
       $("billAmount").value = "";
 
-    if ($("cardBill"))
-      $("cardBill").value = "";
-
+    save();
     renderCredit();
   }
 
@@ -2323,22 +1322,6 @@
 
     if (!bill) return;
 
-    var amount =
-      num(
-        prompt(
-          "Payment amount:",
-          String(
-            Math.max(
-              0,
-              num(bill.amount) -
-              num(bill.paid)
-            )
-          )
-        )
-      );
-
-    if (amount <= 0) return;
-
     var remaining =
       Math.max(
         0,
@@ -2346,8 +1329,32 @@
         num(bill.paid)
       );
 
-    if (amount > remaining)
+    if (remaining <= 0) {
+      bill.status = "paid";
+      save();
+      renderCredit();
+      return;
+    }
+
+    var amount =
+      num(
+        prompt(
+          "Payment amount:",
+          String(remaining)
+        )
+      );
+
+    if (amount <= 0) return;
+
+    if (amount > remaining) {
       amount = remaining;
+    }
+
+    var method =
+      prompt(
+        "Payment method:",
+        "Cash"
+      ) || "Cash";
 
     bill.paid =
       num(bill.paid) + amount;
@@ -2360,17 +1367,15 @@
       id: uid("billpay"),
       date: today(),
       amount: amount,
-      method:
-        prompt(
-          "Payment method:",
-          "Cash"
-        ) || "Cash"
+      method: method
     });
 
-    bill.status =
-      bill.paid >= num(bill.amount)
-        ? "paid"
-        : "partial";
+    if (bill.paid >= num(bill.amount)) {
+      bill.paid = num(bill.amount);
+      bill.status = "paid";
+    } else {
+      bill.status = "partial";
+    }
 
     save();
     renderCredit();
@@ -2395,8 +1400,7 @@
     }
 
     var text =
-      bill.name +
-      " Payment History\n\n";
+      "Bill Payment History\n\n";
 
     history.forEach(function (h) {
       text +=
@@ -2411,89 +1415,58 @@
     alert(text);
   }
 
-  /* =========================================================
-     LOAN / EMI
-     ========================================================= */
-
-  function calcEMI() {
-    var principal =
-      $("emiPrincipal")
-        ? num($("emiPrincipal").value)
-        : 0;
-
-    var rate =
-      $("emiRate")
-        ? num($("emiRate").value)
-        : 0;
-
-    var months =
-      $("emiMonths")
-        ? num($("emiMonths").value)
-        : 0;
-
-    if (
-      principal <= 0 ||
-      months <= 0
-    ) {
-      alert(
-        "Principal aur months enter karein."
-      );
+  function deleteBill(id) {
+    if (!confirm("Bill delete karein?")) {
       return;
     }
 
-    var r =
-      rate / 12 / 100;
+    D.bills =
+      D.bills.filter(function (b) {
+        return b.id !== id;
+      });
 
-    var emi;
+    save();
+    renderCredit();
+  }
 
-    if (r === 0) {
-      emi = principal / months;
-    } else {
-      emi =
-        (principal * r *
-          Math.pow(1 + r, months)) /
-        (Math.pow(1 + r, months) - 1);
-    }
+  function addLoan() {
+    var name =
+      $("loanName")
+        ? $("loanName").value.trim()
+        : "";
 
-    if ($("emiResult")) {
-      $("emiResult").textContent =
-        "Monthly EMI: " +
-        money(emi);
-    }
+    var amount =
+      $("loanAmount")
+        ? num($("loanAmount").value)
+        : 0;
 
-    if (
-      !confirm(
-        "Is EMI ko Loan record mein save karna hai?"
-      )
-    ) {
+    var due =
+      $("loanDue")
+        ? safeDate($("loanDue").value)
+        : today();
+
+    if (!name || amount <= 0) {
+      alert("Loan name aur amount enter karein.");
       return;
     }
-
-    var loanName =
-      prompt(
-        "Loan / Bank name:",
-        "Loan"
-      ) || "Loan";
-
-    var dueDate =
-      prompt(
-        "First due date (YYYY-MM-DD):",
-        today()
-      ) || today();
 
     D.loans.push({
       id: uid("loan"),
       mode: D.mode,
-      name: loanName.trim(),
-      principal: principal,
-      rate: rate,
-      months: months,
-      emi: emi,
-      due: safeDate(dueDate),
+      name: name,
+      amount: amount,
+      due: due,
       status: "pending",
       paid: 0,
-      history: []
+      history: [],
+      date: today()
     });
+
+    if ($("loanName"))
+      $("loanName").value = "";
+
+    if ($("loanAmount"))
+      $("loanAmount").value = "";
 
     save();
     renderCredit();
@@ -2510,7 +1483,7 @@
     var remaining =
       Math.max(
         0,
-        num(loan.principal) -
+        num(loan.amount) -
         num(loan.paid)
       );
 
@@ -2525,19 +1498,15 @@
       num(
         prompt(
           "Payment amount:",
-          String(
-            Math.min(
-              num(loan.emi) || remaining,
-              remaining
-            )
-          )
+          String(remaining)
         )
       );
 
     if (amount <= 0) return;
 
-    if (amount > remaining)
+    if (amount > remaining) {
       amount = remaining;
+    }
 
     var method =
       prompt(
@@ -2559,10 +1528,12 @@
       method: method
     });
 
-    loan.status =
-      loan.paid >= num(loan.principal)
-        ? "paid"
-        : "pending";
+    if (loan.paid >= num(loan.amount)) {
+      loan.paid = num(loan.amount);
+      loan.status = "paid";
+    } else {
+      loan.status = "partial";
+    }
 
     save();
     renderCredit();
@@ -2587,8 +1558,7 @@
     }
 
     var text =
-      loan.name +
-      " Loan Payment History\n\n";
+      "Loan / EMI Payment History\n\n";
 
     history.forEach(function (h) {
       text +=
@@ -2603,26 +1573,8 @@
     alert(text);
   }
 
-  function toggleLoanStatus(id) {
-    var loan =
-      D.loans.find(function (l) {
-        return l.id === id;
-      });
-
-    if (!loan) return;
-
-    if (loan.status === "paid") {
-      loan.status = "pending";
-    } else {
-      loan.status = "paid";
-    }
-
-    save();
-    renderCredit();
-  }
-
   function deleteLoan(id) {
-    if (!confirm("Loan delete karein?")) {
+    if (!confirm("Loan / EMI delete karein?")) {
       return;
     }
 
@@ -2635,13 +1587,12 @@
     renderCredit();
   }
 
-  /* =========================================================
-     CREDIT RENDER
-     ========================================================= */
-
   function renderCredit() {
-    var list = $("billList");
-    if (!list) return;
+    var page = $("credit");
+    if (!page) return;
+
+    var billList = $("billList");
+    var loanList = $("loanList");
 
     var bills =
       D.bills.filter(function (b) {
@@ -2653,650 +1604,280 @@
         return l.mode === D.mode;
       });
 
-    var html = "";
+    if (billList) {
+      if (!bills.length) {
+        billList.innerHTML =
+          '<div class="empty-state">No bills yet.</div>';
+      } else {
+        billList.innerHTML =
+          bills.map(function (b) {
+            var remaining =
+              Math.max(
+                0,
+                num(b.amount) -
+                num(b.paid)
+              );
 
-    /* BILLS */
+            return (
+              '<div class="hisab-entry-card">' +
 
-    if (bills.length) {
-      html += "<h4>Bills</h4>";
+              '<div>' +
+              '<strong>' +
+              esc(b.name) +
+              '</strong>' +
 
-      html += bills.map(function (b) {
-        var total = num(b.amount);
-        var paid = num(b.paid);
-        var remaining =
-          Math.max(0, total - paid);
+              '<div>' +
+              "Due: " +
+              esc(b.due) +
+              '</div>' +
 
-        return (
-          '<div class="hisab-entry-card">' +
+              '<div style="font-size:12px;margin-top:4px;">' +
+              "Total: " +
+              money(b.amount) +
+              " • Paid: " +
+              money(b.paid) +
+              " • Remaining: " +
+              money(remaining) +
+              '</div>' +
 
-          '<div>' +
+              '<div style="color:' +
+              (b.status === "paid"
+                ? "#168a45"
+                : "#d93025") +
+              ';font-weight:700;">' +
+              esc(b.status || "pending") +
+              '</div>' +
 
-          '<strong>' +
-          esc(b.name) +
-          '</strong>' +
+              '</div>' +
 
-          '<div>' +
-          esc(b.type) +
-          " • Due " +
-          esc(b.due) +
-          '</div>' +
+              '<div style="margin-top:8px;">' +
 
-          '<div>' +
-          "Total: " +
-          money(total) +
-          " • Paid: " +
-          money(paid) +
-          " • Remaining: " +
-          money(remaining) +
-          '</div>' +
+              (remaining > 0
+                ? '<button type="button" onclick="payBill(\'' +
+                  esc(b.id) +
+                  '\')">Pay</button> '
+                : "") +
 
-          '<div>Status: ' +
-          esc(b.status || "pending") +
-          '</div>' +
-
-          '</div>' +
-
-          '<div>' +
-
-          '<strong>' +
-          money(total) +
-          '</strong>' +
-
-          (remaining > 0
-            ? ' <button type="button" onclick="payBill(\'' +
+              '<button type="button" onclick="billHistory(\'' +
               esc(b.id) +
-              "')\">Paid</button>"
-            : "") +
+              '\')">History</button> ' +
 
-          ' <button type="button" onclick="billHistory(\'' +
-          esc(b.id) +
-          "')\">History</button>" +
+              '<button type="button" onclick="deleteBill(\'' +
+              esc(b.id) +
+              '\')">Delete</button>' +
 
-          '</div>' +
+              '</div>' +
 
-          '</div>'
-        );
-      }).join("");
+              '</div>'
+            );
+          }).join("");
+      }
     }
 
-    /* LOANS */
+    if (loanList) {
+      if (!loans.length) {
+        loanList.innerHTML =
+          '<div class="empty-state">No loans / EMI yet.</div>';
+      } else {
+        loanList.innerHTML =
+          loans.map(function (l) {
+            var remaining =
+              Math.max(
+                0,
+                num(l.amount) -
+                num(l.paid)
+              );
 
-    if (loans.length) {
-      html +=
-        "<h4>Loans / EMI</h4>";
+            return (
+              '<div class="hisab-entry-card">' +
 
-      html += loans.map(function (l) {
-        var principal =
-          num(l.principal);
+              '<div>' +
+              '<strong>' +
+              esc(l.name) +
+              '</strong>' +
 
-        var paid =
-          num(l.paid);
+              '<div>' +
+              "Due: " +
+              esc(l.due) +
+              '</div>' +
 
-        var remaining =
-          Math.max(
-            0,
-            principal - paid
-          );
+              '<div style="font-size:12px;margin-top:4px;">' +
+              "Total: " +
+              money(l.amount) +
+              " • Paid: " +
+              money(l.paid) +
+              " • Remaining: " +
+              money(remaining) +
+              '</div>' +
 
-        return (
-          '<div class="hisab-entry-card">' +
+              '<div style="color:' +
+              (l.status === "paid"
+                ? "#168a45"
+                : "#d93025") +
+              ';font-weight:700;">' +
+              esc(l.status || "pending") +
+              '</div>' +
 
-          '<div>' +
+              '</div>' +
 
-          '<strong>' +
-          esc(l.name) +
-          '</strong>' +
+              '<div style="margin-top:8px;">' +
 
-          '<div>' +
-          "EMI " +
-          money(l.emi) +
-          " • Due " +
-          esc(l.due) +
-          '</div>' +
+              (remaining > 0
+                ? '<button type="button" onclick="payLoan(\'' +
+                  esc(l.id) +
+                  '\')">Pay</button> '
+                : "") +
 
-          '<div>' +
-          "Principal: " +
-          money(principal) +
-          " • Paid: " +
-          money(paid) +
-          " • Remaining: " +
-          money(remaining) +
-          '</div>' +
-
-          '<div>Status: ' +
-          esc(l.status || "pending") +
-          '</div>' +
-
-          '</div>' +
-
-          '<div>' +
-
-          (remaining > 0
-            ? '<button type="button" onclick="payLoan(\'' +
+              '<button type="button" onclick="loanHistory(\'' +
               esc(l.id) +
-              "')\">Pay</button>"
-            : "") +
+              '\')">History</button> ' +
 
-          ' <button type="button" onclick="loanHistory(\'' +
-          esc(l.id) +
-          "')\">History</button>" +
+              '<button type="button" onclick="deleteLoan(\'' +
+              esc(l.id) +
+              '\')">Delete</button>' +
 
-          ' <button type="button" onclick="toggleLoanStatus(\'' +
-          esc(l.id) +
-          "')\">Status</button>" +
+              '</div>' +
 
-          ' <button type="button" onclick="deleteLoan(\'' +
-          esc(l.id) +
-          "')\">Delete</button>" +
-
-          '</div>' +
-
-          '</div>'
-        );
-      }).join("");
+              '</div>'
+            );
+          }).join("");
+      }
     }
-
-    if (!html) {
-      html =
-        '<div class="empty-state">No bills or loans yet.</div>';
-    }
-
-    list.innerHTML = html;
   }
 
   /* =========================================================
-     REPORTS / ANALYTICS
+     REPORTS
      ========================================================= */
 
   function renderReports() {
+    var root = $("reports");
+    if (!root) return;
+
+    var transactions =
+      D.transactions.filter(function (t) {
+        return t.mode === D.mode;
+      });
+
     var income = 0;
     var expense = 0;
+
+    transactions.forEach(function (t) {
+      if (t.type === "income") {
+        income += num(t.amount);
+      }
+
+      if (t.type === "expense") {
+        expense += num(t.amount);
+      }
+    });
+
     var give = 0;
     var receive = 0;
 
-    D.transactions.forEach(function (t) {
-      if (t.mode !== D.mode) return;
-
-      if (t.type === "income")
-        income += num(t.amount);
-
-      if (t.type === "expense")
-        expense += num(t.amount);
-    });
-
-    D.khata.forEach(function (k) {
-      if (k.mode !== D.mode) return;
-
-      if (k.type === "give")
+    getKhata(D.mode).forEach(function (k) {
+      if (k.type === "give") {
         give += num(k.amount);
+      }
 
-      if (k.type === "receive")
+      if (k.type === "receive") {
         receive += num(k.amount);
+      }
     });
 
-    var sales = 0;
-    var purchases = 0;
-    var salePaid = 0;
-    var purchasePaid = 0;
+    var salesTotal =
+      getBusinessSales().reduce(function (s, x) {
+        return s + num(x.amount);
+      }, 0);
 
-    if (D.mode === "business") {
-      getBusinessSales().forEach(function (s) {
-        sales += num(s.amount);
-        salePaid += num(s.paid);
-      });
+    var purchaseTotal =
+      getBusinessPurchases().reduce(function (s, x) {
+        return s + num(x.amount);
+      }, 0);
 
-      getBusinessPurchases().forEach(function (p) {
-        purchases += num(p.amount);
-        purchasePaid += num(p.paid);
-      });
-    }
+    var budget =
+      num(D.budget[D.mode]);
 
-    var balance =
+    var spent =
+      transactions.reduce(function (s, x) {
+        return x.type === "expense"
+          ? s + num(x.amount)
+          : s;
+      }, 0);
+
+    var remaining =
+      budget - spent;
+
+    var net =
       income -
       expense +
       receive -
       give;
 
-    var budget =
-      num(D.budget[D.mode]);
+    var box =
+      root.querySelector(
+        ".hisab-report-box"
+      );
 
-    var budgetSpent =
-      D.transactions
-        .filter(function (t) {
-          return (
-            t.mode === D.mode &&
-            t.type === "expense"
-          );
-        })
-        .reduce(function (s, t) {
-          return s + num(t.amount);
-        }, 0);
+    if (!box) {
+      box =
+        document.createElement("div");
 
-    var pendingBills =
-      D.bills
-        .filter(function (b) {
-          return (
-            b.mode === D.mode &&
-            b.status !== "paid"
-          );
-        })
-        .reduce(function (s, b) {
-          return (
-            s +
-            Math.max(
-              0,
-              num(b.amount) -
-              num(b.paid)
-            )
-          );
-        }, 0);
+      box.className =
+        "hisab-report-box";
 
-    var pendingLoans =
-      D.loans
-        .filter(function (l) {
-          return (
-            l.mode === D.mode &&
-            l.status !== "paid"
-          );
-        })
-        .reduce(function (s, l) {
-          return (
-            s +
-            Math.max(
-              0,
-              num(l.principal) -
-              num(l.paid)
-            )
-          );
-        }, 0);
+      root.prepend(box);
+    }
 
-    if ($("reportIncome"))
-      $("reportIncome").textContent =
-        money(income);
-
-    if ($("reportExpense"))
-      $("reportExpense").textContent =
-        money(expense);
-
-    if ($("reportGive"))
-      $("reportGive").textContent =
-        money(give);
-
-    if ($("reportReceive"))
-      $("reportReceive").textContent =
-        money(receive);
-
-    var content =
-      $("reportContent");
-
-    if (!content) return;
-
-    var html =
-      "<h3>HISAB Analytics</h3>" +
-
-      "<p><strong>Mode:</strong> " +
-      esc(D.mode) +
-      "</p>" +
-
-      "<p><strong>Income:</strong> " +
+    box.innerHTML =
+      '<div class="hisab-entry-card">' +
+      '<strong>Income</strong><br>' +
       money(income) +
-      "</p>" +
+      '</div>' +
 
-      "<p><strong>Expense:</strong> " +
+      '<div class="hisab-entry-card">' +
+      '<strong>Expense</strong><br>' +
       money(expense) +
-      "</p>" +
+      '</div>' +
 
-      "<p><strong>Net Cash:</strong> " +
-      money(income - expense) +
-      "</p>" +
+      '<div class="hisab-entry-card">' +
+      '<strong>Net Balance</strong><br>' +
+      money(net) +
+      '</div>' +
 
-      "<p><strong>Give:</strong> " +
+      '<div class="hisab-entry-card">' +
+      '<strong>Give</strong><br>' +
       money(give) +
-      "</p>" +
+      '</div>' +
 
-      "<p><strong>Receive:</strong> " +
+      '<div class="hisab-entry-card">' +
+      '<strong>Receive</strong><br>' +
       money(receive) +
-      "</p>" +
+      '</div>' +
 
-      "<p><strong>Udhaar Balance:</strong> " +
-      money(give - receive) +
-      "</p>" +
+      '<div class="hisab-entry-card">' +
+      '<strong>Budget</strong><br>' +
+      money(budget) +
+      '<br>Spent: ' +
+      money(spent) +
+      '<br>Remaining: ' +
+      money(remaining) +
+      '</div>' +
 
-      "<p><strong>Overall Balance:</strong> " +
-      money(balance) +
-      "</p>";
+      (D.mode === "business"
+        ? '<div class="hisab-entry-card">' +
+          '<strong>Sales</strong><br>' +
+          money(salesTotal) +
+          '<br>Purchases: ' +
+          money(purchaseTotal) +
+          '</div>'
+        : "");
 
-    if (budget > 0) {
-      var bp =
-        Math.min(
-          100,
-          Math.max(
-            0,
-            (budgetSpent /
-              budget) *
-              100
-          )
-        );
-
-      html +=
-        "<hr>" +
-        "<p><strong>Budget:</strong> " +
-        money(budget) +
-        "</p>" +
-
-        "<p><strong>Budget Spent:</strong> " +
-        money(budgetSpent) +
-        "</p>" +
-
-        "<p><strong>Budget Remaining:</strong> " +
-        money(
-          budget - budgetSpent
-        ) +
-        "</p>" +
-
-        "<p><strong>Budget Progress:</strong> " +
-        bp.toFixed(1) +
-        "%</p>" +
-
-        '<div style="height:10px;background:#ddd;border-radius:10px;overflow:hidden;">' +
-        '<div style="height:100%;width:' +
-        bp +
-        '%;background:#168a45;"></div>' +
-        "</div>";
-    }
-
-    if (D.mode === "business") {
-      html +=
-        "<hr>" +
-
-        "<p><strong>Sales:</strong> " +
-        money(sales) +
-        "</p>" +
-
-        "<p><strong>Sales Paid:</strong> " +
-        money(salePaid) +
-        "</p>" +
-
-        "<p><strong>Purchase:</strong> " +
-        money(purchases) +
-        "</p>" +
-
-        "<p><strong>Purchase Paid:</strong> " +
-        money(purchasePaid) +
-        "</p>" +
-
-        "<p><strong>Business Net:</strong> " +
-        money(sales - purchases) +
-        "</p>";
-    }
-
-    html +=
-      "<hr>" +
-
-      "<p><strong>Pending Bills:</strong> " +
-      money(pendingBills) +
-      "</p>" +
-
-      "<p><strong>Pending Loans:</strong> " +
-      money(pendingLoans) +
-      "</p>" +
-
-      "<p><strong>Transactions:</strong> " +
-      D.transactions.filter(function (t) {
-        return t.mode === D.mode;
-      }).length +
-      "</p>" +
-
-      "<p><strong>Udhaar Entries:</strong> " +
-      D.khata.filter(function (k) {
-        return k.mode === D.mode;
-      }).length +
-      "</p>";
-
-    content.innerHTML = html;
   }
-
-  function makeSummaryText() {
-    var income = 0;
-    var expense = 0;
-    var give = 0;
-    var receive = 0;
-
-    D.transactions.forEach(function (t) {
-      if (t.mode !== D.mode) return;
-
-      if (t.type === "income")
-        income += num(t.amount);
-
-      if (t.type === "expense")
-        expense += num(t.amount);
-    });
-
-    D.khata.forEach(function (k) {
-      if (k.mode !== D.mode) return;
-
-      if (k.type === "give")
-        give += num(k.amount);
-
-      if (k.type === "receive")
-        receive += num(k.amount);
-    });
-
-    var text =
-      "HISAB SUMMARY\n\n" +
-
-      "Mode: " +
-      D.mode +
-      "\n" +
-
-      "Currency: " +
-      D.currency +
-      "\n\n" +
-
-      "Income: " +
-      money(income) +
-      "\n" +
-
-      "Expense: " +
-      money(expense) +
-      "\n" +
-
-      "Give: " +
-      money(give) +
-      "\n" +
-
-      "Receive: " +
-      money(receive) +
-      "\n" +
-
-      "Balance: " +
-      money(
-        income -
-        expense +
-        receive -
-        give
-      ) +
-      "\n";
-
-    if (D.mode === "business") {
-      var sales =
-        getBusinessSales()
-          .reduce(function (s, x) {
-            return s + num(x.amount);
-          }, 0);
-
-      var purchases =
-        getBusinessPurchases()
-          .reduce(function (s, x) {
-            return s + num(x.amount);
-          }, 0);
-
-      text +=
-        "\nSales: " +
-        money(sales) +
-
-        "\nPurchase: " +
-        money(purchases) +
-
-        "\nBusiness Net: " +
-        money(sales - purchases);
-    }
-
-    return text;
-  }
-
-  function exportSummary() {
-    var text =
-      makeSummaryText();
-
-    if (navigator.share) {
-      navigator.share({
-        title: "HISAB Summary",
-        text: text
-      }).catch(function () {});
+function deleteReminder(id) {
+    if (!confirm("Reminder delete karein?")) {
       return;
     }
 
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(text)
-        .then(function () {
-          alert("Summary copied.");
-        });
-      return;
-    }
-
-    alert(text);
-  }
-
-  function exportSummaryPDF() {
-    var w =
-      window.open("", "_blank");
-
-    if (!w) {
-      alert("Popup blocked.");
-      return;
-    }
-
-    var content =
-      $("reportContent");
-
-    w.document.open();
-
-    w.document.write(
-      "<html><head>" +
-
-      "<title>HISAB Report</title>" +
-
-      "<style>" +
-      "body{font-family:Arial;padding:20px;color:#111}" +
-      "h2{margin-bottom:15px}" +
-      "p{padding:4px 0;border-bottom:1px solid #eee}" +
-      "@media print{button{display:none}}" +
-      "</style>" +
-
-      "</head><body>" +
-
-      "<h2>HISAB Report</h2>" +
-
-      (content
-        ? content.innerHTML
-        : "") +
-
-      "</body></html>"
-    );
-
-    w.document.close();
-
-    setTimeout(function () {
-      w.print();
-    }, 400);
-  }
-
-  /* =========================================================
-     REMINDERS
-     ========================================================= */
-
-  function addReminder() {
-    var name =
-      $("reminderName")
-        ? $("reminderName").value.trim()
-        : "";
-
-    if (!name) {
-      alert("Reminder name enter karein.");
-      return;
-    }
-
-    D.reminders.push({
-      id: uid("reminder"),
-      name: name,
-      date:
-        $("reminderDate")
-          ? safeDate(
-              $("reminderDate").value
-            )
-          : today(),
-      done: false
-    });
-
-    if ($("reminderName"))
-      $("reminderName").value = "";
-
-    if ($("reminderDate"))
-      $("reminderDate").value = "";
-
-    save();
-    renderReminders();
-  }
-
-  function renderReminders() {
-    var list =
-      $("reminderList");
-
-    if (!list) return;
-
-    if (!D.reminders.length) {
-      list.innerHTML =
-        '<div class="empty-state">No reminders.</div>';
-      return;
-    }
-
-    list.innerHTML =
-      D.reminders
-        .slice()
-        .sort(function (a, b) {
-          return String(a.date)
-            .localeCompare(
-              String(b.date)
-            );
-        })
-        .map(function (r) {
-          return (
-            '<div class="hisab-entry-card">' +
-
-            '<div>' +
-            '<strong>' +
-            esc(r.name) +
-            '</strong>' +
-
-            '<div>' +
-            esc(r.date) +
-            '</div>' +
-
-            '</div>' +
-
-            '<button type="button" onclick="deleteReminder(\'' +
-            esc(r.id) +
-            "')\">Delete</button>" +
-
-            '</div>'
-          );
-        })
-        .join("");
-  }
-
-  function deleteReminder(id) {
     D.reminders =
       D.reminders.filter(function (r) {
         return r.id !== id;
@@ -3307,6 +1888,561 @@
   }
 
   /* =========================================================
+     PRIVACY / SECURITY
+     ========================================================= */
+
+  function renderPrivacy() {
+    var root = $("privacy");
+    if (!root) return;
+
+    var status =
+      root.querySelector(
+        ".pin-status"
+      );
+
+    if (status) {
+      status.textContent =
+        D.pinHash
+          ? "PIN is enabled"
+          : "PIN is not set";
+    }
+  }
+
+  /* =========================================================
+     FAMILY
+     ========================================================= */
+
+  function addFamily() {
+    var name =
+      $("familyName")
+        ? $("familyName").value.trim()
+        : "";
+
+    if (!name) {
+      alert("Family member name enter karein.");
+      return;
+    }
+
+    D.family.push({
+      id: uid("family"),
+      name: name,
+      date: today()
+    });
+
+    if ($("familyName"))
+      $("familyName").value = "";
+
+    save();
+    renderFamily();
+  }
+
+  function deleteFamily(id) {
+    if (!confirm("Family member delete karein?")) {
+      return;
+    }
+
+    D.family =
+      D.family.filter(function (f) {
+        return f.id !== id;
+      });
+
+    save();
+    renderFamily();
+  }
+
+  function renderFamily() {
+    var list = $("familyList");
+    if (!list) return;
+
+    if (!D.family.length) {
+      list.innerHTML =
+        '<div class="empty-state">No family members.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      D.family.map(function (f) {
+        return (
+          '<div class="hisab-entry-card">' +
+
+          '<strong>' +
+          esc(f.name) +
+          '</strong>' +
+
+          '<div style="font-size:12px;opacity:.7;">' +
+          esc(f.date) +
+          '</div>' +
+
+          '<button type="button" onclick="deleteFamily(\'' +
+          esc(f.id) +
+          "')\">Delete</button>" +
+
+          '</div>'
+        );
+      }).join("");
+  }
+
+  /* =========================================================
+     TOOLS
+     ========================================================= */
+
+  function addTool() {
+    var name =
+      prompt("Tool name:");
+
+    if (!name || !name.trim()) return;
+
+    D.tools.push({
+      id: uid("tool"),
+      name: name.trim(),
+      date: today()
+    });
+
+    save();
+    renderTools();
+  }
+
+  function deleteTool(id) {
+    D.tools =
+      D.tools.filter(function (t) {
+        return t.id !== id;
+      });
+
+    save();
+    renderTools();
+  }
+
+  function renderTools() {
+    var list = $("toolsList");
+    if (!list) return;
+
+    if (!D.tools.length) {
+      list.innerHTML =
+        '<div class="empty-state">No tools yet.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      D.tools.map(function (t) {
+        return (
+          '<div class="hisab-entry-card">' +
+
+          '<strong>' +
+          esc(t.name) +
+          '</strong>' +
+
+          '<div style="font-size:12px;opacity:.7;">' +
+          esc(t.date) +
+          '</div>' +
+
+          '<button type="button" onclick="deleteTool(\'' +
+          esc(t.id) +
+          "')\">Delete</button>" +
+
+          '</div>'
+        );
+      }).join("");
+  }
+
+  /* =========================================================
+     BACKUP / RESTORE
+     ========================================================= */
+
+  function backupData() {
+    var data =
+      JSON.stringify(
+        D,
+        null,
+        2
+      );
+
+    var blob =
+      new Blob(
+        [data],
+        {
+          type: "application/json"
+        }
+      );
+
+    var url =
+      URL.createObjectURL(blob);
+
+    var a =
+      document.createElement("a");
+
+    a.href = url;
+    a.download =
+      "HISAB-backup-" +
+      today() +
+      ".json";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }
+
+  function restoreData() {
+    var input =
+      $("restoreFile");
+
+    if (!input) {
+      alert("Restore file option not found.");
+      return;
+    }
+
+    input.onchange =
+      function () {
+        var file =
+          input.files &&
+          input.files[0];
+
+        if (!file) return;
+
+        var reader =
+          new FileReader();
+
+        reader.onload =
+          function () {
+            try {
+              var parsed =
+                JSON.parse(
+                  reader.result
+                );
+
+              if (
+                !parsed ||
+                typeof parsed !== "object"
+              ) {
+                throw new Error(
+                  "Invalid backup"
+                );
+              }
+
+              D =
+                Object.assign(
+                  {},
+                  D,
+                  parsed
+                );
+
+              normalize();
+              save();
+
+              alert(
+                "Backup restored successfully."
+              );
+
+              show("home");
+            } catch (e) {
+              alert(
+                "Invalid HISAB backup file."
+              );
+            }
+          };
+
+        reader.readAsText(file);
+      };
+
+    input.click();
+  }
+
+  /* =========================================================
+     SEARCH
+     ========================================================= */
+
+  function globalSearch() {
+    var input =
+      $("globalSearch");
+
+    var q =
+      input
+        ? input.value.trim().toLowerCase()
+        : "";
+
+    if (!q) {
+      renderHome();
+      return;
+    }
+
+    var results = [];
+
+    D.transactions.forEach(function (t) {
+      if (t.mode !== D.mode) return;
+
+      var text =
+        [
+          t.category,
+          t.note,
+          t.date,
+          t.type
+        ]
+          .join(" ")
+          .toLowerCase();
+
+      if (text.includes(q)) {
+        results.push({
+          type: "Transaction",
+          title:
+            t.category ||
+            t.type,
+          amount: t.amount,
+          date: t.date
+        });
+      }
+    });
+
+    D.khata.forEach(function (k) {
+      if (k.mode !== D.mode) return;
+
+      var text =
+        [
+          k.person,
+          k.note,
+          k.date,
+          k.type
+        ]
+          .join(" ")
+          .toLowerCase();
+
+      if (text.includes(q)) {
+        results.push({
+          type: "Udhaar",
+          title: k.person,
+          amount: k.amount,
+          date: k.date
+        });
+      }
+    });
+
+    if (D.mode === "business") {
+      getBusinessSales().forEach(function (s) {
+        var text =
+          [
+            s.customer,
+            s.note,
+            s.date
+          ]
+            .join(" ")
+            .toLowerCase();
+
+        if (text.includes(q)) {
+          results.push({
+            type: "Sale",
+            title: s.customer,
+            amount: s.amount,
+            date: s.date
+          });
+        }
+      });
+
+      getBusinessPurchases().forEach(function (p) {
+        var text =
+          [
+            p.supplier,
+            p.note,
+            p.date
+          ]
+            .join(" ")
+            .toLowerCase();
+
+        if (text.includes(q)) {
+          results.push({
+            type: "Purchase",
+            title: p.supplier,
+            amount: p.amount,
+            date: p.date
+          });
+        }
+      });
+    }
+
+    var list =
+      $("searchResults");
+
+    if (!list) {
+      alert(
+        results.length
+          ? results.map(function (r) {
+              return (
+                r.type +
+                ": " +
+                r.title +
+                " • " +
+                money(r.amount)
+              );
+            }).join("\n")
+          : "No results found."
+      );
+
+      return;
+    }
+
+    if (!results.length) {
+      list.innerHTML =
+        '<div class="empty-state">No results found.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      results.map(function (r) {
+        return (
+          '<div class="hisab-entry-card">' +
+
+          '<strong>' +
+          esc(r.type) +
+          '</strong>' +
+
+          '<div>' +
+          esc(r.title) +
+          '</div>' +
+
+          '<div>' +
+          money(r.amount) +
+          " • " +
+          esc(r.date) +
+          '</div>' +
+
+          '</div>'
+        );
+      }).join("");
+  }
+
+  /* =========================================================
+     QUICK ADD
+     ========================================================= */
+
+  function quickAdd(type) {
+    if (type === "income") {
+      addTransaction("income");
+      return;
+    }
+
+    if (type === "expense") {
+      addTransaction("expense");
+      return;
+    }
+
+    if (type === "give") {
+      openKhataForm(D.mode);
+
+      if ($("khataType")) {
+        $("khataType").value =
+          "give";
+      }
+
+      return;
+    }
+
+    if (type === "receive") {
+      openKhataForm(D.mode);
+
+      if ($("khataType")) {
+        $("khataType").value =
+          "receive";
+      }
+
+      return;
+    }
+
+    if (type === "sale") {
+      addBusinessSales();
+      return;
+    }
+
+    if (type === "purchase") {
+      addBusinessPurchase();
+      return;
+    }
+  }
+
+  /* =========================================================
+     FINAL PAGE
+     ========================================================= */
+
+  function renderFinal() {
+    var root = $("final");
+    if (!root) return;
+
+    var summary =
+      root.querySelector(
+        ".final-summary"
+      );
+
+    if (!summary) return;
+
+    summary.innerHTML =
+      "<strong>HISAB</strong><br>" +
+      "Mode: " +
+      esc(D.mode) +
+      "<br>" +
+      "Currency: " +
+      esc(D.currency);
+  }
+
+  /* =========================================================
+     INIT
+     ========================================================= */
+
+  function init() {
+    try {
+      loadData();
+      initGate();
+      applyLanguage();
+
+      if (
+        D.ui &&
+        D.ui.page &&
+        pages.indexOf(D.ui.page) !== -1
+      ) {
+        show(D.ui.page);
+      } else {
+        show("home");
+      }
+
+      if ($("splashScreen")) {
+        setTimeout(function () {
+          var splash =
+            $("splashScreen");
+
+          if (splash) {
+            splash.style.display =
+              "none";
+          }
+        }, 1200);
+      }
+    } catch (e) {
+      console.error(
+        "HISAB init error:",
+        e
+      );
+
+      /*
+        Never leave a blank white screen
+        because of a render error.
+      */
+      try {
+        if ($("splashScreen")) {
+          $("splashScreen").style.display =
+            "none";
+        }
+
+        if ($("welcomeScreen")) {
+          $("welcomeScreen").style.display =
+            "none";
+        }
+
+        if ($("homeScreen")) {
+          $("homeScreen").style.display =
+            "";
+        }
+      } catch (ignore) {}
+    }
+  }
+/* =========================================================
      BACKUP
      ========================================================= */
 
@@ -3830,12 +2966,6 @@
         "HISAB init error:",
         e
       );
-
-      /*
-        Never intentionally create a white screen.
-        Keep app shell visible if initialization
-        has a non-fatal rendering error.
-      */
 
       var shell =
         $("appShell");
