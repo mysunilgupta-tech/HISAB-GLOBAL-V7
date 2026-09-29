@@ -866,24 +866,9 @@
         esc(k.status || "pending") +
         '</div>' +
 
-        '<div style="margin-top:6px;">' +
+                '<div style="margin-top:6px;">' +
 
         '<button type="button" onclick="openKhataDetail(\'' +
-        esc(k.person).replace(/'/g, "\\'") +
-        "','" +
-        mode +
-        "')\">View</button> " +
-
-        
-
-        '</div>' +
-
-        '</div>' +
-        '</div>'
-      );
-    }).join("");
-  }
-'<button type="button" onclick="openKhataDetail(\'' +
         esc(k.person).replace(/'/g, "\\'") +
         "','" +
         mode +
@@ -896,10 +881,18 @@
         '<button type="button" onclick="deleteKhata(\'' +
         esc(k.id) +
         '\')">Delete</button>' +
+
+        '</div>' +
+
+        '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
   function searchKhata(mode) {
     renderKhata(mode);
   }
-
   function filterKhata(mode, filter) {
     D.ui.khataFilter =
       filter || "all";
