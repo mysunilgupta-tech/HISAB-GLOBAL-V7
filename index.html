@@ -1,918 +1,146 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#082b45">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>HISAB Money Manager</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HISAB V7 - FINAL</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--primary:#082b45;--border:#e2e8f0;--shadow:0 8px 24px rgba(8,43,69,.08);--muted:#64748b;--text:#0f172a}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+input,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:14px;outline:none}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(8,43,69,.12)}
+.app{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:80px}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px}
+header h1{font-size:20px;color:var(--primary);font-weight:900;margin:0}
+.top-nav{display:flex;gap:6px;margin-top:10px;overflow:auto} .top-nav::-webkit-scrollbar{display:none}
+.top-nav button{white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--muted);font-weight:700;font-size:12px}
+.top-nav button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.page{display:none!important;padding:16px;animation:fade .2s ease} .page.active{display:block!important}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+.stat span{font-size:10px;color:var(--muted);text-transform:uppercase;display:block} .stat b{font-size:15px;margin-top:4px;display:block}
+.hisab-entry-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.empty-state{background:var(--card);border:1px dashed var(--border);border-radius:14px;padding:24px;text-align:center;color:var(--muted)}
+.filter-group{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0} .filter-btn{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:#fff;font-weight:700;font-size:12px} .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.action-bar{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0} .btn{padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:#fff;font-weight:700;font-size:13px} .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.m-actions{display:flex;gap:8px;margin-top:14px} .btn-cancel{background:#eef2f7;border:0;padding:12px;border-radius:12px;flex:1;font-weight:800} .btn-save{background:var(--primary);color:#fff;border:0;padding:12px;border-radius:12px;flex:1;font-weight:800}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px} .modal-box{background:#fff;border-radius:18px;padding:18px;width:100%;max-width:420px;animation:pop .18s ease}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
 </head>
-
 <body>
+<div class="app">
+<header><h1>HISAB V7</h1>
+<div class="top-nav">
+<button onclick="show('home')" id="nav-home" class="active">Home</button>
+<button onclick="show('personal')" id="nav-personal">Personal</button>
+<button onclick="show('business')" id="nav-business">Business</button>
+<button onclick="show('transactions')" id="nav-transactions">Khata</button>
+<button onclick="show('reports')" id="nav-reports">Reports</button>
+</div></header>
 
-<!-- ================= GUEST GATE ================= -->
-<div id="guestGate" class="screen">
-  <div class="logo">₹</div>
-  <h1>HISAB</h1>
-  <p>Track • Plan • Grow</p>
-  <button onclick="window.enterGuestMode ? window.enterGuestMode() : (localStorage.setItem('hisab_v7_guest','1'), location.reload())">Start Using HISAB</button>
+<div id="home" class="page active">
+<div class="stats"><div class="stat"><span>Balance</span><b id="homeBalance">₹0</b></div><div class="stat"><span>Lena</span><b id="receivable">₹0</b></div><div class="stat"><span>Dena</span><b id="payable">₹0</b></div></div>
+<div class="action-bar"><button class="btn primary" onclick="openKhataForm('personal')">+ Udhaar</button><button class="btn primary" onclick="openEntryModal('sale')">+ Sale</button><button class="btn" onclick="show('transactions')">+ Income</button></div>
+<div id="homeRecent"></div>
 </div>
 
-<!-- ================= APP SHELL ================= -->
-<div id="appShell" class="app-shell">
-
-<header class="topbar">
-  <div>
-    <div class="brand">₹ HISAB</div>
-    <small>Track • Plan • Grow</small>
-  </div>
-
-  <div class="top-actions">
-    <button onclick="toggleLanguage()" title="Language">EN/हि</button>
-    <button onclick="toggleCurrency()" title="Currency">₹</button>
-    <button onclick="show('reminders')" title="Reminders">🔔</button>
-  </div>
-</header>
-
-
-<!-- ================= HOME ================= -->
-<section id="home" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Dashboard</h2>
-
-      <!-- PERSONAL / BUSINESS SELECTOR -->
-      <div class="mode-switch">
-        <button
-          id="personalModeBtn"
-          type="button"
-          onclick="setMode('personal')">
-          👤 Personal
-        </button>
-
-        <button
-          id="businessModeBtn"
-          type="button"
-          onclick="setMode('business')">
-          💼 Business
-        </button>
-      </div>
-
-      <p id="modeLabel">Personal</p>
-    </div>
-  </div>
-
-
-  <div class="overview-strip">
-
-    <div class="summary-card">
-      <small>Receivable</small>
-      <strong id="receivable">₹0</strong>
-    </div>
-
-    <div class="summary-card">
-      <small>Payable</small>
-      <strong id="payable">₹0</strong>
-    </div>
-
-    <div class="summary-card">
-      <small>Balance</small>
-      <strong id="homeBalance">₹0</strong>
-    </div>
-
-  </div>
-
-
-  <div class="section-head">
-    <h3>Quick Actions</h3>
-  </div>
-
-
-  <div class="feature-grid">
-
-    <button onclick="show(D.mode === 'business' ? 'business' : 'personal')">
-      <span>💰</span>
-      <b>Money</b>
-      <small>Income & Expense</small>
-    </button>
-
-    <button onclick="openKhataForm(D.mode === 'business' ? 'business' : 'personal')">
-      <span>📒</span>
-      <b>Udhar</b>
-      <small>Give / Receive</small>
-    </button>
-
-    <button onclick="show('planning')">
-      <span>🎯</span>
-      <b>Planning</b>
-      <small>Budget & Goals</small>
-    </button>
-
-    <button onclick="show('credit')">
-      <span>💳</span>
-      <b>Payments</b>
-      <small>Bills & EMI</small>
-    </button>
-
-    <button onclick="show('reports')">
-      <span>📊</span>
-      <b>Reports</b>
-      <small>Analytics</small>
-    </button>
-
-    <button onclick="show('privacy')">
-      <span>🔐</span>
-      <b>Security</b>
-      <small>PIN & Privacy</small>
-    </button>
-
-  </div>
-
-</section>
-
-
-<!-- ================= PERSONAL ================= -->
-<section id="personal" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Personal Money</h2>
-      <p>Income, Expense & Udhar</p>
-    </div>
-  </div>
-
-  <div class="action-row">
-    <button onclick="show('transactions')">➕ Add Transaction</button>
-    <button onclick="openKhataForm('personal')">📒 Add Udhar</button>
-  </div>
-
-  <div class="search-box">
-    <input
-      id="personalSearch"
-      type="search"
-      placeholder="Search person..."
-      oninput="searchKhata('personal')">
-  </div>
-
-  <div class="totals-row">
-
-    <div>
-      <small>Total Give</small>
-      <strong id="ledgerGiven">₹0</strong>
-    </div>
-
-    <div>
-      <small>Total Receive</small>
-      <strong id="ledgerReceived">₹0</strong>
-    </div>
-
-    <div>
-      <small>Net</small>
-      <strong id="ledgerNet">₹0</strong>
-    </div>
-
-  </div>
-
-  <div class="filter-row">
-    <button onclick="filterKhata('personal','all',this)">All</button>
-    <button onclick="filterKhata('personal','give',this)">Give</button>
-    <button onclick="filterKhata('personal','receive',this)">Receive</button>
-    <button onclick="filterKhata('personal','pending',this)">Pending</button>
-  </div>
-
-  <div id="personalList" class="list"></div>
-
-</section>
-
-
-<!-- ================= BUSINESS ================= -->
-<section id="business" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Business</h2>
-      <p>Customers, Suppliers & Cashflow</p>
-    </div>
-  </div>
-
-  <div class="action-row">
-
-    <button type="button" onclick="addBusinessCustomer()">
-      👤 Add Customer
-    </button>
-
-    <button type="button" onclick="addBusinessSupplier()">
-      🚚 Add Supplier
-    </button>
-
-    <button type="button" onclick="openKhataForm('business')">
-      ➕ Add Entry
-    </button>
-
-    <button type="button" onclick="show('transactions')">
-      💰 Money
-    </button>
-
-  </div>
-
-  <div class="business-tabs">
-
-    <button
-      type="button"
-      onclick="businessFilter('customer',this)">
-      👤 Customers
-    </button>
-
-    <button
-      type="button"
-      onclick="businessFilter('supplier',this)">
-      🚚 Suppliers
-    </button>
-
-    <button
-      type="button"
-      onclick="businessFilter('sales',this)">
-      🛒 Sales
-    </button>
-
-    <button
-      type="button"
-      onclick="businessFilter('purchase',this)">
-      📦 Purchase
-    </button>
-
-  </div>
-
-  <div class="search-box">
-    <input
-      id="businessSearch"
-      type="search"
-      placeholder="Search customer / supplier..."
-      oninput="searchKhata('business')">
-  </div>
-
-  <div class="totals-row">
-
-    <div>
-      <small>Total Give</small>
-      <strong id="businessGiven">₹0</strong>
-    </div>
-
-    <div>
-      <small>Total Receive</small>
-      <strong id="businessReceived">₹0</strong>
-    </div>
-
-    <div>
-      <small>Net</small>
-      <strong id="businessNet">₹0</strong>
-    </div>
-
-  </div>
-
-  <div id="businessList" class="list"></div>
-
-</section>
-
-
-<!-- ================= KHATA ENTRY ================= -->
-<section id="khataEntry" class="page screen">
-
-  <div class="page-title">
-
-    <div>
-      <h2>Udhar Entry</h2>
-      <p>Give / Receive</p>
-    </div>
-
-    <button type="button" onclick="closeKhataForm()">✕</button>
-
-  </div>
-
-  <div class="form-card">
-
-    <label>Person / Customer</label>
-    <input id="khataPerson" type="text" placeholder="Name">
-
-    <label>Entry Type</label>
-    <select id="khataType">
-      <option value="give">Give</option>
-      <option value="receive">Receive</option>
-    </select>
-
-    <label>Amount</label>
-    <input
-      id="khataAmount"
-      type="number"
-      inputmode="decimal"
-      placeholder="0">
-
-    <label>Date</label>
-    <input id="khataDate" type="date">
-
-    <label>Payment Method</label>
-    <select id="khataMethod">
-      <option value="Cash">Cash</option>
-      <option value="UPI">UPI</option>
-      <option value="Bank Transfer">Bank Transfer</option>
-      <option value="Debit Card">Debit Card</option>
-      <option value="Credit Card">Credit Card</option>
-      <option value="Wallet">Wallet</option>
-      <option value="Cheque">Cheque</option>
-      <option value="Other">Other</option>
-    </select>
-
-    <label>Status</label>
-    <select id="khataStatus">
-      <option value="pending">Pending</option>
-      <option value="settled">Settled</option>
-    </select>
-
-    <label>Note</label>
-    <textarea id="khataNote" placeholder="Note"></textarea>
-
-    <button
-      class="primary-btn"
-      type="button"
-      onclick="saveKhataEntry()">
-      Save Entry
-    </button>
-
-  </div>
-
-</section>
-
-
-<!-- ================= KHATA DETAIL ================= -->
-<section id="khataDetail" class="page screen">
-
-  <div class="page-title">
-
-    <button type="button" onclick="closeKhataDetail()">←</button>
-
-    <div>
-      <h2 id="detailPersonName">Khata</h2>
-      <p>Complete History</p>
-    </div>
-
-  </div>
-
-  <div class="khata-summary">
-
-    <div>
-      <small>Give</small>
-      <strong id="detailGive">₹0</strong>
-    </div>
-
-    <div>
-      <small>Receive</small>
-      <strong id="detailReceive">₹0</strong>
-    </div>
-
-    <div>
-      <small>Balance</small>
-      <strong id="detailBalance">₹0</strong>
-    </div>
-
-  </div>
-
-  <div class="filter-row">
-    <button onclick="detailFilter('all',this)">All</button>
-    <button onclick="detailFilter('give',this)">Give</button>
-    <button onclick="detailFilter('receive',this)">Receive</button>
-    <button onclick="detailFilter('pending',this)">Pending</button>
-  </div>
-
-  <div id="khataHistory" class="list"></div>
-
-  <div class="action-row">
-    <button onclick="openPaymentEntry()">💵 Payment</button>
-    <button onclick="shareKhata()">📤 Share</button>
-    <button onclick="exportKhataPDF()">📄 PDF</button>
-  </div>
-
-</section>
-
-
-<!-- ================= TRANSACTIONS ================= -->
-<section id="transactions" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Transactions</h2>
-      <p>Income & Expense</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <label>Type</label>
-    <select id="transactionType">
-      <option value="income">Income</option>
-      <option value="expense">Expense</option>
-    </select>
-
-    <label>Amount</label>
-    <input
-      id="transactionAmount"
-      type="number"
-      inputmode="decimal"
-      placeholder="0">
-
-    <label>Category</label>
-    <input
-      id="transactionCategory"
-      type="text"
-      placeholder="Category">
-
-    <label>Note</label>
-    <input
-      id="transactionNote"
-      type="text"
-      placeholder="Note">
-
-    <label>Date</label>
-    <input id="transactionDate" type="date">
-
-    <button
-      class="primary-btn"
-      type="button"
-      onclick="addTransaction()">
-      Add Transaction
-    </button>
-
-  </div>
-
-  <div id="transactionList" class="list"></div>
-
-</section>
-
-
-<!-- ================= PLANNING ================= -->
-<section id="planning" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Planning</h2>
-      <p>Budget • Savings • Goals</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <h3>Budget</h3>
-
-    <label>Monthly Budget</label>
-    <input
-      id="budgetAmount"
-      type="number"
-      inputmode="decimal">
-
-    <button type="button" onclick="calcBudget()">
-      Save Budget
-    </button>
-
-    <hr>
-
-    <h3>Goal / Savings</h3>
-
-    <label>Goal Name</label>
-    <input
-      id="goalName"
-      type="text"
-      placeholder="e.g. Bike">
-
-    <label>Target Amount</label>
-    <input
-      id="goalTarget"
-      type="number"
-      inputmode="decimal">
-
-    <label>Saved Amount</label>
-    <input
-      id="goalSaved"
-      type="number"
-      inputmode="decimal">
-
-    <label>Goal Date</label>
-    <input id="goalDate" type="date">
-
-    <button type="button" onclick="calcGoal()">
-      Save Goal
-    </button>
-
-  </div>
-
-  <div id="goalList" class="list"></div>
-
-</section>
-
-
-<!-- ================= CREDIT / PAYMENTS ================= -->
-<section id="credit" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Payments</h2>
-      <p>Bills • Credit Card • Loans & EMI</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <h3>Bill</h3>
-
-    <label>Bill Name</label>
-    <input
-      id="billName"
-      type="text"
-      placeholder="Electricity">
-
-    <label>Amount</label>
-    <input
-      id="billAmount"
-      type="number"
-      inputmode="decimal">
-
-    <label>Due Date</label>
-    <input id="billDue" type="date">
-
-    <button type="button" onclick="addBill('Bill')">
-      Add Bill
-    </button>
-
-    <hr>
-
-    <h3>Credit Card</h3>
-
-    <label>Card Bill Amount</label>
-    <input
-      id="cardBill"
-      type="number"
-      inputmode="decimal">
-
-    <label>Due Date</label>
-    <input id="cardDue" type="date">
-
-    <button
-      type="button"
-      onclick="addBill('Credit Card')">
-      Add Credit Card Bill
-    </button>
-
-    <hr>
-
-    <h3>Loan / EMI</h3>
-
-    <label>Loan Amount</label>
-    <input
-      id="emiPrincipal"
-      type="number"
-      inputmode="decimal">
-
-    <label>Interest %</label>
-    <input
-      id="emiRate"
-      type="number"
-      inputmode="decimal">
-
-    <label>Tenure (Months)</label>
-    <input
-      id="emiMonths"
-      type="number"
-      inputmode="numeric">
-
-    <button type="button" onclick="calcEMI()">
-      Calculate EMI
-    </button>
-
-    <div id="emiResult"></div>
-
-  </div>
-
-  <div id="billList" class="list"></div>
-
-</section>
-
-
-<!-- ================= REPORTS ================= -->
-<section id="reports" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Reports & Analytics</h2>
-      <p>Your money overview</p>
-    </div>
-  </div>
-
-  <div class="report-cards">
-
-    <div class="summary-card">
-      <small>Total Income</small>
-      <strong id="reportIncome">₹0</strong>
-    </div>
-
-    <div class="summary-card">
-      <small>Total Expense</small>
-      <strong id="reportExpense">₹0</strong>
-    </div>
-
-    <div class="summary-card">
-      <small>Give</small>
-      <strong id="reportGive">₹0</strong>
-    </div>
-
-    <div class="summary-card">
-      <small>Receive</small>
-      <strong id="reportReceive">₹0</strong>
-    </div>
-
-  </div>
-
-  <div id="reportContent"></div>
-
-  <div class="action-row">
-    <button onclick="exportSummary()">📤 Export</button>
-    <button onclick="exportSummaryPDF()">📄 PDF</button>
-  </div>
-
-</section>
-
-
-<!-- ================= REMINDERS ================= -->
-<section id="reminders" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Reminders</h2>
-      <p>Bills & important dates</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <label>Reminder</label>
-    <input
-      id="reminderName"
-      type="text"
-      placeholder="Reminder">
-
-    <label>Date</label>
-    <input id="reminderDate" type="date">
-
-    <button onclick="addReminder()">
-      Add Reminder
-    </button>
-
-  </div>
-
-  <div id="reminderList" class="list"></div>
-
-</section>
-
-
-<!-- ================= PRIVACY / SECURITY ================= -->
-<section id="privacy" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Security & Backup</h2>
-      <p>Keep your HISAB safe</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <h3>Security PIN</h3>
-
-    <input
-      id="pinInput"
-      type="password"
-      inputmode="numeric"
-      maxlength="6"
-      placeholder="Enter PIN">
-
-    <button onclick="setPin()">Set PIN</button>
-    <button onclick="lockApp()">Lock App</button>
-
-    <hr>
-
-    <h3>Backup & Restore</h3>
-
-    <button onclick="exportBackup()">⬇ Backup</button>
-
-    <label class="file-btn">
-      ⬆ Restore Backup
-      <input
-        type="file"
-        accept=".json,application/json"
-        onchange="importBackup(event)"
-        hidden>
-    </label>
-
-  </div>
-
-</section>
-
-
-<!-- ================= FAMILY ================= -->
-<section id="family" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Family</h2>
-      <p>Family money planning</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <label>Family Member</label>
-
-    <input
-      id="familyName"
-      type="text"
-      placeholder="Name">
-
-    <button onclick="addFamilyMember()">
-      Add Member
-    </button>
-
-  </div>
-
-  <div id="familyList" class="list"></div>
-
-</section>
-
-
-<!-- ================= ADS ================= -->
-<section id="ads" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>HISAB Free</h2>
-      <p>Supported by advertisements</p>
-    </div>
-  </div>
-
-  <div id="adContainer"></div>
-
-</section>
-
-
-<!-- ================= FAMILY TOOLS ================= -->
-<section id="familytools" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Family Tools</h2>
-    </div>
-  </div>
-
-  <div class="feature-grid">
-
-    <button onclick="show('family')">
-      👨‍👩‍👧 Family
-    </button>
-
-    <button onclick="show('planning')">
-      🎯 Goals
-    </button>
-
-    <button onclick="show('credit')">
-      💳 Payments
-    </button>
-
-  </div>
-
-</section>
-
-
-<!-- ================= TOOLS ================= -->
-<section id="tools13" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>More Tools</h2>
-    </div>
-  </div>
-
-  <div class="feature-grid">
-
-    <button onclick="calcFD()">🏦 FD Calculator</button>
-    <button onclick="addInsurance()">🛡 Insurance</button>
-    <button onclick="addSchool()">🎓 School</button>
-    <button onclick="addVehicle()">🚗 Vehicle</button>
-    <button onclick="addShopping()">🛒 Shopping</button>
-    <button onclick="addUtility()">💡 Utility</button>
-    <button onclick="calcEmergency()">🚨 Emergency Fund</button>
-    <button onclick="addDoc()">📄 Documents</button>
-    <button onclick="addAnnual()">📅 Annual Planning</button>
-
-  </div>
-
-  <div class="form-card">
-
-    <h3>FD Calculator</h3>
-
-    <input
-      id="fdPrincipal"
-      type="number"
-      placeholder="Principal">
-
-    <input
-      id="fdRate"
-      type="number"
-      placeholder="Interest %">
-
-    <input
-      id="fdN"
-      type="number"
-      placeholder="Months">
-
-    <button onclick="calcFD()">
-      Calculate FD
-    </button>
-
-    <div id="fdResult"></div>
-
-  </div>
-
-</section>
-
-
-<!-- ================= FINAL / SETTINGS ================= -->
-<section id="final" class="page screen">
-
-  <div class="page-title">
-    <div>
-      <h2>Settings</h2>
-      <p>HISAB preferences</p>
-    </div>
-  </div>
-
-  <div class="form-card">
-
-    <label>Search Everything</label>
-
-    <input
-      id="searchAll"
-      type="search"
-      placeholder="Search HISAB..."
-      oninput="searchAllData(this.value)">
-
-    <div id="searchResults" class="list"></div>
-
-    <hr>
-
-    <button onclick="toggleLanguage()">🌐 Language</button>
-    <button onclick="toggleCurrency()">💱 Currency</button>
-    <button onclick="exportBackup()">💾 Backup</button>
-    <button onclick="exportSummary()">📤 Share Summary</button>
-    <button onclick="exportSummaryPDF()">📄 Export Summary PDF</button>
-
-  </div>
-
-</section>
-
-
-<!-- ================= BOTTOM NAV ================= -->
-<nav class="bottom-nav">
-
-  <button onclick="show('home')">
-    <span>⌂</span>
-    <small>Home</small>
-  </button>
-
-  <button onclick="show('transactions')">
-    <span>↔</span>
-    <small>Transactions</small>
-  </button>
-
-  <button class="add-btn" onclick="openQuickAdd()">
-    <span>＋</span>
-  </button>
-
-  <button onclick="show('reports')">
-    <span>▥</span>
-    <small>Reports</small>
-  </button>
-
-  <button onclick="show('final')">
-    <span>☰</span>
-    <small>More</small>
-  </button>
-
-</nav>
-
-</div>
-
-
-<!-- ================= JS ================= -->
-<script src="app.js"></script>
-
+<div id="personal" class="page"><h3>Personal Udhaar</h3>
+<div class="filter-group"><button class="filter-btn active" onclick="filterKhata('personal','all')">All</button><button class="filter-btn" onclick="filterKhata('personal','give')">Dena</button><button class="filter-btn" onclick="filterKhata('personal','receive')">Lena</button></div>
+<input id="personalSearch" placeholder="Search..." oninput="searchKhata('personal')">
+<div style="margin-top:10px"><button class="btn primary" onclick="openKhataForm('personal')">+ Add</button></div>
+<div id="personalList" style="margin-top:12px"></div></div>
+
+<div id="business" class="page"><h3>Business</h3>
+<div class="filter-group"><button class="filter-btn active" data-f="customer" onclick="businessFilter('customer')">Customers</button><button class="filter-btn" data-f="supplier" onclick="businessFilter('supplier')">Suppliers</button><button class="filter-btn" data-f="sales" onclick="businessFilter('sales')">Sales</button><button class="filter-btn" data-f="purchase" onclick="businessFilter('purchase')">Purchase</button></div>
+<div class="action-bar"><button class="btn" onclick="addBusinessCustomer()">+ Customer</button><button class="btn" onclick="addBusinessSupplier()">+ Supplier</button><button class="btn primary" onclick="addBusinessSales()">+ Sale</button><button class="btn primary" onclick="addBusinessPurchase()">+ Purchase</button></div>
+<div id="businessList"></div></div>
+
+<div id="khataEntry" class="page"><h3>Add Udhaar</h3>
+<input id="khataPerson" placeholder="Person Name*"><select id="khataType"><option value="give">Give (Dena)</option><option value="receive">Receive (Lena)</option></select><input id="khataAmount" type="number" placeholder="Amount*"><input id="khataDate" type="date"><select id="khataMethod"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Other</option></select><select id="khataStatus"><option value="pending">Pending</option><option value="partial">Partial</option><option value="settled">Settled</option></select><input id="khataNote" placeholder="Note">
+<div class="m-actions"><button class="btn-cancel" onclick="closeKhataForm()">Cancel</button><button class="btn-save" onclick="saveKhataEntry()">Save</button></div></div>
+
+<div id="khataDetail" class="page"><button class="btn" onclick="closeKhataDetail()">← Back</button><h2 id="detailPersonName" style="margin-top:10px"></h2>
+<div class="stats" style="margin-top:10px"><div class="stat"><span>Give</span><b id="detailGive">₹0</b></div><div class="stat"><span>Receive</span><b id="detailReceive">₹0</b></div><div class="stat"><span>Balance</span><b id="detailBalance">₹0</b></div></div><div id="khataHistory" style="margin-top:12px"></div></div>
+
+<div id="transactions" class="page"><h3>Income / Expense</h3><select id="transactionType"><option value="expense">Expense</option><option value="income">Income</option></select><input id="transactionAmount" type="number" placeholder="Amount*"><input id="transactionCategory" placeholder="Category"><input id="transactionDate" type="date"><input id="transactionNote" placeholder="Note"><button class="btn primary" style="width:100%;margin-top:8px" onclick="addTransaction()">Save</button><div id="transactionList" style="margin-top:14px"></div></div>
+
+<div id="reports" class="page"><h3>Reports</h3><div id="reportContent" style="margin-top:12px"></div></div>
+</div><div id="modalRoot"></div>
+
+<script>
+(function(){
+"use strict";var KEY="hisab_v7_data";var PAY=["Cash","UPI","Bank Transfer","Debit Card","Credit Card","Wallet","Cheque","Other"];var PAGES=["home","personal","business","khataEntry","khataDetail","transactions","reports"];
+var D={mode:"personal",currency:"₹",language:"hi",transactions:[],khata:[],business:[],sales:[],purchases:[],goals:[],savings:[],bills:[],loans:[],reminders:[],family:[],tools:[],budget:{personal:0,business:0},pinHash:"",ui:{page:"home",khataEditId:null,businessFilter:"customer",khataFilter:"all",detailPerson:"",detailFilter:"all"}};
+function $(id){return document.getElementById(id);}function num(v){var n=parseFloat(v);return isFinite(n)?n:0;}function uid(p){return (p||"id")+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);}function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}function safeDate(v){return v||today();}function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");}function money(v){return D.currency+" "+num(v).toLocaleString("en-IN",{maximumFractionDigits:2});}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D));}catch(e){}}function load(){try{var raw=localStorage.getItem(KEY);if(raw){var s=JSON.parse(raw);if(s) Object.keys(s).forEach(function(k){D[k]=s[k];});}}catch(e){} normalize();}
+function normalize(){
+["transactions","khata","business","sales","purchases","goals","savings","bills","loans","reminders","family","tools"].forEach(function(k){if(!Array.isArray(D[k])) D[k]=[];});
+if(!D.budget||typeof D.budget!=="object") D.budget={personal:0,business:0}; D.budget.personal=num(D.budget.personal); D.budget.business=num(D.budget.business);
+if(!D.ui||typeof D.ui!=="object") D.ui={}; D.ui.page=D.ui.page||"home"; D.ui.khataEditId=D.ui.khataEditId||null; D.ui.businessFilter=D.ui.businessFilter||"customer"; D.ui.khataFilter=D.ui.khataFilter||"all"; D.ui.detailPerson=D.ui.detailPerson||""; D.ui.detailFilter=D.ui.detailFilter||"all";
+if(D.mode!=="personal"&&D.mode!=="business") D.mode="personal";
+D.khata.forEach(function(x){x.id=x.id||uid("khata");x.mode=x.mode==="business"?"business":"personal";x.person=x.person||"";x.amount=num(x.amount);x.paid=num(x.paid);if(x.paid<0) x.paid=0;if(x.paid>x.amount) x.paid=x.amount;x.type=x.type==="receive"?"receive":"give";x.method=PAY.indexOf(x.method)>=0?x.method:"Cash";x.date=x.date||today();x.note=x.note||"";if(!Array.isArray(x.history)) x.history=[];if(x.paid>=x.amount&&x.amount>0) x.status="settled";else if(x.paid>0) x.status="partial";else x.status="pending";});
+D.transactions.forEach(function(x){x.id=x.id||uid("txn");x.mode=x.mode==="business"?"business":"personal";x.amount=num(x.amount);x.type=x.type==="income"?"income":"expense";x.date=x.date||today();x.category=x.category||"";x.note=x.note||"";});
+D.business.forEach(function(x){x.id=x.id||uid("biz");x.mode="business";x.type=x.type==="supplier"?"supplier":"customer";x.name=x.name||"";x.phone=x.phone||"";x.date=x.date||today();});
+[D.sales,D.purchases].forEach(function(arr){arr.forEach(function(x){x.id=x.id||uid("entry");x.mode="business";x.businessId=x.businessId||null;x.customer=x.customer||"";x.supplier=x.supplier||"";x.item=x.item||"";x.quantity=num(x.quantity)>0?num(x.quantity):1;x.rate=num(x.rate);x.amount=num(x.amount);x.paid=num(x.paid);if(x.paid<0) x.paid=0;if(x.paid>x.amount) x.paid=x.amount;x.date=x.date||today();x.method=PAY.indexOf(x.method)>=0?x.method:"Cash";x.note=x.note||"";if(!Array.isArray(x.history)) x.history=[];if(x.paid>=x.amount&&x.amount>0) x.status="paid";else if(x.paid>0) x.status="partial";else x.status="pending";});});
+}
+function setMode(m){D.mode=m==="business"?"business":"personal";D.ui.page=D.mode==="business"?"business":"personal";save();renderAll();show(D.ui.page);}
+function show(page){if(PAGES.indexOf(page)===-1) page="home";PAGES.forEach(function(id){var el=$(id);if(el) el.classList.toggle("active",id===page);});document.querySelectorAll(".top-nav button").forEach(function(b){b.classList.toggle("active",b.id==="nav-"+page);});D.ui.page=page;if(page==="personal") D.mode="personal";if(page==="business") D.mode="business";save();renderPage(page);try{window.scrollTo(0,0);}catch(e){}}
+function renderPage(p){if(p==="home") renderHome();if(p==="personal") renderKhata("personal");if(p==="business") renderBusiness();if(p==="khataDetail") renderKhataDetail();if(p==="transactions") renderTransactions();if(p==="reports") renderReports();}
+function actionButton(a,i,t){return '<button class="btn" type="button" data-hisab-action="'+esc(a)+'" data-hisab-id="'+esc(i==null?"":i)+'">'+esc(t)+'</button>';}
+function actionButton2(a,i,i2,t){return '<button class="btn" type="button" data-hisab-action="'+esc(a)+'" data-hisab-id="'+esc(i==null?"":i)+'" data-hisab-id2="'+esc(i2==null?"":i2)+'">'+esc(t)+'</button>';}
+function khataTotals(mode){var g=0,r=0;D.khata.forEach(function(x){if((x.mode||"personal")!==mode) return;var due=Math.max(0,num(x.amount)-num(x.paid));if(x.type==="give") g+=due;else r+=due;});return{give:g,receive:r,net:g-r};}
+function renderHome(){var inc=0,exp=0;D.transactions.forEach(function(x){if(x.mode!==D.mode) return;if(x.type==="income") inc+=num(x.amount);else exp+=num(x.amount);});var kh=khataTotals(D.mode);var bal=inc-exp+kh.receive-kh.give;if($("homeBalance")) $("homeBalance").textContent=money(bal);if($("receivable")) $("receivable").textContent=money(kh.receive);if($("payable")) $("payable").textContent=money(kh.give);var list=$("homeRecent");if(!list) return;var recent=[];D.khata.forEach(function(x){if((x.mode||"personal")===D.mode) recent.push({kind:"khata",item:x});});D.sales.forEach(function(x){recent.push({kind:"sale",item:x});});D.purchases.forEach(function(x){recent.push({kind:"purchase",item:x});});recent.sort(function(a,b){return String(b.item.date||"").localeCompare(String(a.item.date||""));});recent=recent.slice(0,8);if(!recent.length){list.innerHTML='<div class="empty-state">Koi entry nahi hai</div>';return;}list.innerHTML=recent.map(function(row){var x=row.item;if(row.kind==="khata") return '<div class="hisab-entry-card"><b>'+esc(x.person)+'</b> • '+esc(x.type==="give"?"Dena":"Lena")+" • "+money(Math.max(0,num(x.amount)-num(x.paid)))+'<div style="font-size:12px;opacity:.7">'+esc(x.date)+'</div></div>';return businessCard(x,row.kind);}).join("");}
+function getKhata(mode){return D.khata.filter(function(x){return (x.mode||"personal")===mode;});}
+function renderKhata(mode){var list=$("personalList");if(!list||mode!=="personal") return;var data=getKhata(mode);var filter=D.ui.khataFilter||"all";if(filter!=="all") data=data.filter(function(x){return x.type===filter||x.status===filter;});var search=$("personalSearch");var q=search?search.value.trim().toLowerCase():"";if(q) data=data.filter(function(x){return [x.person,x.note,x.date,x.type,x.status,x.method].join(" ").toLowerCase().includes(q);});data.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});if(!data.length){list.innerHTML='<div class="empty-state">No Udhaar entries yet.</div>';return;}list.innerHTML=data.map(function(item){var due=Math.max(0,num(item.amount)-num(item.paid));var color=item.type==="give"?"#d32f2f":"#168a45";return '<div class="hisab-entry-card"><strong>'+esc(item.person)+'</strong><div style="color:'+color+';font-weight:700">'+esc(item.type==="give"?"Give":"Receive")+" • "+money(item.amount)+'</div><div style="font-size:12px;opacity:.7">'+esc(item.date)+" • "+esc(item.method)+" • "+esc(item.status)+'</div><div>Paid: '+money(item.paid)+' • Due: <b>'+money(due)+'</b></div>'+(item.note?"<div>"+esc(item.note)+"</div>":"")+'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+actionButton2("khata-view",item.person,mode,"View")+actionButton("khata-edit",item.id,"Edit")+actionButton("khata-delete",item.id,"Delete")+(due>0?actionButton("khata-payment",item.id,"Payment"):"")+'</div></div>';}).join("");}
+function searchKhata(mode){renderKhata(mode||D.mode);}function filterKhata(mode,type){if(type===undefined){type=mode;mode=D.mode;}D.ui.khataFilter=type||"all";save();renderKhata(mode||D.mode);}
+function openKhataForm(mode){D.mode=mode==="business"?"business":"personal";D.ui.khataEditId=null;if($("khataPerson")) $("khataPerson").value="";if($("khataAmount")) $("khataAmount").value="";if($("khataNote")) $("khataNote").value="";if($("khataType")) $("khataType").value="give";if($("khataDate")) $("khataDate").value=today();if($("khataMethod")) $("khataMethod").value="Cash";if($("khataStatus")) $("khataStatus").value="pending";show("khataEntry");}
+function closeKhataForm(){show(D.mode==="business"?"business":"personal");}
+function saveKhataEntry(){var person=$("khataPerson")?$("khataPerson").value.trim():"";var amount=$("khataAmount")?num($("khataAmount").value):0;if(!person||amount<=0){alert("Name aur valid amount enter karein");return;}var id=D.ui.khataEditId;var item=id?D.khata.find(function(x){return x.id===id;}):null;if(!item){item={id:uid("khata"),paid:0,history:[]};D.khata.push(item);}item.mode=D.mode;item.person=person;item.type=$("khataType")?$("khataType").value:"give";item.amount=amount;item.date=safeDate($("khataDate")?$("khataDate").value:today());item.method=$("khataMethod")?$("khataMethod").value:"Cash";item.note=$("khataNote")?$("khataNote").value.trim():"";item.paid=Math.min(Math.max(0,num(item.paid)),item.amount);if(item.paid>=item.amount) item.status="settled";else if(item.paid>0) item.status="partial";else item.status="pending";D.ui.khataEditId=null;save();show(D.mode==="business"?"business":"personal");}
+function editKhata(id){var item=D.khata.find(function(x){return x.id===id;});if(!item) return;D.mode=item.mode==="business"?"business":"personal";D.ui.khataEditId=id;if($("khataPerson")) $("khataPerson").value=item.person||"";if($("khataType")) $("khataType").value=item.type||"give";if($("khataAmount")) $("khataAmount").value=item.amount||"";if($("khataDate")) $("khataDate").value=item.date||today();if($("khataMethod")) $("khataMethod").value=item.method||"Cash";if($("khataStatus")) $("khataStatus").value=item.status||"pending";if($("khataNote")) $("khataNote").value=item.note||"";show("khataEntry");}
+function deleteKhata(id){if(!confirm("Delete?")) return;D.khata=D.khata.filter(function(x){return x.id!==id;});save();renderAll();}
+function openKhataDetail(person,mode){D.mode=mode==="business"?"business":"personal";D.ui.detailPerson=person||"";D.ui.detailFilter="all";show("khataDetail");}function closeKhataDetail(){show(D.mode==="business"?"business":"personal");}
+function renderKhataDetail(){var list=$("khataHistory");if(!list) return;var person=D.ui.detailPerson||"";var filter=D.ui.detailFilter||"all";var data=getKhata(D.mode).filter(function(x){if(String(x.person||"").toLowerCase()!==String(person).toLowerCase()) return false;if(filter!=="all"&&x.type!==filter&&x.status!==filter) return false;return true;});var g=0,r=0;data.forEach(function(x){var due=Math.max(0,num(x.amount)-num(x.paid));if(x.type==="give") g+=due;else r+=due;});if($("detailPersonName")) $("detailPersonName").textContent=person||"Khata";if($("detailGive")) $("detailGive").textContent=money(g);if($("detailReceive")) $("detailReceive").textContent=money(r);if($("detailBalance")) $("detailBalance").textContent=money(g-r);if(!data.length){list.innerHTML='<div class="empty-state">No entries</div>';return;}data.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});list.innerHTML=data.map(function(item){var due=Math.max(0,num(item.amount)-num(item.paid));var color=item.type==="give"?"#d32f2f":"#168a45";return '<div class="hisab-entry-card"><strong style="color:'+color+'">'+esc(item.type==="give"?"Give":"Receive")+" • "+money(item.amount)+'</strong><div style="font-size:12px;opacity:.7">'+esc(item.date)+" • "+esc(item.method)+" • "+esc(item.status)+'</div><div>Paid: '+money(item.paid)+' • Due: '+money(due)+'</div>'+(item.note?"<div>"+esc(item.note)+"</div>":"")+'<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">'+actionButton("khata-edit",item.id,"Edit")+actionButton("khata-delete",item.id,"Delete")+(due>0?actionButton("khata-payment",item.id,"Payment"):"")+'</div></div>';}).join("");}
+function ensureModalRoot(){var r=$("modalRoot");if(!r){r=document.createElement("div");r.id="modalRoot";document.body.appendChild(r);}return r;}function closeModal(){var r=$("modalRoot");if(r) r.innerHTML="";}
+function methodOptions(s){return PAY.map(function(m){return '<option value="'+esc(m)+'"'+(m===s?' selected':"")+'>'+esc(m)+'</option>';}).join("");}
+function openPaymentEntry(id){var item=D.khata.find(function(x){return x.id===id;});if(!item) return;var rem=Math.max(0,num(item.amount)-num(item.paid));if(rem<=0){item.status="settled";save();renderAll();return;}var root=ensureModalRoot();root.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h3>Payment</h3><div>Due: <b>'+money(rem)+'</b></div><input id="khPayAmt" type="number" min="0" value="'+rem+'"><select id="khPayMethod">'+methodOptions(item.method||"Cash")+'</select><div class="m-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="confirmKhataPay(\''+esc(item.id)+'\')">Pay</button></div></div></div>';}
+function confirmKhataPay(id){var item=D.khata.find(function(x){return x.id===id;});if(!item) return;var amt=$("khPayAmt")?num($("khPayAmt").value):0;if(amt<=0){alert("Valid amount likho");return;}var rem=Math.max(0,num(item.amount)-num(item.paid));amt=Math.min(amt,rem);var method=$("khPayMethod")?$("khPayMethod").value:"Cash";item.paid=num(item.paid)+amt;item.history=Array.isArray(item.history)?item.history:[];item.history.push({id:uid("pay"),date:today(),amount:amt,method:method});if(item.paid>=num(item.amount)){item.paid=num(item.amount);item.status="settled";}else item.status="partial";closeModal();save();renderAll();if(D.ui.page==="khataDetail") renderKhataDetail();}
+function businessFilter(f){if(typeof f==="object"&&f.target) f=f.target.value;if(["customer","supplier","sales","purchase"].indexOf(f)===-1) f="customer";D.ui.businessFilter=f;save();renderBusiness();}
+function findMasterByName(t,n){var nn=String(n||"").trim().toLowerCase();return D.business.find(function(x){return x.type===t&&String(x.name||"").trim().toLowerCase()===nn;})||null;}
+function masterNameExists(t,n,ignoreId){var nn=String(n||"").trim().toLowerCase();return D.business.some(function(x){return x.type===t&&x.id!==ignoreId&&String(x.name||"").trim().toLowerCase()===nn;});}
+function openMasterModal(type){var root=ensureModalRoot();root.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h3>'+(type==="customer"?"New Customer":"New Supplier")+'</h3><input id="mName" placeholder="Name*"><input id="mPhone" type="tel" placeholder="Phone (optional)"><div class="m-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveMaster(\''+type+'\')">Save</button></div></div></div>';}
+function saveMaster(type){var name=$("mName")?$("mName").value.trim():"";var phone=$("mPhone")?$("mPhone").value.trim():"";if(!name){alert("Name zaruri hai");return;}if(masterNameExists(type,name,null)){alert(type==="customer"?"Customer already exists":"Supplier already exists");return;}D.business.push({id:uid("biz"),mode:"business",type:type,name:name,phone:phone,date:today()});closeModal();save();renderBusiness();}
+function addBusinessMaster(t){openMasterModal(t);}function addBusinessCustomer(){addBusinessMaster("customer");}function addBusinessSupplier(){addBusinessMaster("supplier");}
+function openEntryModal(type){var isSale=type==="sale";var masterType=isSale?"customer":"supplier";var masters=D.business.filter(function(x){return x.type===masterType;});var opts=masters.map(function(x){return '<option value="'+esc(x.name)+'"></option>';}).join("");var root=ensureModalRoot();root.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h3>'+(isSale?"New Sale":"New Purchase")+'</h3><input list="bMasterList" id="eName" placeholder="'+(isSale?"Customer Name*":"Supplier Name*")+'"><datalist id="bMasterList">'+opts+'</datalist><input id="eItem" placeholder="Item / Product"><div style="display:flex;gap:8px"><input id="eQty" type="number" min="1" value="1"><input id="eRate" type="number" min="0" placeholder="Rate*"></div><input id="eDate" type="date" value="'+today()+'"><select id="eMethod">'+methodOptions("Cash")+'</select><input id="eNote" placeholder="Note (optional)"><div class="m-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveEntry(\''+type+'\')">Save</button></div></div></div>';}
+function saveEntry(type){var isSale=type==="sale";var name=$("eName")?$("eName").value.trim():"";var itemName=$("eItem")?$("eItem").value.trim():"";var qty=$("eQty")?num($("eQty").value):1;var rate=$("eRate")?num($("eRate").value):0;var date=$("eDate")?safeDate($("eDate").value):today();var method=$("eMethod")?$("eMethod").value:"Cash";var note=$("eNote")?$("eNote").value.trim():"";if(!name){alert("Name zaruri hai");return;}if(qty<=0){alert("Valid qty");return;}if(rate<=0){alert("Valid rate");return;}var master=findMasterByName(isSale?"customer":"supplier",name);if(!master){master={id:uid("biz"),mode:"business",type:isSale?"customer":"supplier",name:name,phone:"",date:today()};D.business.push(master);}var total=qty*rate;var entry={id:uid(type),mode:"business",businessId:master.id,customer:isSale?name:"",supplier:isSale?"":name,item:itemName,quantity:qty,rate:rate,amount:total,paid:0,status:"pending",date:date,method:method,note:note,history:[]};if(isSale) D.sales.push(entry);else D.purchases.push(entry);closeModal();save();renderBusiness();renderHome();renderReports();}
+function addBusinessSales(){openEntryModal("sale");}function addBusinessPurchase(){openEntryModal("purchase");}
+function getBusinessSales(){return D.sales.filter(function(x){return x.mode==="business";});}function getBusinessPurchases(){return D.purchases.filter(function(x){return x.mode==="business";});}
+function findBusiness(t,id){var arr=t==="sale"?D.sales:D.purchases;return arr.find(function(x){return x.id===id;})||null;}
+function salesForCustomer(m){return getBusinessSales().filter(function(x){return x.businessId===m.id||String(x.customer||"").toLowerCase()===String(m.name||"").toLowerCase();});}
+function purchasesForSupplier(m){return getBusinessPurchases().filter(function(x){return x.businessId===m.id||String(x.supplier||"").toLowerCase()===String(m.name||"").toLowerCase();});}
+function businessCard(item,type){var isSale=type==="sale";var name=isSale?item.customer:item.supplier;var due=Math.max(0,num(item.amount)-num(item.paid));return '<div class="hisab-entry-card"><strong>'+esc(name||"")+'</strong><div style="font-weight:700">'+esc(isSale?"SALE":"PURCHASE")+" • "+money(item.amount)+'</div>'+(item.item?'<div style="font-size:12px;opacity:.7">Item: '+esc(item.item)+' • Qty:'+esc(item.quantity||1)+' × '+money(item.rate||0)+'</div>':"")+'<div style="font-size:12px;opacity:.7">'+esc(item.date)+" • "+esc(item.status||"pending")+'</div><div>Paid: '+money(item.paid)+' • Due: <b>'+money(due)+'</b></div><div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">'+(due>0?actionButton2("business-payment",type,item.id,isSale?"Receive":"Pay"):"")+actionButton2("business-edit",type,item.id,"Edit")+actionButton2("business-delete",type,item.id,"Delete")+actionButton2("business-history",type,item.id,"History")+'</div></div>';}
+function customerCard(m){var entries=salesForCustomer(m);var total=0,paid=0;entries.forEach(function(x){total+=num(x.amount);paid+=num(x.paid);});return '<div class="hisab-entry-card"><strong>'+esc(m.name)+'</strong><div style="font-size:12px;opacity:.7">'+esc(m.phone||"")+'</div><div style="margin-top:5px">Sales: <b>'+money(total)+'</b> • Due: <b>'+money(Math.max(0,total-paid))+'</b></div><div style="font-size:12px;opacity:.7">'+entries.length+' sale(s)</div>'+actionButton("business-master-delete",m.id,"Delete")+(entries.length?'<div style="margin-top:10px">'+entries.map(function(x){return businessCard(x,"sale");}).join("")+'</div>':"")+'</div>';}
+function supplierCard(m){var entries=purchasesForSupplier(m);var total=0,paid=0;entries.forEach(function(x){total+=num(x.amount);paid+=num(x.paid);});return '<div class="hisab-entry-card"><strong>'+esc(m.name)+'</strong><div style="font-size:12px;opacity:.7">'+esc(m.phone||"")+'</div><div style="margin-top:5px">Purchases: <b>'+money(total)+'</b> • Due: <b>'+money(Math.max(0,total-paid))+'</b></div><div style="font-size:12px;opacity:.7">'+entries.length+' purchase(s)</div>'+actionButton("business-master-delete",m.id,"Delete")+(entries.length?'<div style="margin-top:10px">'+entries.map(function(x){return businessCard(x,"purchase");}).join("")+'</div>':"")+'</div>';}
+function renderBusiness(){var list=$("businessList");if(!list) return;var filter=D.ui.businessFilter||"customer";document.querySelectorAll(".filter-btn").forEach(function(btn){if(btn.dataset.f) btn.classList.toggle("active",btn.dataset.f===filter);});var html="";if(filter==="customer"){var customers=D.business.filter(function(x){return x.type==="customer";});customers.forEach(function(x){html+=customerCard(x);});var linked={};customers.forEach(function(c){salesForCustomer(c).forEach(function(s){linked[s.id]=true;});});var other=getBusinessSales().filter(function(x){return !linked[x.id];});if(other.length) html+='<div class="hisab-entry-card"><strong>Other Sales</strong>'+other.map(function(x){return businessCard(x,"sale");}).join("")+'</div>';}else if(filter==="supplier"){var suppliers=D.business.filter(function(x){return x.type==="supplier";});suppliers.forEach(function(x){html+=supplierCard(x);});var linkedP={};suppliers.forEach(function(s){purchasesForSupplier(s).forEach(function(p){linkedP[p.id]=true;});});var otherP=getBusinessPurchases().filter(function(x){return !linkedP[x.id];});if(otherP.length) html+='<div class="hisab-entry-card"><strong>Other Purchases</strong>'+otherP.map(function(x){return businessCard(x,"purchase");}).join("")+'</div>';}else if(filter==="sales"){getBusinessSales().slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));}).forEach(function(x){html+=businessCard(x,"sale");});}else if(filter==="purchase"){getBusinessPurchases().slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));}).forEach(function(x){html+=businessCard(x,"purchase");});}list.innerHTML=html||'<div class="empty-state">No entries</div>';}
+function payBusinessEntry(type,id){var item=findBusiness(type,id);if(!item) return;var rem=Math.max(0,num(item.amount)-num(item.paid));if(rem<=0){item.status="paid";save();renderBusiness();return;}var root=ensureModalRoot();root.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h3>'+(type==="sale"?"Receive Payment":"Pay Supplier")+'</h3><div>Due: <b>'+money(rem)+'</b></div><input id="pAmount" type="number" min="0" value="'+rem+'"><select id="pMethod">'+methodOptions(item.method||"Cash")+'</select><div class="m-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="confirmPayBusiness(\''+type+'\',\''+esc(id)+'\')">Save</button></div></div></div>';}
+function confirmPayBusiness(type,id){var item=findBusiness(type,id);if(!item) return;var rem=Math.max(0,num(item.amount)-num(item.paid));var amt=$("pAmount")?num($("pAmount").value):0;if(amt<=0){alert("Valid amount likho");return;}amt=Math.min(amt,rem);var method=$("pMethod")?$("pMethod").value:"Cash";item.paid=num(item.paid)+amt;item.history=Array.isArray(item.history)?item.history:[];item.history.push({id:uid("payment"),date:today(),amount:amt,method:method});if(item.paid>=num(item.amount)){item.paid=num(item.amount);item.status="paid";}else item.status="partial";closeModal();save();renderBusiness();renderHome();renderReports();}
+function editBusinessEntry(type,id){var item=findBusiness(type,id);if(!item) return;var root=ensureModalRoot();root.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h3>Edit '+(type==="sale"?"Sale":"Purchase")+'</h3><input id="beName" value="'+esc(type==="sale"?item.customer:item.supplier)+'"><input id="beItem" value="'+esc(item.item||"")+'"><div style="display:flex;gap:8px"><input id="beQty" type="number" min="1" value="'+num(item.quantity||1)+'"><input id="beRate" type="number" min="0" value="'+num(item.rate||0)+'"></div><input id="beDate" type="date" value="'+esc(item.date||today())+'"><select id="beMethod">'+methodOptions(item.method||"Cash")+'</select><input id="beNote" value="'+esc(item.note||"")+'"><div class="m-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="confirmEditBusiness(\''+type+'\',\''+esc(id)+'\')">Update</button></div></div></div>';}
+function confirmEditBusiness(type,id){var item=findBusiness(type,id);if(!item) return;var isSale=type==="sale";var name=$("beName")?$("beName").value.trim():"";var itemName=$("beItem")?$("beItem").value.trim():"";var qty=$("beQty")?num($("beQty").value):1;var rate=$("beRate")?num($("beRate").value):0;if(!name||qty<=0||rate<=0){alert("Name, qty, rate sahi likho");return;}var master=findMasterByName(isSale?"customer":"supplier",name);if(!master){master={id:uid("biz"),mode:"business",type:isSale?"customer":"supplier",name:name,phone:"",date:today()};D.business.push(master);}item.businessId=master.id;if(isSale){item.customer=name;item.supplier="";}else{item.supplier=name;item.customer="";}item.item=itemName;item.quantity=qty;item.rate=rate;item.amount=qty*rate;item.date=$("beDate")?safeDate($("beDate").value):today();item.method=$("beMethod")?$("beMethod").value:"Cash";item.note=$("beNote")?$("beNote").value.trim():"";item.paid=Math.min(num(item.paid),item.amount);if(item.paid>=item.amount) item.status="paid";else if(item.paid>0) item.status="partial";else item.status="pending";closeModal();save();renderBusiness();renderHome();renderReports();}
+function deleteBusinessEntry(type,id){if(!confirm("Delete this entry?")) return;if(type==="sale") D.sales=D.sales.filter(function(x){return x.id!==id;});else D.purchases=D.purchases.filter(function(x){return x.id!==id;});save();renderBusiness();renderHome();renderReports();}
+function deleteBusinessMaster(id){var master=D.business.find(function(x){return x.id===id;});if(!master) return;if(!confirm("Delete "+master.type+"?")) return;if(master.type==="customer") D.sales.forEach(function(x){if(x.businessId===id||String(x.customer||"").toLowerCase()===String(master.name).toLowerCase()) x.businessId=null;});else D.purchases.forEach(function(x){if(x.businessId===id||String(x.supplier||"").toLowerCase()===String(master.name).toLowerCase()) x.businessId=null;});D.business=D.business.filter(function(x){return x.id!==id;});save();renderBusiness();}
+function businessHistory(type,id){var item=findBusiness(type,id);if(!item) return;var h=Array.isArray(item.history)?item.history:[];var html=h.length?h.map(function(x){return '<div style="padding:8px 0;border-bottom:1px solid #eee">'+esc(x.date||"")+" • "+money(x.amount)+" • "+esc(x.method||"Cash")+'</div>';}).join(""):"<div>No payment history</div>";var due=Math.max(0,num(item.amount)-num(item.paid));var root=ensureModalRoot();root.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h3>History - '+esc(type==="sale"?item.customer:item.supplier)+'</h3><div style="max-height:300px;overflow:auto">'+html+'</div><div style="margin-top:12px">Total: '+money(item.amount)+'<br>Paid: '+money(item.paid)+'<br>Due: '+money(due)+'</div><button class="btn-save" style="width:100%;margin-top:12px" onclick="closeModal()">Close</button></div></div>';}
+function addTransaction(type){var tType=type||($("transactionType")?$("transactionType").value:"expense");var amt=$("transactionAmount")?num($("transactionAmount").value):0;var cat=$("transactionCategory")?$("transactionCategory").value.trim():"";var note=$("transactionNote")?$("transactionNote").value.trim():"";var date=$("transactionDate")?safeDate($("transactionDate").value):today();if(amt<=0){alert("Amount enter karein");return;}D.transactions.push({id:uid("txn"),mode:D.mode,type:tType==="income"?"income":"expense",amount:amt,category:cat,note:note,date:date});if($("transactionAmount")) $("transactionAmount").value="";if($("transactionCategory")) $("transactionCategory").value="";if($("transactionNote")) $("transactionNote").value="";save();renderAll();show("transactions");}
+function deleteTransaction(id){if(!confirm("Delete?")) return;D.transactions=D.transactions.filter(function(x){return x.id!==id;});save();renderAll();}
+function renderTransactions(){var list=$("transactionList");if(!list) return;var data=D.transactions.filter(function(x){return x.mode===D.mode;}).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});if(!data.length){list.innerHTML='<div class="empty-state">No transactions yet.</div>';return;}list.innerHTML=data.map(function(x){var color=x.type==="income"?"#168a45":"#d32f2f";return '<div class="hisab-entry-card"><strong style="color:'+color+'">'+esc(x.type==="income"?"Income":"Expense")+" • "+money(x.amount)+'</strong><div style="font-size:12px;opacity:.7">'+esc(x.date)+(x.category?" • "+esc(x.category):"")+'</div>'+(x.note?"<div>"+esc(x.note)+"</div>":"")+'<div style="margin-top:7px">'+actionButton("transaction-delete",x.id,"Delete")+'</div></div>';}).join("");}
+function renderReports(){var box=$("reportContent");if(!box) return;var inc=0,exp=0;D.transactions.forEach(function(x){if(x.mode!==D.mode) return;if(x.type==="income") inc+=num(x.amount);else exp+=num(x.amount);});var kh=khataTotals(D.mode);var sales=getBusinessSales().reduce(function(s,x){return s+num(x.amount);},0);var pur=getBusinessPurchases().reduce(function(s,x){return s+num(x.amount);},0);var salePaid=getBusinessSales().reduce(function(s,x){return s+num(x.paid);},0);var purPaid=getBusinessPurchases().reduce(function(s,x){return s+num(x.paid);},0);box.innerHTML='<div class="hisab-entry-card"><strong>Money Summary</strong><div>Income: '+money(inc)+'</div><div>Expense: '+money(exp)+'</div><div>Net: <b>'+money(inc-exp)+'</b></div></div><div class="hisab-entry-card"><strong>Udhaar Summary</strong><div>Dena: '+money(kh.give)+'</div><div>Lena: '+money(kh.receive)+'</div><div>Net Due: <b>'+money(kh.give-kh.receive)+'</b></div></div><div class="hisab-entry-card"><strong>Business Summary</strong><div>Sales: '+money(sales)+'</div><div>Sales Received: '+money(salePaid)+'</div><div>Sales Due: '+money(Math.max(0,sales-salePaid))+'</div><div>Purchase: '+money(pur)+'</div><div>Purchase Paid: '+money(purPaid)+'</div><div>Purchase Due: '+money(Math.max(0,pur-purPaid))+'</div><div>Difference: <b>'+money(sales-pur)+'</b></div></div>';}
+function handleAction(b){var a=b.getAttribute("data-hisab-action");var id=b.getAttribute("data-hisab-id");var id2=b.getAttribute("data-hisab-id2");switch(a){case "khata-view":openKhataDetail(id,id2);break;case "khata-edit":editKhata(id);break;case "khata-delete":deleteKhata(id);break;case "khata-payment":openPaymentEntry(id);break;case "business-payment":payBusinessEntry(id,id2);break;case "business-edit":editBusinessEntry(id,id2);break;case "business-delete":deleteBusinessEntry(id,id2);break;case "business-history":businessHistory(id,id2);break;case "business-master-delete":deleteBusinessMaster(id);break;case "transaction-delete":deleteTransaction(id);break;}}
+document.addEventListener("click",function(e){var b=e.target.closest("[data-hisab-action]");if(!b) return;e.preventDefault();try{handleAction(b);}catch(err){console.error(err);}},false);
+function renderAll(){renderHome();renderKhata("personal");renderBusiness();renderTransactions();renderReports();}
+function init(){load();if($("khataDate")) $("khataDate").value=today();if($("transactionDate")) $("transactionDate").value=today();ensureModalRoot();renderAll();show(D.ui.page||"home");}
+window.show=show;window.setMode=setMode;window.openKhataForm=openKhataForm;window.closeKhataForm=closeKhataForm;window.saveKhataEntry=saveKhataEntry;window.searchKhata=searchKhata;window.filterKhata=filterKhata;window.openKhataDetail=openKhataDetail;window.closeKhataDetail=closeKhataDetail;window.openPaymentEntry=openPaymentEntry;window.confirmKhataPay=confirmKhataPay;window.closeModal=closeModal;window.businessFilter=businessFilter;window.addBusinessCustomer=addBusinessCustomer;window.addBusinessSupplier=addBusinessSupplier;window.addBusinessSales=addBusinessSales;window.addBusinessPurchase=addBusinessPurchase;window.saveMaster=saveMaster;window.saveEntry=saveEntry;window.openEntryModal=openEntryModal;window.confirmPayBusiness=confirmPayBusiness;window.confirmEditBusiness=confirmEditBusiness;window.addTransaction=addTransaction;
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}
+})();
+</script>
 </body>
 </html>
