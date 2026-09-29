@@ -57,7 +57,7 @@ body{
 
 #guestGate{
   min-height:100vh;
-  display:none;
+  display:flex;
   flex-direction:column;
   justify-content:center;
   align-items:center;
