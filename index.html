@@ -17,7 +17,7 @@
   <div class="logo">₹</div>
   <h1>HISAB</h1>
   <p>Track • Plan • Grow</p>
-  <button onclick="enterGuestMode()">Start Using HISAB</button>
+  <button onclick="window.enterGuestMode ? window.enterGuestMode() : (localStorage.setItem('hisab_v7_guest','1'), location.reload())">Start Using HISAB</button>
 </div>
 
 <!-- ================= APP SHELL ================= -->
