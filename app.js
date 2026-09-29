@@ -2527,7 +2527,7 @@
     return String(hash >>> 0);
   }
 
-  async function setPin() {
+    async function setPin() {
     var input = $("pinInput");
 
     var pin = input
@@ -2548,19 +2548,27 @@
     alert("PIN saved.");
   }
 
-  async function enterGuestMode() {
-    if (D.pinHash) {
-      var pin = prompt("Enter HISAB PIN:");
+ function enterGuestMode() {
+  try {
+    localStorage.setItem(SESSION_KEY, "1");
 
-      if (pin === null) return;
+    var gate = $("guestGate");
+    var shell = $("appShell");
 
-      var hash = await hashPin(pin);
+    if (gate) gate.style.display = "none";
+    if (shell) shell.style.display = "";
 
-      if (hash !== D.pinHash) {
-        alert("Wrong PIN.");
-        return;
-      }
-    }
+    show("home");
+
+  } catch (e) {
+    console.error("HISAB START ERROR:", e);
+
+    try {
+      localStorage.setItem(SESSION_KEY, "1");
+      location.reload();
+    } catch (ignore) {}
+  }
+}
 
     localStorage.setItem(SESSION_KEY, "1");
 
