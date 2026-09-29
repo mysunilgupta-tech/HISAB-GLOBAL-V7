@@ -2528,27 +2528,27 @@
   }
 
     async function setPin() {
-    var input = $("pinInput");
+  var input = $("pinInput");
 
-    var pin = input
-      ? input.value.trim()
-      : "";
+  var pin = input
+    ? input.value.trim()
+    : "";
 
-    if (!/^\d{4,8}$/.test(pin)) {
-      alert("PIN 4 se 8 digit ka hona chahiye.");
-      return;
-    }
-
-    D.pinHash = await hashPin(pin);
-
-    save();
-
-    if (input) input.value = "";
-
-    alert("PIN saved.");
+  if (!/^\d{4,8}$/.test(pin)) {
+    alert("PIN 4 se 8 digit ka hona chahiye.");
+    return;
   }
 
- function enterGuestMode() {
+  D.pinHash = await hashPin(pin);
+
+  save();
+
+  if (input) input.value = "";
+
+  alert("PIN saved.");
+}
+
+function enterGuestMode() {
   try {
     localStorage.setItem(SESSION_KEY, "1");
 
@@ -2570,35 +2570,28 @@
   }
 }
 
-    localStorage.setItem(SESSION_KEY, "1");
+function lockApp() {
+  localStorage.removeItem(SESSION_KEY);
+  initGate();
+}
 
-    initGate();
-    show("home");
+function initGate() {
+  var gate = $("guestGate");
+  var shell = $("appShell");
+
+  var unlocked =
+    localStorage.getItem(SESSION_KEY) === "1";
+
+  if (gate) {
+    gate.style.display =
+      unlocked ? "none" : "flex";
   }
 
-  function lockApp() {
-    localStorage.removeItem(SESSION_KEY);
-    initGate();
+  if (shell) {
+    shell.style.display =
+      unlocked ? "" : "none";
   }
-
-  function initGate() {
-    var gate = $("guestGate");
-    var shell = $("appShell");
-
-    var unlocked =
-      localStorage.getItem(SESSION_KEY) === "1";
-
-    if (gate) {
-      gate.style.display =
-        unlocked ? "none" : "flex";
-    }
-
-    if (shell) {
-      shell.style.display =
-        unlocked ? "" : "none";
-    }
-  }
-
+}
   /* =========================================================
      FAMILY
      ========================================================= */
