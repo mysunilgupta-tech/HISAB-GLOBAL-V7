@@ -874,13 +874,7 @@
         mode +
         "')\">View</button> " +
 
-        '<button type="button" onclick="editKhata(\'' +
-        esc(k.id) +
-        "')\">Edit</button> " +
-
-        '<button type="button" onclick="deleteKhata(\'' +
-        esc(s.id) +
-        '\')">Delete</button>' +
+        
 
         '</div>' +
 
@@ -889,7 +883,19 @@
       );
     }).join("");
   }
+'<button type="button" onclick="openKhataDetail(\'' +
+        esc(k.person).replace(/'/g, "\\'") +
+        "','" +
+        mode +
+        '\')">View</button> ' +
 
+        '<button type="button" onclick="editKhata(\'' +
+        esc(k.id) +
+        '\')">Edit</button> ' +
+
+        '<button type="button" onclick="deleteKhata(\'' +
+        esc(k.id) +
+        '\')">Delete</button>' +
   function searchKhata(mode) {
     renderKhata(mode);
   }
