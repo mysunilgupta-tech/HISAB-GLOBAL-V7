@@ -3257,6 +3257,35 @@
   window.editBusinessEntry = editBusinessEntry;
   window.deleteBusinessEntry = deleteBusinessEntry;
   window.deleteBusinessMaster = deleteBusinessMaster;
+     /* =========================================================
+     GUEST START / UNLOCK
+     ========================================================= */
+
+  async function enterGuestMode() {
+    try {
+      localStorage.setItem(SESSION_KEY, "1");
+
+      var gate = document.getElementById("guestGate");
+      var shell = document.getElementById("appShell");
+
+      if (gate) gate.style.display = "none";
+      if (shell) shell.style.display = "";
+
+      if (typeof show === "function") {
+        show("home");
+      }
+
+      if (typeof renderAll === "function") {
+        renderAll();
+      }
+    } catch (e) {
+      console.error("Guest start error:", e);
+      localStorage.setItem(SESSION_KEY, "1");
+      location.reload();
+    }
+  }
+
+  window.enterGuestMode = enterGuestMode;
   window.businessHistory = businessHistory;
 
   window.addTransaction = addTransaction;
