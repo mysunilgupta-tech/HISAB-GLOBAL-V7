@@ -879,7 +879,7 @@
         "')\">Edit</button> " +
 
         '<button type="button" onclick="deleteKhata(\'' +
-        esc(k.id) +
+        esc(s.id) +
         '\')">Delete</button>' +
 
         '</div>' +
