@@ -4,7 +4,7 @@
   "description": "HISAB - Money Manager for Personal and Business",
   "private": true,
   "scripts": {
-    "build": "mkdir -p www && cp index.html app.js style.css www/"
+    "build": "mkdir -p www && cp index.html app.js style.css www/",
     "cap:sync": "npx cap sync",
     "android": "npx cap open android"
   },
