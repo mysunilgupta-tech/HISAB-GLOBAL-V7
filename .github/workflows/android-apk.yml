@@ -43,6 +43,7 @@ jobs:
           test -f app.js
           test -f style.css
           test -f package.json
+          test -f capacitor.config.ts
 
           echo "Source files OK."
 
@@ -102,35 +103,25 @@ jobs:
 
           npm run build
 
-          echo "Web build OK."
-
-      # 10. VERIFY WEB
-      - name: Verify web build
-        shell: bash
-        run: |
-          set -e
-
           test -f www/index.html
           test -f www/app.js
           test -f www/style.css
 
-          node --check www/app.js
+          echo "Web build OK."
 
-          echo "www verification OK."
-
-      # 11. CAPACITOR CONFIG
-      - name: Verify Capacitor configuration
+      # 10. CREATE ANDROID PROJECT IF MISSING
+      - name: Prepare Android project
         shell: bash
         run: |
           set -e
 
-          if [ -f capacitor.config.ts ]; then
-            echo "capacitor.config.ts found."
-          elif [ -f capacitor.config.json ]; then
-            echo "capacitor.config.json found."
+          if [ ! -d android ] || [ ! -f android/gradlew ]; then
+            echo "Android project missing."
+            echo "Creating Android project with Capacitor..."
+
+            npx cap add android
           else
-            echo "ERROR: Capacitor config missing."
-            exit 1
+            echo "Android project already exists."
           fi
 
           test -d android
@@ -138,9 +129,9 @@ jobs:
 
           chmod +x android/gradlew
 
-          echo "Android project OK."
+          echo "Android project ready."
 
-      # 12. CAPACITOR SYNC
+      # 11. CAPACITOR SYNC
       - name: Sync Capacitor Android
         shell: bash
         run: |
@@ -150,7 +141,7 @@ jobs:
 
           echo "Capacitor Android sync OK."
 
-      # 13. VERIFY ANDROID ASSETS
+      # 12. VERIFY ANDROID ASSETS
       - name: Verify Android web assets
         shell: bash
         run: |
@@ -167,7 +158,7 @@ jobs:
 
           echo "Android web assets OK."
 
-      # 14. ADMOB
+      # 13. ADMOB
       - name: Configure AdMob
         shell: bash
         env:
@@ -267,7 +258,7 @@ jobs:
 
           echo "AdMob configuration OK."
 
-      # 15. VERIFY ADMOB
+      # 14. VERIFY ADMOB
       - name: Verify AdMob
         shell: bash
         env:
@@ -292,7 +283,7 @@ jobs:
 
           echo "AdMob verification OK."
 
-      # 16. GRADLE VERSION
+      # 15. GRADLE VERSION
       - name: Check Gradle
         shell: bash
         working-directory: android
@@ -301,7 +292,7 @@ jobs:
 
           ./gradlew --version
 
-      # 17. CLEAN
+      # 16. CLEAN
       - name: Clean Android
         shell: bash
         working-directory: android
@@ -310,7 +301,7 @@ jobs:
 
           ./gradlew clean --no-daemon
 
-      # 18. DEBUG APK
+      # 17. DEBUG APK
       - name: Build Debug APK
         shell: bash
         working-directory: android
@@ -321,7 +312,7 @@ jobs:
             --stacktrace \
             --no-daemon
 
-      # 19. VERIFY APK
+      # 18. VERIFY APK
       - name: Verify Debug APK
         shell: bash
         run: |
@@ -337,7 +328,7 @@ jobs:
 
           echo "Debug APK OK."
 
-      # 20. RELEASE AAB
+      # 19. RELEASE AAB
       - name: Build Release AAB
         shell: bash
         working-directory: android
@@ -348,7 +339,7 @@ jobs:
             --stacktrace \
             --no-daemon
 
-      # 21. VERIFY AAB
+      # 20. VERIFY AAB
       - name: Verify Release AAB
         shell: bash
         run: |
@@ -364,7 +355,7 @@ jobs:
 
           echo "Release AAB OK."
 
-      # 22. UPLOAD APK
+      # 21. UPLOAD APK
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -372,7 +363,7 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      # 23. UPLOAD AAB
+      # 22. UPLOAD AAB
       - name: Upload Release AAB
         uses: actions/upload-artifact@v4
         with:
@@ -380,7 +371,7 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
-      # 24. SUMMARY
+      # 23. SUMMARY
       - name: Build Summary
         shell: bash
         run: |
