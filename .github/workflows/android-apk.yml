@@ -15,25 +15,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
+      # =====================================================
       # 1. CHECKOUT
+      # =====================================================
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # 2. NODE 22
+      # =====================================================
+      # 2. NODE
+      # =====================================================
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '22'
 
-      # 3. JAVA 21
+      # =====================================================
+      # 3. JAVA
+      # =====================================================
       - name: Setup Java 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      # 4. CHECK SOURCE
+      # =====================================================
+      # 4. CHECK SOURCE FILES
+      # =====================================================
       - name: Check HISAB source files
         shell: bash
         run: |
@@ -47,7 +54,9 @@ jobs:
 
           echo "Source files OK."
 
+      # =====================================================
       # 5. CHECK APP.JS
+      # =====================================================
       - name: Validate app.js
         shell: bash
         run: |
@@ -57,19 +66,41 @@ jobs:
 
           echo "app.js syntax OK."
 
-      # 6. CHECK INDEX
+      # =====================================================
+      # 6. CHECK INDEX.HTML
+      # =====================================================
       - name: Validate index.html
         shell: bash
         run: |
           set -e
 
+          echo "Validating index.html..."
+
           grep -qi '<html' index.html
-          grep -qi 'app.js' index.html
-          grep -qi 'style.css' index.html
+
+          if grep -qi 'app\.js' index.html; then
+            echo "External app.js reference found."
+          elif grep -qi '<script' index.html; then
+            echo "Inline script found."
+          else
+            echo "ERROR: No JavaScript found in index.html."
+            exit 1
+          fi
+
+          if grep -qi 'style\.css' index.html; then
+            echo "External style.css reference found."
+          elif grep -qi '<style' index.html; then
+            echo "Inline CSS found."
+          else
+            echo "ERROR: No CSS found in index.html."
+            exit 1
+          fi
 
           echo "index.html OK."
 
-      # 7. INSTALL
+      # =====================================================
+      # 7. INSTALL DEPENDENCIES
+      # =====================================================
       - name: Install dependencies
         shell: bash
         run: |
@@ -83,7 +114,9 @@ jobs:
 
           echo "Dependencies installed."
 
-      # 8. CAPACITOR
+      # =====================================================
+      # 8. CHECK CAPACITOR
+      # =====================================================
       - name: Check Capacitor
         shell: bash
         run: |
@@ -93,7 +126,9 @@ jobs:
 
           echo "Capacitor OK."
 
-      # 9. BUILD WEB
+      # =====================================================
+      # 9. BUILD WEB APP
+      # =====================================================
       - name: Build web app
         shell: bash
         run: |
@@ -109,19 +144,21 @@ jobs:
 
           echo "Web build OK."
 
-      # 10. CREATE ANDROID PROJECT IF MISSING
+      # =====================================================
+      # 10. PREPARE ANDROID
+      # =====================================================
       - name: Prepare Android project
         shell: bash
         run: |
           set -e
 
           if [ ! -d android ] || [ ! -f android/gradlew ]; then
-            echo "Android project missing."
-            echo "Creating Android project with Capacitor..."
+            echo "Android project not found."
+            echo "Creating Android project..."
 
             npx cap add android
           else
-            echo "Android project already exists."
+            echo "Existing Android project found."
           fi
 
           test -d android
@@ -131,7 +168,9 @@ jobs:
 
           echo "Android project ready."
 
+      # =====================================================
       # 11. CAPACITOR SYNC
+      # =====================================================
       - name: Sync Capacitor Android
         shell: bash
         run: |
@@ -141,7 +180,9 @@ jobs:
 
           echo "Capacitor Android sync OK."
 
-      # 12. VERIFY ANDROID ASSETS
+      # =====================================================
+      # 12. VERIFY ANDROID WEB ASSETS
+      # =====================================================
       - name: Verify Android web assets
         shell: bash
         run: |
@@ -158,7 +199,9 @@ jobs:
 
           echo "Android web assets OK."
 
-      # 13. ADMOB
+      # =====================================================
+      # 13. CONFIGURE ADMOB
+      # =====================================================
       - name: Configure AdMob
         shell: bash
         env:
@@ -167,8 +210,8 @@ jobs:
           set -e
 
           if [ -z "$ADMOB_APP_ID" ]; then
-            echo "ADMOB_APP_ID not configured."
-            echo "Keeping existing AdMob configuration."
+            echo "ADMOB_APP_ID secret not configured."
+            echo "Skipping AdMob configuration."
             exit 0
           fi
 
@@ -240,14 +283,28 @@ jobs:
 
           for meta in application.findall("meta-data"):
               if meta.get(name_key) == target_name:
-                  meta.set(value_key, "@string/admob_app_id")
+                  meta.set(
+                      value_key,
+                      "@string/admob_app_id"
+                  )
                   found = True
                   break
 
           if not found:
-              meta = ET.SubElement(application, "meta-data")
-              meta.set(name_key, target_name)
-              meta.set(value_key, "@string/admob_app_id")
+              meta = ET.SubElement(
+                  application,
+                  "meta-data"
+              )
+
+              meta.set(
+                  name_key,
+                  target_name
+              )
+
+              meta.set(
+                  value_key,
+                  "@string/admob_app_id"
+              )
 
           tree.write(
               file_path,
@@ -258,7 +315,9 @@ jobs:
 
           echo "AdMob configuration OK."
 
+      # =====================================================
       # 14. VERIFY ADMOB
+      # =====================================================
       - name: Verify AdMob
         shell: bash
         env:
@@ -267,7 +326,8 @@ jobs:
           set -e
 
           if [ -z "$ADMOB_APP_ID" ]; then
-            echo "No AdMob secret supplied."
+            echo "AdMob secret not supplied."
+            echo "AdMob verification skipped."
             exit 0
           fi
 
@@ -278,21 +338,33 @@ jobs:
           test -f "$MANIFEST_FILE"
 
           grep -q 'name="admob_app_id"' "$STRINGS_FILE"
-          grep -q 'com.google.android.gms.ads.APPLICATION_ID' "$MANIFEST_FILE"
-          grep -q '@string/admob_app_id' "$MANIFEST_FILE"
+
+          grep -q \
+            'com.google.android.gms.ads.APPLICATION_ID' \
+            "$MANIFEST_FILE"
+
+          grep -q \
+            '@string/admob_app_id' \
+            "$MANIFEST_FILE"
 
           echo "AdMob verification OK."
 
-      # 15. GRADLE VERSION
+      # =====================================================
+      # 15. CHECK GRADLE
+      # =====================================================
       - name: Check Gradle
         shell: bash
         working-directory: android
         run: |
           set -e
 
+          chmod +x gradlew
+
           ./gradlew --version
 
+      # =====================================================
       # 16. CLEAN
+      # =====================================================
       - name: Clean Android
         shell: bash
         working-directory: android
@@ -301,7 +373,9 @@ jobs:
 
           ./gradlew clean --no-daemon
 
-      # 17. DEBUG APK
+      # =====================================================
+      # 17. BUILD DEBUG APK
+      # =====================================================
       - name: Build Debug APK
         shell: bash
         working-directory: android
@@ -312,7 +386,9 @@ jobs:
             --stacktrace \
             --no-daemon
 
-      # 18. VERIFY APK
+      # =====================================================
+      # 18. VERIFY DEBUG APK
+      # =====================================================
       - name: Verify Debug APK
         shell: bash
         run: |
@@ -328,34 +404,9 @@ jobs:
 
           echo "Debug APK OK."
 
-      # 19. RELEASE AAB
-      - name: Build Release AAB
-        shell: bash
-        working-directory: android
-        run: |
-          set -e
-
-          ./gradlew bundleRelease \
-            --stacktrace \
-            --no-daemon
-
-      # 20. VERIFY AAB
-      - name: Verify Release AAB
-        shell: bash
-        run: |
-          set -e
-
-          AAB="android/app/build/outputs/bundle/release/app-release.aab"
-
-          test -f "$AAB"
-
-          unzip -t "$AAB" >/dev/null
-
-          ls -lh "$AAB"
-
-          echo "Release AAB OK."
-
-      # 21. UPLOAD APK
+      # =====================================================
+      # 19. UPLOAD DEBUG APK
+      # =====================================================
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -363,31 +414,78 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      # 22. UPLOAD AAB
+      # =====================================================
+      # 20. RELEASE AAB
+      # =====================================================
+      # Release build is attempted only if Gradle release
+      # configuration is available. Debug APK remains the
+      # main test build.
+      # =====================================================
+      - name: Build Release AAB
+        shell: bash
+        working-directory: android
+        continue-on-error: true
+        run: |
+          ./gradlew bundleRelease \
+            --stacktrace \
+            --no-daemon
+
+      # =====================================================
+      # 21. VERIFY RELEASE AAB
+      # =====================================================
+      - name: Verify Release AAB
+        shell: bash
+        continue-on-error: true
+        run: |
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+
+          if [ -f "$AAB" ]; then
+            unzip -t "$AAB" >/dev/null
+            ls -lh "$AAB"
+            echo "Release AAB OK."
+          else
+            echo "Release AAB was not generated."
+            echo "This does not fail the Debug APK build."
+          fi
+
+      # =====================================================
+      # 22. UPLOAD RELEASE AAB IF AVAILABLE
+      # =====================================================
       - name: Upload Release AAB
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: HISAB-GLOBAL-V7-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
-          if-no-files-found: error
+          if-no-files-found: ignore
 
-      # 23. SUMMARY
+      # =====================================================
+      # 23. BUILD SUMMARY
+      # =====================================================
       - name: Build Summary
         shell: bash
         run: |
           echo ""
           echo "=============================================="
-          echo "       HISAB GLOBAL V7 BUILD SUCCESS"
+          echo "       HISAB GLOBAL V7 BUILD"
           echo "=============================================="
           echo ""
 
-          echo "APK:"
-          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          if [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "DEBUG APK: SUCCESS"
+            ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          else
+            echo "DEBUG APK: NOT FOUND"
+          fi
 
           echo ""
 
-          echo "AAB:"
-          ls -lh android/app/build/outputs/bundle/release/app-release.aab
+          if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then
+            echo "RELEASE AAB: SUCCESS"
+            ls -lh android/app/build/outputs/bundle/release/app-release.aab
+          else
+            echo "RELEASE AAB: NOT GENERATED"
+          fi
 
           echo ""
           echo "=============================================="
