@@ -4,176 +4,326 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0a2e4a">
-<title>HISAB V9 FINAL FIXED</title>
+<title>HISAB V9.1 - Fixed</title>
 <style>
+:root{--bg:#f4f7fb;--card:#fff;--primary:#0a2e4a;--primary2:#145b8d;--accent:#16a36f;--accent2:#0e8c60;--blue:#2478b8;--danger:#d84d4d;--text:#102338;--muted:#718198;--border:#e3ebf3;--soft:#edf5fa;--softgreen:#eaf8f2;--softred:#fff0f0;--shadow:0 8px 24px rgba(15,45,70,.08);--shadow2:0 3px 12px rgba(15,45,70,.06);--radius:18px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#f5f8fc;--card:#ffffff;--primary:#0a2e4a;--primary2:#145b8d;--accent:#18a673;--accent2:#0f8b61;--blue:#2379b8;--danger:#d94b4b;--text:#10233a;--muted:#718198;--border:#e5ecf3;--soft:#eef5fa;--shadow2:0 4px 14px rgba(15,45,70,.06);--radius:18px}
-html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
-.app{width:100%;max-width:560px;min-height:100vh;margin:auto;background:var(--bg)}
-header{position:sticky;top:0;z-index:20;padding:12px 16px;background:rgba(245,248,252,.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(229,236,243,.8)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{width:100%;max-width:720px;min-height:100vh;margin:auto;background:var(--bg)}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:13px 16px}
 .brand{display:flex;align-items:center;gap:11px}
-.logo{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0a2e4a,#1873aa);color:white;font-weight:900;font-size:23px;box-shadow:0 7px 18px rgba(10,46,74,.22)}
-.brand-name{font-size:20px;line-height:1;font-weight:900;letter-spacing:.5px}
-.brand-tag{margin-top:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:1.6px}
-main{padding:16px}
-.page{display:none;animation:pageIn .18s ease}
-.page.active{display:block}
-@keyframes pageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.logo{width:45px;height:45px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:900;background:linear-gradient(145deg,#0a2e4a,#1978b5)}
+.brand-name{font-size:20px;font-weight:900;letter-spacing:.5px}
+.brand-tag{color:var(--muted);font-size:9px;font-weight:800;letter-spacing:1.5px}
+main{padding:14px 14px 90px}
+.page{display:none}.page.active{display:block}
+.hero{border-radius:24px;padding:22px 20px;color:#fff;background:linear-gradient(135deg,#082d4a,#176d9e);box-shadow:var(--shadow);margin-bottom:14px}
+.hero-label{font-size:10px;font-weight:800;letter-spacing:1.2px;opacity:.8}
+.hero-amount{font-size:34px;font-weight:900;margin-top:5px}
+.hero-sub{font-size:11px;opacity:.75;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow2)}
-.section-title{display:flex;justify-content:space-between;align-items:center;margin:20px 2px 10px}
-.section-title h2{margin:0;font-size:16px;font-weight:900}
-.hero{position:relative;overflow:hidden;padding:22px;border-radius:24px;color:white;background:radial-gradient(circle at 90% 10%,rgba(255,255,255,.16),transparent 30%),linear-gradient(140deg,#08283f,#0e4d78 65%,#137d71);box-shadow:0 13px 30px rgba(8,40,63,.18)}
-.hero-label{font-size:10px;font-weight:900;letter-spacing:1.5px;opacity:.75}
-.hero-amount{margin-top:7px;font-size:31px;font-weight:950}
-.hero-sub{margin-top:5px;font-size:11px;opacity:.72}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}
-.stat{padding:13px 10px;min-height:76px}
-.stat-label{font-size:10px;color:var(--muted);font-weight:800}
-.stat-value{margin-top:7px;font-size:15px;font-weight:950}
-.green{color:var(--accent2)}.red{color:var(--danger)}.blue{color:var(--blue)}
-.option-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.option{min-height:105px;padding:15px 10px;text-align:left;border:1px solid var(--border);border-radius:17px;background:white;box-shadow:var(--shadow2);color:var(--text)}
-.option-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--soft);font-size:20px}
-.option-title{margin-top:10px;font-size:12px;font-weight:900}.option-sub{margin-top:3px;font-size:9px;color:var(--muted)}
-.activity{padding:5px 15px}.activity-row{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--border)}
-.activity-icon{width:38px;height:38px;flex:0 0 38px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--soft);font-size:17px}
-.activity-main{flex:1;min-width:0}.activity-name{font-size:12px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.activity-meta{margin-top:3px;font-size:9px;color:var(--muted)}.activity-amount{font-size:12px;font-weight:950;text-align:right}
-.report-card{padding:16px;display:flex;align-items:center;gap:13px}.report-icon{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#e9f5ef;font-size:21px}
-.page-head{display:flex;align-items:center;gap:10px;margin-bottom:13px}.back-btn{width:40px;height:40px;border:1px solid var(--border);border-radius:13px;background:white;font-size:19px}
-.page-head h1{margin:0;font-size:20px;font-weight:950}.page-head p{margin:3px 0 0;color:var(--muted);font-size:10px}
-.mode-pill{padding:6px 9px;border-radius:20px;background:#eaf4fb;color:var(--primary2);font-size:9px;font-weight:900}
-.filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px}.filter-btn{flex:0 0 auto;border:1px solid var(--border);background:white;color:var(--muted);padding:9px 13px;border-radius:11px;font-size:10px;font-weight:850}.filter-btn.active{color:white;background:var(--primary);border-color:var(--primary)}
-.search-row{display:flex;gap:8px;margin:11px 0}.search{flex:1;height:43px;padding:0 13px;border:1px solid var(--border);border-radius:13px;background:white;outline:none}
-.primary-btn{min-height:43px;padding:0 14px;border:0;border-radius:13px;color:white;background:linear-gradient(135deg,var(--primary),var(--primary2));font-size:11px;font-weight:900}
-.secondary-btn{min-height:42px;padding:0 13px;border:1px solid var(--border);border-radius:12px;background:white;color:var(--primary);font-size:10px;font-weight:850}
-.danger-btn{min-height:40px;padding:0 12px;border:1px solid #f0d5d5;border-radius:11px;background:#fff6f6;color:var(--danger);font-size:10px;font-weight:850}
-.full-btn{width:100%}.empty{padding:30px 15px;text-align:center;color:var(--muted)}.list{display:grid;gap:10px}
-.khata-card,.business-entry,.master-card{padding:14px}.card-top{display:flex;gap:10px}.avatar{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:white;background:linear-gradient(145deg,#0a2e4a,#1880a8);font-weight:950}
-.card-name{font-size:13px;font-weight:950}.card-meta{margin-top:4px;color:var(--muted);font-size:9px}.card-amount{text-align:right;font-size:13px;font-weight:950}
-.badge{display:inline-flex;padding:4px 7px;border-radius:8px;font-size:8px;font-weight:900}.badge-green{color:#08754f;background:#e7f7ef}.badge-red{color:#a53b3b;background:#fff0f0}
-.card-actions{display:flex;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}.card-actions button{flex:1}
-.form-card{padding:16px}.form-group{margin-bottom:13px}.label{display:block;margin-bottom:6px;font-size:10px;font-weight:900;color:#52657a}
-.input,.select,.textarea{width:100%;border:1px solid var(--border);border-radius:12px;background:white;padding:11px 12px;outline:none}
-.textarea{min-height:80px;resize:vertical}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.business-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.summary-box{padding:13px;min-height:76px}.summary-label{font-size:9px;color:var(--muted);font-weight:850}.summary-value{margin-top:6px;font-size:15px;font-weight:950}
-.business-balance{margin-top:9px;padding:15px;border-radius:16px;color:white;background:linear-gradient(135deg,#0b536c,#15936d)}
-.business-quick{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.quick-card{position:relative;padding:14px;text-align:left;border:1px solid var(--border);border-radius:17px;background:white;box-shadow:var(--shadow2)}
-.quick-icon{width:39px;height:39px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--soft);font-size:20px}.quick-title{margin-top:10px;font-size:12px;font-weight:950}.quick-value{margin-top:3px;font-size:10px;color:var(--muted)}
-.business-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.business-action{min-height:42px;border:1px solid var(--border);border-radius:12px;background:white;color:var(--primary);font-size:10px;font-weight:900}
-.modal-backdrop{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center;padding:10px;background:rgba(5,22,35,.48);backdrop-filter:blur(5px)}.modal-backdrop.show{display:flex}
-.modal{width:100%;max-width:560px;max-height:90vh;overflow:auto;padding:18px;border-radius:22px;background:white}
-.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.modal-head h3{margin:0;font-size:16px;font-weight:950}
-.close{width:35px;height:35px;border:1px solid var(--border);border-radius:11px;background:#f8fafc}
-.modal-actions{display:flex;gap:8px;margin-top:15px}.modal-actions button{flex:1}
-.footer{padding:25px 0 10px;text-align:center;color:#9aa8b7;font-size:9px}
-</style></head><body><div class="app"><header><div class="brand"><div class="logo">H</div><div><div class="brand-name">HISAB</div><div class="brand-tag">TRACK • PLAN • GROW</div></div></div></header><main>
-<section id="page-home" class="page active"><div class="hero"><div class="hero-label">CURRENT BALANCE</div><div id="homeBalance" class="hero-amount">₹0</div><div class="hero-sub">Personal + Business • All entries</div></div>
-<div class="stats"><div class="card stat"><div class="stat-label">RECEIVABLE</div><div id="receivable" class="stat-value green">₹0</div></div><div class="card stat"><div class="stat-label">PAYABLE</div><div id="payable" class="stat-value red">₹0</div></div><div class="card stat"><div class="stat-label">NET</div><div id="homeNet" class="stat-value blue">₹0</div></div></div>
-<div class="section-title"><h2>Hisab Options</h2><span>Choose mode</span></div>
-<div class="option-grid">
-<button class="option" onclick="openPersonal()"><div class="option-icon">🤝</div><div class="option-title">Personal Udhaar</div><div class="option-sub">Dena • Lena • History</div></button>
-<button class="option" onclick="openBusiness()"><div class="option-icon">🏪</div><div class="option-title">Business Khata</div><div class="option-sub">Customer • Sale • Purchase</div></button>
-<button class="option" onclick="openTransactions()"><div class="option-icon">💰</div><div class="option-title">Money Flow</div><div class="option-sub">Income • Expense</div></button>
-</div>
-<div class="section-title"><h2>Recent Activity</h2><span>Latest entries</span></div><div id="homeRecent" class="card activity"></div>
-<div class="section-title"><h2>Reports & Summary</h2></div>
-<button class="card report-card full-btn" onclick="show('reports')"><div class="report-icon">📊</div><div style="flex:1;text-align:left"><strong>Reports & Analytics</strong><br><span style="font-size:10px;color:var(--muted)">Income, expense, udhaar and business summary</span></div><div>›</div></button>
-<div class="footer">HISAB • TRACK • PLAN • GROW</div>
+.stat{padding:13px 10px}
+.stat-label{font-size:8px;color:var(--muted);font-weight:900;letter-spacing:.5px}
+.stat-value{font-size:15px;font-weight:900;margin-top:6px;word-break:break-word}
+.green{color:var(--accent)}.red{color:var(--danger)}.blue{color:var(--blue)}
+.section-title{display:flex;align-items:end;justify-content:space-between;margin:18px 2px 10px}
+.section-title h2,.planning-section h2{margin:0;font-size:16px;font-weight:900}
+.section-title span,.planning-section span{color:var(--muted);font-size:9px;font-weight:700}
+.option-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.option{border:1px solid var(--border);background:#fff;border-radius:18px;padding:16px 13px;text-align:left;box-shadow:var(--shadow2);color:var(--text);min-height:125px;width:100%}
+.option:active,.quick-card:active,.business-action:active{transform:scale(.98)}
+.option-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--soft);font-size:21px;margin-bottom:11px}
+.option-title{font-size:13px;font-weight:900}.option-sub{font-size:9px;color:var(--muted);margin-top:4px;line-height:1.4}
+.activity{padding:7px;min-height:65px}
+.report-card{width:100%;display:flex;align-items:center;gap:12px;padding:15px;border:1px solid var(--border);background:#fff;border-radius:18px;box-shadow:var(--shadow2)}
+.report-icon{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--soft);font-size:20px}
+.footer{text-align:center;color:#9aa8b8;font-size:8px;font-weight:800;letter-spacing:1.5px;padding:28px 0 5px}
+.page-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.page-head h1{margin:0;font-size:20px;font-weight:900}
+.back-btn{border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 12px;font-size:11px;font-weight:800;color:var(--primary)}
+.home-btn{border:1px solid var(--border);background:var(--soft);color:var(--primary2);border-radius:12px;padding:9px 11px;font-size:10px;font-weight:900;margin-left:auto}
+.mode-pill{margin-left:auto;background:var(--soft);color:var(--primary2);border-radius:20px;padding:7px 10px;font-size:9px;font-weight:900}
+.filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;margin-bottom:10px}
+.filter-btn{white-space:nowrap;border:1px solid var(--border);background:#fff;color:var(--muted);padding:9px 12px;border-radius:12px;font-size:10px;font-weight:800}
+.filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.search-row{display:flex;gap:8px;margin-bottom:10px}
+.input,select,textarea,input{width:100%;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:12px;padding:11px 12px;outline:none}
+.textarea{min-height:80px;resize:vertical}
+.primary-btn,.secondary-btn,.danger-btn{border:0;border-radius:12px;padding:11px 14px;font-size:11px;font-weight:900}
+.primary-btn{background:var(--primary);color:#fff}
+.secondary-btn{background:var(--soft);color:var(--primary2)}
+.danger-btn{background:var(--softred);color:var(--danger)}
+.form-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:15px;box-shadow:var(--shadow2)}
+.label{display:block;font-size:9px;color:var(--muted);font-weight:900;margin:0 0 5px 2px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.list{display:grid;gap:9px}
+.hisab-entry-card{background:#fff;border:1px solid var(--border);border-radius:17px;padding:13px;box-shadow:var(--shadow2)}
+.empty-state{text-align:center;padding:28px 15px;color:var(--muted);background:#fff;border:1px dashed var(--border);border-radius:17px;font-size:11px}
+.btn{border:1px solid var(--border);background:#f8fafc;color:var(--primary);padding:7px 9px;border-radius:9px;font-size:9px;font-weight:800}
+.business-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
+.summary-box{background:#fff;border:1px solid var(--border);border-radius:15px;padding:11px 9px}
+.summary-label{color:var(--muted);font-size:8px;font-weight:900}
+.summary-value{font-size:12px;font-weight:900;margin-top:5px}
+.business-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.business-action{border:1px solid var(--border);background:#fff;border-radius:15px;padding:12px;text-align:left;box-shadow:var(--shadow2);width:100%}
+.business-action strong{display:block;font-size:11px}
+.business-action span{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.quick-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:13px;box-shadow:var(--shadow2)}
+.modal-overlay{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center;padding:12px;background:rgba(5,24,40,.48)}
+.modal-overlay.active{display:flex}
+.modal-box{width:min(100%,560px);max-height:90vh;overflow:auto;background:#fff;border-radius:23px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-box h3{margin:0 0 14px;font-size:17px}
+.m-actions{display:flex;gap:8px;margin-top:12px}
+.btn-cancel,.btn-save{flex:1;border:0;border-radius:12px;padding:12px;font-weight:900}
+.btn-cancel{background:#eef2f6;color:var(--text)}
+.btn-save{background:var(--primary);color:#fff}
+.planning-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.planning-mode button{border:1px solid var(--border);background:#fff;border-radius:13px;padding:11px;font-size:10px;font-weight:900;color:var(--muted)}
+.planning-mode button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.planning-budget{color:#fff;border-radius:22px;padding:17px;background:linear-gradient(135deg,#0a2e4a,#126d9f);box-shadow:var(--shadow)}
+.planning-budget-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.planning-label{font-size:8px;letter-spacing:1px;opacity:.75;font-weight:900}
+.planning-big{font-size:26px;font-weight:900;margin-top:4px}
+.planning-edit{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;border-radius:10px;padding:8px 10px;font-size:9px;font-weight:800}
+.planning-budget-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:16px}
+.planning-mini{background:rgba(255,255,255,.10);border-radius:12px;padding:9px}
+.planning-mini span{display:block;font-size:7px;opacity:.7;font-weight:900}
+.planning-mini b{display:block;font-size:10px;margin-top:4px}
+.planning-progress{height:8px;background:rgba(255,255,255,.18);border-radius:10px;overflow:hidden;margin-top:14px}
+.planning-progress-fill{height:100%;background:#42d59e;border-radius:10px}
+.planning-section{display:flex;align-items:end;justify-content:space-between;margin:19px 2px 10px}
+.planning-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.planning-card{background:#fff;border:1px solid var(--border);border-radius:19px;padding:15px;box-shadow:var(--shadow2)}
+.bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,720px);z-index:30;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.97);border-top:1px solid var(--border);backdrop-filter:blur(12px);padding:7px 8px calc(7px + env(safe-area-inset-bottom))}
+.bottom-nav button{border:0;background:transparent;color:var(--muted);font-size:8px;font-weight:900;padding:7px 2px}
+.bottom-nav button span{display:block;font-size:18px;margin-bottom:2px}
+.bottom-nav button.active{color:var(--primary2)}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="brand"><div class="logo">H</div><div><div class="brand-name">HISAB</div><div class="brand-tag">TRACK • PLAN • GROW</div></div></div></header>
+<main>
+<section id="home" class="page active">
+  <div class="hero"><div class="hero-label">CURRENT BALANCE</div><div id="homeBalance" class="hero-amount">₹ 0</div><div class="hero-sub">Selected mode • Personal + Business</div></div>
+  <div class="stats">
+    <div class="card stat"><div class="stat-label">RECEIVABLE</div><div id="receivable" class="stat-value green">₹ 0</div></div>
+    <div class="card stat"><div class="stat-label">PAYABLE</div><div id="payable" class="stat-value red">₹ 0</div></div>
+    <div class="card stat"><div class="stat-label">NET MONEY</div><div id="homeNet" class="stat-value blue">₹ 0</div></div>
+  </div>
+  <div class="section-title"><h2>HISAB Options</h2><span>Choose what you need</span></div>
+  <div class="option-grid">
+    <button class="option" onclick="show('personal')"><div class="option-icon">🤝</div><div class="option-title">Personal Udhaar</div><div class="option-sub">Dena • Lena • Payment • History</div></button>
+    <button class="option" onclick="show('business')"><div class="option-icon">🏪</div><div class="option-title">Business</div><div class="option-sub">Customer • Supplier • Sales • Purchase</div></button>
+    <button class="option" onclick="show('transactions')"><div class="option-icon">💰</div><div class="option-title">Money Flow</div><div class="option-sub">Income • Expense</div></button>
+    <button class="option" onclick="show('planning')"><div class="option-icon">📋</div><div class="option-title">Planning</div><div class="option-sub">Budget • Goals • Savings</div></button>
+  </div>
+  <div class="section-title"><h2>Recent Activity</h2><span>Latest entries</span></div>
+  <div id="homeRecent" class="activity card"></div>
+  <div class="section-title"><h2>Reports & Analytics</h2></div>
+  <button class="report-card" onclick="show('reports')"><div class="report-icon">📊</div><div style="flex:1;text-align:left"><strong>Reports & Analytics</strong><br><span style="font-size:10px;color:var(--muted)">Money, Udhaar and Business summary</span></div><div>›</div></button>
+  <div class="footer">HISAB • TRACK • PLAN • GROW • V9.1 FIXED</div>
 </section>
-<section id="page-personal" class="page"><div class="page-head"><button class="back-btn" onclick="show('home')">‹</button><div style="flex:1"><h1>Personal Udhaar</h1><p>Simple personal credit tracking</p></div><div class="mode-pill">PERSONAL</div></div>
-<div class="filters"><button class="filter-btn active" data-kfilter="all">All</button><button class="filter-btn" data-kfilter="give">Dena</button><button class="filter-btn" data-kfilter="receive">Lena</button></div>
-<div class="search-row"><input id="personalSearch" class="search" placeholder="Search person..."><button class="primary-btn" onclick="openKhataForm('personal')">+ Add Udhaar</button></div>
-<div id="personalList" class="list"></div></section>
-<section id="page-business" class="page"><div class="page-head"><button class="back-btn" onclick="show('home')">‹</button><div style="flex:1"><h1>Business Khata</h1><p>Customer • Supplier • Sales • Purchase</p></div><div class="mode-pill">BUSINESS</div></div>
-<div id="businessSummary"></div>
-<div class="section-title"><h2>Business Quick</h2><span>Manage your business</span></div>
-<div class="business-quick">
-<button class="quick-card" onclick="setBusinessFilter('customer')"><div class="quick-icon">👤</div><div class="quick-title">Customers</div><div id="miniCustomerDue" class="quick-value">₹0 due</div></button>
-<button class="quick-card" onclick="setBusinessFilter('supplier')"><div class="quick-icon">🏪</div><div class="quick-title">Suppliers</div><div id="miniSupplierDue" class="quick-value">₹0 due</div></button>
-<button class="quick-card" onclick="setBusinessFilter('sales')"><div class="quick-icon">🧾</div><div class="quick-title">Sales</div><div id="miniSales" class="quick-value">₹0 total</div></button>
-<button class="quick-card" onclick="setBusinessFilter('purchase')"><div class="quick-icon">🛒</div><div class="quick-title">Purchase</div><div id="miniPurchase" class="quick-value">₹0 total</div></button>
+
+<section id="personal" class="page">
+  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Personal Udhaar</h1><div class="mode-pill">PERSONAL</div></div>
+  <div class="search-row"><input id="personalSearch" placeholder="Search person, note..." oninput="renderPersonal()"><button class="primary-btn" onclick="openKhataForm()">+ Add</button></div>
+  <div class="filters">
+    <button class="filter-btn active" data-f="all" onclick="setPersonalFilter('all',this)">All</button>
+    <button class="filter-btn" data-f="give" onclick="setPersonalFilter('give',this)">Dena</button>
+    <button class="filter-btn" data-f="receive" onclick="setPersonalFilter('receive',this)">Lena</button>
+    <button class="filter-btn" data-f="pending" onclick="setPersonalFilter('pending',this)">Pending</button>
+    <button class="filter-btn" data-f="settled" onclick="setPersonalFilter('settled',this)">Settled</button>
+  </div>
+  <div id="personalList" class="list"></div>
+</section>
+
+<section id="business" class="page">
+  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Business</h1><div class="mode-pill">BUSINESS</div></div>
+  <div class="business-summary">
+    <div class="summary-box"><div class="summary-label">SALES</div><div id="businessSalesTotal" class="summary-value green">₹ 0</div></div>
+    <div class="summary-box"><div class="summary-label">PURCHASE</div><div id="businessPurchaseTotal" class="summary-value blue">₹ 0</div></div>
+    <div class="summary-box"><div class="summary-label">TOTAL DUE</div><div id="businessDueTotal" class="summary-value red">₹ 0</div></div>
+  </div>
+  <div class="business-actions">
+    <button class="business-action" onclick="openBusinessForm('customer')"><strong>👤 Add Customer</strong><span>Customer master</span></button>
+    <button class="business-action" onclick="openBusinessForm('supplier')"><strong>🚚 Add Supplier</strong><span>Supplier master</span></button>
+    <button class="business-action" onclick="openBusinessForm('sale')"><strong>🧾 Add Sale</strong><span>Customer sale entry</span></button>
+    <button class="business-action" onclick="openBusinessForm('purchase')"><strong>📦 Add Purchase</strong><span>Supplier purchase entry</span></button>
+  </div>
+  <div class="filters">
+    <button class="filter-btn active" onclick="setBusinessFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setBusinessFilter('customer',this)">Customer</button>
+    <button class="filter-btn" onclick="setBusinessFilter('supplier',this)">Supplier</button>
+    <button class="filter-btn" onclick="setBusinessFilter('sales',this)">Sales</button>
+    <button class="filter-btn" onclick="setBusinessFilter('purchases',this)">Purchases</button>
+  </div>
+  <div id="businessList" class="list"></div>
+</section>
+
+<section id="transactions" class="page">
+  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Money Flow</h1><div class="mode-pill" id="transTotalPill">₹ 0</div></div>
+  <div class="search-row"><input id="transSearch" placeholder="Search..." oninput="renderTransactions()"><button class="primary-btn" onclick="openTransForm()">+ Add</button></div>
+  <div class="filters">
+    <button class="filter-btn active" onclick="setTransFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setTransFilter('income',this)">Income</button>
+    <button class="filter-btn" onclick="setTransFilter('expense',this)">Expense</button>
+  </div>
+  <div id="transactionsList" class="list"></div>
+</section>
+
+<section id="planning" class="page">
+  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Planning</h1><button class="home-btn" onclick="show('home')">Home</button></div>
+  <div class="planning-mode"><button id="modeMonthly" class="active" onclick="setPlanMode('monthly')">Monthly</button><button id="modeYearly" onclick="setPlanMode('yearly')">Yearly</button></div>
+  <div class="planning-budget">
+    <div class="planning-budget-top"><div><div class="planning-label">TOTAL BUDGET</div><div id="planBudgetBig" class="planning-big">₹ 30,000</div></div><button class="planning-edit" onclick="openBudgetEdit()">Edit</button></div>
+    <div class="planning-budget-stats"><div class="planning-mini"><span>SPENT</span><b id="planSpent">₹ 0</b></div><div class="planning-mini"><span>REMAINING</span><b id="planRem">₹ 0</b></div><div class="planning-mini"><span>% USED</span><b id="planPerc">0%</b></div></div>
+    <div class="planning-progress"><div id="planProgress" class="planning-progress-fill" style="width:10%"></div></div>
+  </div>
+  <div class="planning-section"><h2>Budget Categories</h2><span id="catCount"></span></div>
+  <div style="margin-bottom:8px"><button class="secondary-btn" onclick="openCategoryForm()">+ Add Category</button></div>
+  <div id="planningCatGrid" class="planning-grid"></div>
+  <div class="planning-section"><h2>Savings Goals</h2><span id="goalCount"></span></div>
+  <div style="margin-bottom:8px"><button class="secondary-btn" onclick="openGoalForm()">+ Add Goal</button></div>
+  <div id="planningGoalGrid" class="planning-grid"></div>
+</section>
+
+<section id="reports" class="page">
+  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Reports</h1></div>
+  <div id="reportsContent"></div>
+  <div style="display:grid;gap:8px;margin-top:12px">
+    <button class="primary-btn" onclick="exportData()">Export JSON Backup</button>
+    <button class="danger-btn" onclick="clearAll()">Clear All Data</button>
+  </div>
+</section>
+</main>
+<div class="bottom-nav">
+  <button class="active" id="navHome" onclick="show('home')"><span>🏠</span>Home</button>
+  <button id="navPersonal" onclick="show('personal')"><span>🤝</span>Khata</button>
+  <button id="navTrans" onclick="show('transactions')"><span>💰</span>Dhan</button>
+  <button id="navPlan" onclick="show('planning')"><span>📋</span>Yojana</button>
 </div>
-<div class="section-title"><h2>Business Records</h2><span id="businessFilterLabel">Customers</span></div>
-<div class="filters"><button class="filter-btn active" data-f="customer" onclick="setBusinessFilter('customer')">Customers</button><button class="filter-btn" data-f="supplier" onclick="setBusinessFilter('supplier')">Suppliers</button><button class="filter-btn" data-f="sales" onclick="setBusinessFilter('sales')">Sales</button><button class="filter-btn" data-f="purchase" onclick="setBusinessFilter('purchase')">Purchase</button></div>
-<div style="height:10px"></div>
-<div class="business-actions"><button class="business-action" onclick="openBusinessMaster('customer')">👤 + Customer</button><button class="business-action" onclick="openBusinessMaster('supplier')">🏪 + Supplier</button><button class="business-action" onclick="openBusinessEntry('sale')">🧾 + Sale</button><button class="business-action" onclick="openBusinessEntry('purchase')">🛒 + Purchase</button></div>
-<div style="height:12px"></div><div id="businessList" class="list"></div></section>
-<section id="page-khataEntry" class="page"><div class="page-head"><button class="back-btn" onclick="closeKhataForm()">‹</button><div style="flex:1"><h1 id="khataFormTitle">Add Udhaar</h1><p>Keep every entry clear and simple</p></div></div>
-<div class="card form-card"><div class="form-group"><label class="label">Person Name</label><input id="khataName" class="input" placeholder="Enter name"></div>
-<div class="form-group"><label class="label">Mobile</label><input id="khataPhone" class="input" placeholder="Mobile"></div>
-<div class="form-group"><label class="label">Type</label><select id="khataType" class="select"><option value="give">Dena — You will receive</option><option value="receive">Lena — You have to pay</option></select></div>
-<div class="form-group"><label class="label">Amount</label><input id="khataAmount" class="input" type="number" placeholder="₹ Amount"></div>
-<div class="form-group"><label class="label">Payment Method</label><select id="khataMethod" class="select"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Other</option></select></div>
-<div class="form-group"><label class="label">Note</label><textarea id="khataNote" class="textarea" placeholder="Optional note"></textarea></div>
-<button class="primary-btn full-btn" onclick="saveKhata()">Save Udhaar</button></div></section>
-<section id="page-khataDetail" class="page"><div class="page-head"><button class="back-btn" onclick="closeKhataDetail()">‹</button><div style="flex:1"><h1 id="detailPersonTitle">Person</h1><p>Complete udhaar history</p></div></div><div id="khataDetailBox"></div></section>
-<section id="page-transactions" class="page"><div class="page-head"><button class="back-btn" onclick="show('home')">‹</button><div style="flex:1"><h1>Money Flow</h1><p>Income and expense</p></div></div>
-<div class="card form-card"><div class="form-group"><label class="label">Type</label><select id="transactionType" class="select"><option value="income">Income</option><option value="expense">Expense</option></select></div>
-<div class="form-group"><label class="label">Amount</label><input id="transactionAmount" class="input" type="number" placeholder="₹ Amount"></div>
-<div class="form-group"><label class="label">Note</label><input id="transactionNote" class="input" placeholder="Example: Salary, Shop expense"></div>
-<button class="primary-btn full-btn" onclick="addTransaction()">Save Transaction</button></div>
-<div class="section-title"><h2>Transactions</h2></div><div id="transactionList" class="list"></div></section>
-<section id="page-reports" class="page"><div class="page-head"><button class="back-btn" onclick="show('home')">‹</button><div style="flex:1"><h1>Reports</h1><p>Your complete financial summary</p></div></div><div id="reportContent"></div></section>
-</main><div id="modalRoot" class="modal-backdrop"></div>
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
 <script>
-(function(){
-"use strict";
-var KEY="hisab_v7_data";
-var PAY=["Cash","UPI","Bank Transfer","Other"];
-var PAGES=["home","personal","business","khataEntry","khataDetail","transactions","reports"];
-var D={mode:"personal",currency:"₹",transactions:[],khata:[],business:[],sales:[],purchases:[],ui:{page:"home",khataEditId:null,businessFilter:"customer",khataFilter:"all",detailPerson:""}};
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
-function today(){return new Date().toISOString().slice(0,10)}
-function money(n){n=Number(n)||0;return D.currency+n.toLocaleString("en-IN",{maximumFractionDigits:2})}
-function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
-function escAttr(v){return String(v==null?"":v).replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
-function getInitial(name){name=String(name||"?").trim();return name?name.charAt(0).toUpperCase():"?"}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}}
-function load(){try{var raw=localStorage.getItem(KEY);if(raw){var x=JSON.parse(raw);if(x&&typeof x==="object"){D=Object.assign(D,x);D.ui=Object.assign({page:"home",khataEditId:null,businessFilter:"customer",khataFilter:"all",detailPerson:""},x.ui||{})}}}catch(e){}normalize()}
-function normalize(){if(!Array.isArray(D.transactions))D.transactions=[];if(!Array.isArray(D.khata))D.khata=[];if(!Array.isArray(D.business))D.business=[];if(!Array.isArray(D.sales))D.sales=[];if(!Array.isArray(D.purchases))D.purchases=[];D.khata.forEach(function(x){x.id=x.id||uid();x.mode=x.mode||"personal";x.name=x.name||x.person||"Unknown";x.phone=x.phone||"";x.type=x.type||"give";x.amount=Number(x.amount)||0;x.paid=Number(x.paid)||0;x.method=PAY.indexOf(x.method)>=0?x.method:"Cash";x.note=x.note||"";x.date=x.date||today();x.history=Array.isArray(x.history)?x.history:[];if(x.paid>x.amount)x.paid=x.amount});D.transactions.forEach(function(x){x.id=x.id||uid();x.mode=x.mode||"personal";x.type=x.type||"expense";x.amount=Number(x.amount)||0;x.note=x.note||"";x.date=x.date||today()});D.business.forEach(function(x){x.id=x.id||uid();x.type=x.type==="supplier"?"supplier":"customer";x.name=x.name||"Unknown";x.phone=x.phone||"";x.date=x.date||today()});D.sales.forEach(function(x){x.id=x.id||uid();x.type="sale";x.customer=x.customer||"Customer";x.businessId=x.businessId||"";x.amount=Number(x.amount)||0;x.paid=Number(x.paid)||0;x.method=x.method||"Cash";x.note=x.note||"";x.date=x.date||today();x.history=Array.isArray(x.history)?x.history:[]});D.purchases.forEach(function(x){x.id=x.id||uid();x.type="purchase";x.supplier=x.supplier||"Supplier";x.businessId=x.businessId||"";x.amount=Number(x.amount)||0;x.paid=Number(x.paid)||0;x.method=x.method||"Cash";x.note=x.note||"";x.date=x.date||today();x.history=Array.isArray(x.history)?x.history:[]});save()}
-function show(page){if(PAGES.indexOf(page)<0)page="home";PAGES.forEach(function(p){var el=document.getElementById("page-"+p);if(el)el.classList.toggle("active",p===page)});D.ui.page=page;if(page==="home")renderHome();if(page==="personal")renderPersonal();if(page==="business")renderBusiness();if(page==="khataDetail")renderKhataDetail();if(page==="transactions")renderTransactions();if(page==="reports")renderReports();window.scrollTo(0,0);save()}
-function openPersonal(){D.mode="personal";show("personal")}function openBusiness(){D.mode="business";show("business")}function openTransactions(){show("transactions")}
-function khataTotals(mode){var receive=0,give=0;D.khata.forEach(function(x){if(x.mode!==mode)return;var due=Math.max(0,Number(x.amount||0)-Number(x.paid||0));if(x.type==="give")receive+=due;else give+=due});return{receive:receive,give:give,net:receive-give}}
-function businessTotals(){var sales=0,purchases=0,salePaid=0,purchasePaid=0;D.sales.forEach(function(x){sales+=Number(x.amount)||0;salePaid+=Number(x.paid)||0});D.purchases.forEach(function(x){purchases+=Number(x.amount)||0;purchasePaid+=Number(x.paid)||0});return{sales:sales,purchases:purchases,salePaid:salePaid,purchasePaid:purchasePaid,saleDue:sales-salePaid,purchaseDue:purchases-purchasePaid,balance:(sales-salePaid)-(purchases-purchasePaid)}}
-function moneyTotals(){var income=0,expense=0;D.transactions.forEach(function(x){if(x.type==="income")income+=Number(x.amount)||0;else expense+=Number(x.amount)||0});return{income:income,expense:expense,net:income-expense}}
-function renderHome(){var p=khataTotals("personal");var bkh=khataTotals("business");var bt=businessTotals();var mt=moneyTotals();var receivable=p.receive+bkh.receive+bt.saleDue;var payable=p.give+bkh.give+bt.purchaseDue;var balance=mt.net+p.net+bkh.net+bt.salePaid-bt.purchasePaid;var net=receivable-payable;document.getElementById("homeBalance").textContent=money(balance);document.getElementById("receivable").textContent=money(receivable);document.getElementById("payable").textContent=money(payable);document.getElementById("homeNet").textContent=money(net);var items=[];D.khata.forEach(function(x){items.push({date:x.date,icon:x.type==="give"?"↗":"↙",name:x.name,meta:(x.type==="give"?"Dena":"Lena")+" • Udhaar",amount:x.type==="give"? "+"+money(x.amount): "-"+money(x.amount),cls:x.type==="give"?"green":"red"})});D.transactions.forEach(function(x){items.push({date:x.date,icon:x.type==="income"?"💰":"💸",name:x.note||(x.type==="income"?"Income":"Expense"),meta:x.type==="income"?"Income":"Expense",amount:(x.type==="income"?"+":"-")+money(x.amount),cls:x.type==="income"?"green":"red"})});D.sales.forEach(function(x){items.push({date:x.date,icon:"🧾",name:x.customer,meta:"Business Sale",amount:"+"+money(x.amount),cls:"green"})});D.purchases.forEach(function(x){items.push({date:x.date,icon:"🛒",name:x.supplier,meta:"Business Purchase",amount:"-"+money(x.amount),cls:"red"})});items.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});items=items.slice(0,6);var html="";if(!items.length){html='<div class="empty"><div>🧾</div><strong>No activity yet</strong></div>'}else{items.forEach(function(x){html+='<div class="activity-row"><div class="activity-icon">'+esc(x.icon)+'</div><div class="activity-main"><div class="activity-name">'+esc(x.name)+'</div><div class="activity-meta">'+esc(x.meta)+' • '+esc(x.date)+'</div></div><div class="activity-amount '+x.cls+'">'+esc(x.amount)+'</div></div>'}) }document.getElementById("homeRecent").innerHTML=html}
-function renderPersonal(){var filter=D.ui.khataFilter||"all";var search=(document.getElementById("personalSearch")||{}).value||"";search=search.toLowerCase().trim();document.querySelectorAll("[data-kfilter]").forEach(function(btn){btn.classList.toggle("active",btn.dataset.kfilter===filter)});var arr=D.khata.filter(function(x){if(x.mode!=="personal")return false;if(filter==="give"&&x.type!=="give")return false;if(filter==="receive"&&x.type!=="receive")return false;if(search&&!String(x.name).toLowerCase().includes(search))return false;return true});arr.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});var html="";if(!arr.length){html='<div class="card empty">No udhaar found</div>'}else{arr.forEach(function(x){var due=Math.max(0,x.amount-x.paid);html+='<div class="card khata-card"><div class="card-top"><div class="avatar">'+esc(getInitial(x.name))+'</div><div style="flex:1"><div class="card-name">'+esc(x.name)+'</div><div class="card-meta">'+(x.phone?esc(x.phone)+" • ":"")+esc(x.date)+'</div></div><div class="card-amount '+(x.type==="give"?"green":"red")+'">'+money(due)+'<div class="badge '+(x.type==="give"?"badge-green":"badge-red")+'">'+(x.type==="give"?"DENA":"LENA")+'</div></div></div><div class="card-meta" style="margin-top:10px">Total '+money(x.amount)+' • Paid '+money(x.paid)+'</div><div class="card-actions"><button class="secondary-btn" data-action="khata-history" data-id="'+escAttr(x.name)+'">History</button><button class="secondary-btn" data-action="khata-edit" data-id="'+escAttr(x.id)+'">Edit</button>'+(due>0?'<button class="primary-btn" data-action="khata-pay" data-id="'+escAttr(x.id)+'">Pay</button>':'<button class="secondary-btn" disabled>Settled</button>')+'<button class="danger-btn" data-action="khata-delete" data-id="'+escAttr(x.id)+'">Delete</button></div></div>'})}document.getElementById("personalList").innerHTML=html}
-function openKhataForm(mode){D.mode=mode||"personal";D.ui.khataEditId=null;document.getElementById("khataFormTitle").textContent="Add Udhaar";document.getElementById("khataName").value="";document.getElementById("khataPhone").value="";document.getElementById("khataType").value="give";document.getElementById("khataAmount").value="";document.getElementById("khataMethod").value="Cash";document.getElementById("khataNote").value="";show("khataEntry")}
-function closeKhataForm(){show(D.mode==="business"?"business":"personal")}
-function saveKhata(){var name=document.getElementById("khataName").value.trim();var phone=document.getElementById("khataPhone").value.trim();var type=document.getElementById("khataType").value;var amount=Number(document.getElementById("khataAmount").value);var method=document.getElementById("khataMethod").value;var note=document.getElementById("khataNote").value.trim();if(!name){alert("Person name enter karein.");return}if(!(amount>0)){alert("Valid amount enter karein.");return}if(D.ui.khataEditId){var x=D.khata.find(function(a){return a.id===D.ui.khataEditId});if(x){x.name=name;x.phone=phone;x.type=type;x.amount=amount;x.method=method;x.note=note;if(x.paid>amount)x.paid=amount}}else{D.khata.push({id:uid(),mode:D.mode,name:name,phone:phone,type:type,amount:amount,paid:0,method:method,note:note,date:today(),history:[]})}D.ui.khataEditId=null;save();show(D.mode==="business"?"business":"personal")}
-function editKhata(id){var x=D.khata.find(function(a){return a.id===id});if(!x)return;D.mode=x.mode||"personal";D.ui.khataEditId=id;document.getElementById("khataFormTitle").textContent="Edit Udhaar";document.getElementById("khataName").value=x.name||"";document.getElementById("khataPhone").value=x.phone||"";document.getElementById("khataType").value=x.type||"give";document.getElementById("khataAmount").value=x.amount||"";document.getElementById("khataMethod").value=x.method||"Cash";document.getElementById("khataNote").value=x.note||"";show("khataEntry")}
-function deleteKhata(id){var x=D.khata.find(function(a){return a.id===id});if(!x)return;if(!confirm("Delete?"))return;D.khata=D.khata.filter(function(a){return a.id!==id});save();renderPersonal();renderHome()}
-function payKhata(id){var x=D.khata.find(function(a){return a.id===id});if(!x)return;var due=Math.max(0,x.amount-x.paid);openModal("Payment",'<div class="form-group"><label class="label">Amount</label><input id="pAmount" class="input" type="number" value="'+due+'"></div><div class="form-group"><label class="label">Method</label><select id="pMethod" class="select"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Other</option></select></div><div class="modal-actions"><button class="secondary-btn" onclick="closeModal()">Cancel</button><button class="primary-btn" data-action="confirm-khata-pay" data-id="'+escAttr(id)+'">Save</button></div>')}
-function confirmPayKhata(id){var x=D.khata.find(function(a){return a.id===id});if(!x)return;var amount=Number(document.getElementById("pAmount").value);var method=document.getElementById("pMethod").value;var due=Math.max(0,x.amount-x.paid);if(!(amount>0)||amount>due){alert("Valid amount");return}x.paid+=amount;x.history.push({date:today(),amount:amount,method:method});save();closeModal();renderPersonal();renderHome()}
-function openKhataDetail(person,mode){D.mode=mode||"personal";D.ui.detailPerson=person;show("khataDetail")}
-function closeKhataDetail(){show(D.mode==="business"?"business":"personal")}
-function renderKhataDetail(){var person=D.ui.detailPerson||"";document.getElementById("detailPersonTitle").textContent=person||"Person";var arr=D.khata.filter(function(x){return x.mode===D.mode&&String(x.name).toLowerCase()===String(person).toLowerCase()});var total=0,paid=0;arr.forEach(function(x){total+=x.amount;paid+=x.paid});var due=Math.max(0,total-paid);var html='<div class="card" style="padding:17px"><div class="badge '+(due>0?"badge-red":"badge-green")+'">'+(due>0?"PENDING":"SETTLED")+'</div><div style="margin-top:10px;font-size:24px;font-weight:950">'+money(due)+'</div><div class="card-meta">Total '+money(total)+' • Paid '+money(paid)+'</div></div>';arr.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});arr.forEach(function(x){html+='<div class="card khata-card" style="margin-top:10px"><div class="card-top"><div style="flex:1"><div class="card-name">'+(x.type==="give"?"Dena":"Lena")+'</div><div class="card-meta">'+esc(x.date)+' • '+esc(x.method)+'</div></div><div class="card-amount">'+money(x.amount)+'</div></div><div class="card-meta" style="margin-top:9px">Paid '+money(x.paid)+' • Due '+money(Math.max(0,x.amount-x.paid))+'</div></div>'});document.getElementById("khataDetailBox").innerHTML=html}
-function setBusinessFilter(filter){D.ui.businessFilter=filter;D.mode="business";document.querySelectorAll("[data-f]").forEach(function(btn){btn.classList.toggle("active",btn.dataset.f===filter)});show("business")}
-function renderBusiness(){var bt=businessTotals();document.getElementById("businessSummary").innerHTML='<div class="business-summary"><div class="card summary-box"><div class="summary-label">RECEIVABLE</div><div class="summary-value green">'+money(bt.saleDue)+'</div></div><div class="card summary-box"><div class="summary-label">PAYABLE</div><div class="summary-value red">'+money(bt.purchaseDue)+'</div></div><div class="card summary-box"><div class="summary-label">TOTAL SALES</div><div class="summary-value">'+money(bt.sales)+'</div></div><div class="card summary-box"><div class="summary-label">TOTAL PURCHASE</div><div class="summary-value">'+money(bt.purchases)+'</div></div></div><div class="business-balance"><div style="font-size:9px;opacity:.75">BUSINESS BALANCE</div><div style="font-size:22px;font-weight:950;margin-top:5px">'+money(bt.balance)+'</div></div>';document.getElementById("miniCustomerDue").textContent=money(bt.saleDue)+" due";document.getElementById("miniSupplierDue").textContent=money(bt.purchaseDue)+" due";document.getElementById("miniSales").textContent=money(bt.sales)+" total";document.getElementById("miniPurchase").textContent=money(bt.purchases)+" total";var filter=D.ui.businessFilter||"customer";document.getElementById("businessFilterLabel").textContent=filter;document.querySelectorAll("[data-f]").forEach(function(btn){btn.classList.toggle("active",btn.dataset.f===filter)});var html="";if(filter==="customer"){html=renderBusinessMasters("customer")}else if(filter==="supplier"){html=renderBusinessMasters("supplier")}else if(filter==="sales"){html=renderBusinessEntries(D.sales,"sale")}else{html=renderBusinessEntries(D.purchases,"purchase")}document.getElementById("businessList").innerHTML=html}
-function renderBusinessMasters(type){var arr=D.business.filter(function(x){return x.type===type});if(!arr.length){return '<div class="card empty">No '+type+' added</div>'}var html="";arr.forEach(function(x){var entries=type==="customer"?D.sales.filter(function(s){return s.businessId===x.id||(!s.businessId&&String(s.customer).toLowerCase()===String(x.name).toLowerCase())}):D.purchases.filter(function(p){return p.businessId===x.id||(!p.businessId&&String(p.supplier).toLowerCase()===String(x.name).toLowerCase())});var total=0,paid=0;entries.forEach(function(e){total+=e.amount;paid+=e.paid});var due=Math.max(0,total-paid);html+='<div class="card master-card"><div class="card-top"><div class="avatar">'+esc(getInitial(x.name))+'</div><div style="flex:1"><div class="card-name">'+esc(x.name)+'</div><div class="card-meta">'+(x.phone?esc(x.phone)+" • ":"")+entries.length+" entries</div></div><div class="card-amount '+(due?"red":"green")+'">'+money(due)+'<div class="badge '+(due?"badge-red":"badge-green")+'">'+(due?"PENDING":"SETTLED")+'</div></div></div><div class="card-meta" style="margin-top:10px">Total '+money(total)+' • Paid '+money(paid)+'</div><div class="card-actions"><button class="secondary-btn" data-action="master-history" data-id="'+escAttr(x.id)+'" data-type="'+type+'">History</button><button class="secondary-btn" data-action="master-edit" data-id="'+escAttr(x.id)+'">Edit</button><button class="danger-btn" data-action="master-delete" data-id="'+escAttr(x.id)+'">Delete</button></div></div>'});return html}
-function businessMasterHistory(id,type){var master=D.business.find(function(x){return x.id===id});if(!master)return;var entries=type==="customer"?D.sales.filter(function(x){return x.businessId===id||(!x.businessId&&String(x.customer).toLowerCase()===String(master.name).toLowerCase())}):D.purchases.filter(function(x){return x.businessId===id||(!x.businessId&&String(x.supplier).toLowerCase()===String(master.name).toLowerCase())});var total=0,paid=0;entries.forEach(function(x){total+=x.amount;paid+=x.paid});var html='<div class="card" style="padding:17px"><div class="card-name">'+esc(master.name)+'</div><div class="card-meta">'+(master.phone?esc(master.phone):"No mobile")+'</div><div style="margin-top:10px;font-size:24px;font-weight:950">'+money(total-paid)+'</div></div>';entries.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});entries.forEach(function(x){html+='<div class="card business-entry" style="margin-top:10px"><div class="card-top"><div style="flex:1"><div class="card-name">'+(type==="customer"?"Sale":"Purchase")+'</div><div class="card-meta">'+esc(x.date)+' • '+esc(x.method)+'</div></div><div class="card-amount">'+money(x.amount)+'</div></div><div class="card-meta" style="margin-top:9px">Paid '+money(x.paid)+' • Due '+money(Math.max(0,x.amount-x.paid))+'</div></div>'});openModal(esc(master.name)+" History",html+'<div class="modal-actions"><button class="primary-btn full-btn" onclick="closeModal()">Close</button></div>')}
-function openBusinessMaster(type,id){var x=id?D.business.find(function(a){return a.id===id}):null;openModal(id?"Edit "+(type==="customer"?"Customer":"Supplier"):"Add "+(type==="customer"?"Customer":"Supplier"),'<div class="form-group"><label class="label">Name</label><input id="bmName" class="input" value="'+escAttr(x?x.name:"")+'" placeholder="Enter name"></div><div class="form-group"><label class="label">Mobile</label><input id="bmPhone" class="input" value="'+escAttr(x?x.phone:"")+'" placeholder="Mobile"></div><div class="modal-actions"><button class="secondary-btn" onclick="closeModal()">Cancel</button><button class="primary-btn" data-action="save-master" data-type="'+type+'" data-id="'+escAttr(id||"")+'">Save</button></div>')}
-function saveBusinessMaster(type,id){var name=document.getElementById("bmName").value.trim();var phone=document.getElementById("bmPhone").value.trim();if(!name){alert("Name enter karein.");return}if(id){var x=D.business.find(function(a){return a.id===id});if(x){x.name=name;x.phone=phone}}else{getOrCreateBusiness(name,type,phone)}save();closeModal();renderBusiness();renderHome()}
-function editBusinessMaster(id){var x=D.business.find(function(a){return a.id===id});if(!x)return;openBusinessMaster(x.type,id)}
-function deleteBusinessMaster(id){var x=D.business.find(function(a){return a.id===id});if(!x)return;var linked=D.sales.some(function(s){return s.businessId===id})||D.purchases.some(function(p){return p.businessId===id});if(linked){alert("Linked records hain.");return}if(!confirm("Delete?"))return;D.business=D.business.filter(function(a){return a.id!==id});save();renderBusiness()}
-function openBusinessEntry(type,id){var arr=type==="sale"?D.sales:D.purchases;var x=id?arr.find(function(a){return a.id===id}):null;var masters=D.business.filter(function(a){return a.type===(type==="sale"?"customer":"supplier")});var options='<option value="">Select '+(type==="sale"?"Customer":"Supplier")+'</option>';masters.forEach(function(m){var selected=x&&String(type==="sale"?x.customer:x.supplier).toLowerCase()===String(m.name).toLowerCase();options+='<option value="'+escAttr(m.name)+'" '+(selected?"selected":"")+'>'+esc(m.name)+(m.phone?" • "+esc(m.phone):"")+'</option>'});openModal(id?(type==="sale"?"Edit Sale":"Edit Purchase"):(type==="sale"?"Add Sale":"Add Purchase"),'<div class="form-group"><label class="label">'+(type==="sale"?"Customer":"Supplier")+'</label><select id="bePerson" class="select">'+options+'</select></div><div class="form-group"><label class="label">Amount</label><input id="beAmount" class="input" type="number" value="'+escAttr(x?x.amount:"")+'" placeholder="₹ Amount"></div><div class="form-group"><label class="label">Method</label><select id="beMethod" class="select">'+PAY.map(function(p){return '<option '+(x&&x.method===p?"selected":"")+'>'+esc(p)+'</option>'}).join("")+'</select></div><div class="form-group"><label class="label">Note</label><input id="beNote" class="input" value="'+escAttr(x?x.note:"")+'" placeholder="Optional"></div><div class="modal-actions"><button class="secondary-btn" onclick="closeModal()">Cancel</button><button class="primary-btn" data-action="save-entry" data-type="'+type+'" data-id="'+escAttr(id||"")+'">Save</button></div>')}
-function saveBusinessEntry(type,id){var person=document.getElementById("bePerson").value.trim();var amount=Number(document.getElementById("beAmount").value);var method=document.getElementById("beMethod").value;var note=document.getElementById("beNote").value.trim();if(!person){alert("Select karein.");return}if(!(amount>0)){alert("Valid amount.");return}var master=getOrCreateBusiness(person,type==="sale"?"customer":"supplier");var arr=type==="sale"?D.sales:D.purchases;if(id){var x=arr.find(function(a){return a.id===id});if(x){x.businessId=master.id;if(type==="sale")x.customer=person;else x.supplier=person;x.amount=amount;x.method=method;x.note=note;if(x.paid>amount)x.paid=amount}}else{arr.push({id:uid(),type:type,businessId:master.id,customer:type==="sale"?person:"",supplier:type==="purchase"?person:"",amount:amount,paid:0,method:method,note:note,date:today(),history:[]})}save();closeModal();renderBusiness();renderHome()}
-function renderBusinessEntries(arr,type){var list=arr.slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date))});if(!list.length){return '<div class="card empty">No '+(type==="sale"?"sales":"purchase")+' yet</div>'}var html="";list.forEach(function(x){var name=type==="sale"?x.customer:x.supplier;var due=Math.max(0,x.amount-x.paid);html+='<div class="card business-entry"><div class="card-top"><div class="avatar">'+esc(getInitial(name))+'</div><div style="flex:1"><div class="card-name">'+esc(name)+'</div><div class="card-meta">'+esc(x.date)+' • '+esc(x.method||"Cash")+'</div></div><div class="card-amount '+(due>0?"red":"green")+'">'+money(due)+'<div class="badge '+(due>0?"badge-red":"badge-green")+'">'+(due>0?"PENDING":"PAID")+'</div></div></div><div class="card-meta" style="margin-top:10px">Total '+money(x.amount)+' • Paid '+money(x.paid)+(x.note?' • '+esc(x.note):'')+'</div><div class="card-actions">'+(due>0?'<button class="primary-btn" data-action="biz-pay" data-type="'+type+'" data-id="'+escAttr(x.id)+'">Payment</button>':'<button class="secondary-btn" disabled>Fully Paid</button>')+'<button class="secondary-btn" data-action="biz-edit" data-type="'+type+'" data-id="'+escAttr(x.id)+'">Edit</button><button class="danger-btn" data-action="biz-delete" data-type="'+type+'" data-id="'+escAttr(x.id)+'">Delete</button></div></div>'});return html}
-function payBusiness(type,id){var arr=type==="sale"?D.sales:D.purchases;var x=arr.find(function(a){return a.id===id});if(!x)return;var due=Math.max(0,x.amount-x.paid);openModal("Payment",'<div style="margin-bottom:14px;font-size:24px;font-weight:950">'+money(due)+'</div><div class="form-group"><label class="label">Amount</label><input id="bpAmount" class="input" type="number" value="'+due+'"></div><div class="form-group"><label class="label">Method</label><select id="bpMethod" class="select"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Other</option></select></div><div class="form-group"><label class="label">Note</label><input id="bpNote" class="input" placeholder="Optional"></div><div class="modal-actions"><button class="secondary-btn" onclick="closeModal()">Cancel</button><button class="primary-btn" data-action="confirm-biz-pay" data-type="'+type+'" data-id="'+escAttr(id)+'">Save</button></div>')}
-function confirmPayBusiness(type,id){var arr=type==="sale"?D.sales:D.purchases;var x=arr.find(function(a){return a.id===id});if(!x)return;var amount=Number(document.getElementById("bpAmount").value);var method=document.getElementById("bpMethod").value;var note=document.getElementById("bpNote").value.trim();var due=Math.max(0,x.amount-x.paid);if(!(amount>0)||amount>due){alert("Valid amount");return}x.paid+=amount;x.history=x.history||[];x.history.push({date:today(),amount:amount,method:method,note:note});save();closeModal();renderBusiness();renderHome()}
-function deleteBusinessEntry(type,id){if(!confirm("Delete?"))return;if(type==="sale"){D.sales=D.sales.filter(function(x){return x.id!==id})}else{D.purchases=D.purchases.filter(function(x){return x.id!==id})}save();renderBusiness();renderHome()}
-function addTransaction(){var type=document.getElementById("transactionType").value;var amount=Number(document.getElementById("transactionAmount").value);var note=document.getElementById("transactionNote").value.trim();if(!(amount>0)){alert("Valid amount");return}D.transactions.push({id:uid(),mode:D.mode,type:type,amount:amount,note:note,date:today()});document.getElementById("transactionAmount").value="";document.getElementById("transactionNote").value="";save();renderTransactions();renderHome()}
-function renderTransactions(){var arr=D.transactions.slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date))});var html="";if(!arr.length){html='<div class="card empty">No transactions yet</div>'}else{arr.forEach(function(x){html+='<div class="card khata-card"><div class="card-top"><div class="activity-icon">'+(x.type==="income"?"💰":"💸")+'</div><div style="flex:1"><div class="card-name">'+esc(x.note||(x.type==="income"?"Income":"Expense"))+'</div><div class="card-meta">'+esc(x.date)+' • '+(x.mode==="business"?"Business":"Personal")+'</div></div><div class="card-amount '+(x.type==="income"?"green":"red")+'">'+(x.type==="income"?"+":"-")+money(x.amount)+'</div></div><div class="card-actions"><button class="danger-btn" data-action="txn-delete" data-id="'+escAttr(x.id)+'">Delete</button></div></div>'})}document.getElementById("transactionList").innerHTML=html}
-function deleteTransaction(id){if(!confirm("Delete?"))return;D.transactions=D.transactions.filter(function(x){return x.id!==id});save();renderTransactions();renderHome()}
-function renderReports(){var mt=moneyTotals();var p=khataTotals("personal");var bt=businessTotals();document.getElementById("reportContent").innerHTML='<div class="business-summary"><div class="card summary-box"><div class="summary-label">INCOME</div><div class="summary-value green">'+money(mt.income)+'</div></div><div class="card summary-box"><div class="summary-label">EXPENSE</div><div class="summary-value red">'+money(mt.expense)+'</div></div><div class="card summary-box"><div class="summary-label">UDHAAR RECEIVABLE</div><div class="summary-value green">'+money(p.receive)+'</div></div><div class="card summary-box"><div class="summary-label">PAYABLE</div><div class="summary-value red">'+money(p.give)+'</div></div></div><div class="section-title"><h2>Business Summary</h2></div><div class="business-summary"><div class="card summary-box"><div class="summary-label">SALES</div><div class="summary-value">'+money(bt.sales)+'</div></div><div class="card summary-box"><div class="summary-label">PURCHASE</div><div class="summary-value">'+money(bt.purchases)+'</div></div><div class="card summary-box"><div class="summary-label">SALES DUE</div><div class="summary-value green">'+money(bt.saleDue)+'</div></div><div class="card summary-box"><div class="summary-label">PURCHASE DUE</div><div class="summary-value red">'+money(bt.purchaseDue)+'</div></div></div><div class="business-balance" style="margin-top:10px"><div style="font-size:9px;opacity:.75">MONEY FLOW NET</div><div style="font-size:22px;font-weight:950;margin-top:5px">'+money(mt.net)+'</div></div>'}
-function openModal(title,body){var root=document.getElementById("modalRoot");root.innerHTML='<div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><h3>'+esc(title)+'</h3><button class="close" onclick="closeModal()">×</button></div>'+body+'</div>';root.classList.add("show");root.onclick=function(e){if(e.target===root)closeModal()}}
-function closeModal(){var root=document.getElementById("modalRoot");root.classList.remove("show");root.innerHTML=""}
-function handleAction(e){var b=e.target.closest("[data-action]");if(!b)return;var a=b.dataset.action;var id=b.dataset.id;var type=b.dataset.type;if(a==="khata-history")openKhataDetail(id,"personal");else if(a==="khata-edit")editKhata(id);else if(a==="khata-delete")deleteKhata(id);else if(a==="khata-pay")payKhata(id);else if(a==="confirm-khata-pay")confirmPayKhata(id);else if(a==="master-history")businessMasterHistory(id,type);else if(a==="master-edit")editBusinessMaster(id);else if(a==="master-delete")deleteBusinessMaster(id);else if(a==="save-master")saveBusinessMaster(type,id);else if(a==="save-entry")saveBusinessEntry(type,id);else if(a==="biz-pay")payBusiness(type,id);else if(a==="biz-edit")openBusinessEntry(type,id);else if(a==="biz-delete")deleteBusinessEntry(type,id);else if(a==="confirm-biz-pay")confirmPayBusiness(type,id);else if(a==="txn-delete")deleteTransaction(id)}
-document.addEventListener("click",handleAction);
-document.addEventListener("click",function(e){var k=e.target.closest("[data-kfilter]");if(k){D.ui.khataFilter=k.dataset.kfilter;renderPersonal()}});
-var personalSearch=document.getElementById("personalSearch");if(personalSearch){personalSearch.addEventListener("input",renderPersonal)}
-function renderAll(){renderHome();renderPersonal();renderBusiness();renderTransactions();renderReports()}
-window.show=show;window.openPersonal=openPersonal;window.openBusiness=openBusiness;window.openTransactions=openTransactions;window.openKhataForm=openKhataForm;window.closeKhataForm=closeKhataForm;window.saveKhata=saveKhata;window.openKhataDetail=openKhataDetail;window.closeKhataDetail=closeKhataDetail;window.setBusinessFilter=setBusinessFilter;window.openBusinessMaster=openBusinessMaster;window.openBusinessEntry=openBusinessEntry;window.addTransaction=addTransaction;window.openModal=openModal;window.closeModal=closeModal;
-load();renderAll();
-})();
-</script></div></body></html>
+let personal = JSON.parse(localStorage.getItem('hisab_personal_v9')||'null') || [
+  {id:'p1',name:'Ramesh Sharma',amount:5000,type:'receive',date:'2025-05-10',note:'Dukaan udhaar',status:'pending'},
+  {id:'p2',name:'Amit Verma',amount:2000,type:'give',date:'2025-05-12',note:'Friend loan',status:'pending'}
+];
+let business = JSON.parse(localStorage.getItem('hisab_business_v9')||'null') || {customers:[{id:'c1',name:'Gupta Traders',phone:'98765XXXXX'}],suppliers:[{id:'s1',name:'Shree Suppliers',phone:'98765'}],sales:[{id:'sl1',customerId:'c1',customerName:'Gupta Traders',amount:15000,due:12000,date:'2025-05-11',note:'Material'}],purchases:[{id:'pu1',supplierId:'s1',supplierName:'Shree Suppliers',amount:10000,due:8000,date:'2025-05-09',note:'Stock'}]};
+let transactions = JSON.parse(localStorage.getItem('hisab_transactions_v9')||'null') || [
+  {id:'t1',amount:25000,type:'income',category:'Sales',date:'2025-05-08',note:'Week income'},
+  {id:'t2',amount:7000,type:'expense',category:'Rent',date:'2025-05-09',note:'Shop rent'}
+];
+let planning = JSON.parse(localStorage.getItem('hisab_planning_v9')||'null') || {mode:'monthly',budget:30000,categories:[{id:'bc1',name:'Khana',limit:8000,spent:3200,icon:'🍛'},{id:'bc2',name:'Kiraya',limit:7000,spent:7000,icon:'🏠'}],goals:[{id:'g1',name:'New Bike',target:80000,saved:24000,icon:'🏍️'}]};
+
+let pFilter='all', bFilter='all', tFilter='all', editingId=null, modalType=null;
+
+function saveAll(){
+  localStorage.setItem('hisab_personal_v9', JSON.stringify(personal));
+  localStorage.setItem('hisab_business_v9', JSON.stringify(business));
+  localStorage.setItem('hisab_transactions_v9', JSON.stringify(transactions));
+  localStorage.setItem('hisab_planning_v9', JSON.stringify(planning));
+  renderAll();
+}
+function fmt(n){return '₹ '+(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:0});}
+function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(2,4);}
+function today(){return new Date().toISOString().slice(0,10);}
+
+function show(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(page).classList.add('active');
+  document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.remove('active'));
+  const map={home:'navHome',personal:'navPersonal',business:'navPersonal',transactions:'navTrans',planning:'navPlan',reports:'navHome'};
+  const navId=map[page]; if(navId) document.getElementById(navId).classList.add('active');
+  window.scrollTo(0,0);
+  renderAll();
+}
+window.show=show;
+
+function setPersonalFilter(f,el){pFilter=f; el.parentElement.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderPersonal();}
+function setBusinessFilter(f,el){bFilter=f; el.parentElement.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderBusiness();}
+function setTransFilter(f,el){tFilter=f; el.parentElement.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderTransactions();}
+window.setPersonalFilter=setPersonalFilter; window.setBusinessFilter=setBusinessFilter; window.setTransFilter=setTransFilter;
+
+function renderAll(){
+  const inc=transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp=transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const bal=inc-exp;
+  document.getElementById('homeBalance').textContent=fmt(bal);
+  document.getElementById('transTotalPill').textContent=fmt(bal);
+  const rec=personal.filter(e=>e.type==='receive'&&e.status==='pending').reduce((s,e)=>s+e.amount,0) + business.sales.reduce((s,x)=>s+x.due,0);
+  const pay=personal.filter(e=>e.type==='give'&&e.status==='pending').reduce((s,e)=>s+e.amount,0) + business.purchases.reduce((s,x)=>s+x.due,0);
+  document.getElementById('receivable').textContent=fmt(rec);
+  document.getElementById('payable').textContent=fmt(pay);
+  document.getElementById('homeNet').textContent=fmt(rec-pay);
+  document.getElementById('businessSalesTotal').textContent=fmt(business.sales.reduce((s,x)=>s+x.amount,0));
+  document.getElementById('businessPurchaseTotal').textContent=fmt(business.purchases.reduce((s,x)=>s+x.amount,0));
+  document.getElementById('businessDueTotal').textContent=fmt(pay);
+  renderPersonal(); renderBusiness(); renderTransactions(); renderPlanning(); renderReports(); renderHomeRecent();
+}
+function renderHomeRecent(){
+  const all=[...personal.map(p=>({t:'personal',d:p.date,n:`${p.type==='give'?'Dena: ':'Lena: '}${p.name}`,a:p.amount})),...transactions.slice(-3).map(t=>({t:'trans',d:t.date,n:`${t.type} - ${t.category}`,a:t.amount})),...business.sales.slice(-2).map(s=>({t:'sale',d:s.date,n:`Sale: ${s.customerName}`,a:s.amount}))].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,5);
+  const el=document.getElementById('homeRecent');
+  if(all.length===0){el.innerHTML='<div class="empty-state">No activity yet</div>';return;}
+  el.innerHTML=all.map(x=>`<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef2f6;font-size:11px"><div><b>${x.n}</b><br><span style="color:#718198;font-size:9px">${x.d}</span></div><b>${fmt(x.a)}</b></div>`).join('');
+}
+
+function renderPersonal(){
+  const search=(document.getElementById('personalSearch').value||'').toLowerCase();
+  let list=[...personal];
+  if(pFilter==='give'||pFilter==='receive') list=list.filter(e=>e.type===pFilter);
+  if(pFilter==='pending'||pFilter==='settled') list=list.filter(e=>e.status===pFilter);
+  if(search) list=list.filter(e=>e.name.toLowerCase().includes(search)||e.note.toLowerCase().includes(search));
+  list.sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('personalList');
+  if(list.length===0){el.innerHTML='<div class="empty-state">Koi entry nahi hai<br><button class="primary-btn" style="margin-top:8px" onclick="openKhataForm()">+ Add Udhaar</button></div>';return;}
+  el.innerHTML=list.map(e=>`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-weight:900;font-size:13px">${e.name} <span style="font-size:9px;padding:2px 6px;border-radius:20px;background:${e.type==='give'?'#fff0f0':'#eaf8f2'};color:${e.type==='give'?'#d84d4d':'#0e8c60'}">${e.type==='give'?'DENA':'LENA'}</span> <span style="font-size:8px;padding:2px 6px;border-radius:20px;background:#edf5fa">${e.status}</span></div><div style="font-size:10px;color:#718198;margin-top:3px">${e.date} • ${e.note||'No note'}</div></div><div style="text-align:right"><div style="font-weight:900;color:${e.type==='give'?'#d84d4d':'#16a36f'}">${fmt(e.amount)}</div></div></div><div style="display:flex;gap:6px;margin-top:10px"><button class="btn" onclick="toggleStatus('${e.id}')">${e.status==='pending'?'✓ Settle':'↩ Pending'}</button><button class="btn" onclick="editKhata('${e.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteKhata('${e.id}')">Delete</button></div></div>`).join('');
+}
+
+function renderBusiness(){
+  const el=document.getElementById('businessList');
+  let items=[];
+  if(bFilter==='all'||bFilter==='customer') business.customers.forEach(c=>items.push({kind:'customer',date:'',html:`<div class="hisab-entry-card"><b>👤 ${c.name}</b><div style="font-size:10px;color:#718198">${c.phone}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editCustomer('${c.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteCustomer('${c.id}')">Delete</button></div></div>`}));
+  if(bFilter==='all'||bFilter==='supplier') business.suppliers.forEach(s=>items.push({kind:'supplier',date:'',html:`<div class="hisab-entry-card"><b>🚚 ${s.name}</b><div style="font-size:10px;color:#718198">${s.phone}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editSupplier('${s.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteSupplier('${s.id}')">Delete</button></div></div>`}));
+  if(bFilter==='all'||bFilter==='sales') business.sales.forEach(s=>items.push({kind:'sale',date:s.date,html:`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between"><b>🧾 ${s.customerName}</b><b class="green">${fmt(s.amount)}</b></div><div style="font-size:9px;color:#718198">${s.date} • Due ${fmt(s.due)} • ${s.note}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editSale('${s.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteSale('${s.id}')">Delete</button></div></div>`}));
+  if(bFilter==='all'||bFilter==='purchases') business.purchases.forEach(p=>items.push({kind:'purchase',date:p.date,html:`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between"><b>📦 ${p.supplierName}</b><b class="blue">${fmt(p.amount)}</b></div><div style="font-size:9px;color:#718198">${p.date} • Due ${fmt(p.due)} • ${p.note}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editPurchase('${p.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deletePurchase('${p.id}')">Delete</button></div></div>`}));
+  if(items.length===0){el.innerHTML='<div class="empty-state">No business data. Add customer/supplier first.</div>';return;}
+  el.innerHTML=items.map(i=>i.html).join('');
+}
+
+function renderTransactions(){
+  const search=(document.getElementById('transSearch').value||'').toLowerCase();
+  let list=[...transactions];
+  if(tFilter!=='all') list=list.filter(t=>t.type===tFilter);
+  if(search) list=list.filter(t=>t.category.toLowerCase().includes(search)||t.note.toLowerCase().includes(search));
+  list.sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('transactionsList');
+  if(list.length===0){el.innerHTML='<div class="empty-state">No transactions</div>';return;}
+  el.innerHTML=list.map(t=>`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between"><div><b style="font-size:12px">${t.category}</b> <span style="font-size:8px;padding:2px 6px;border-radius:20px;background:${t.type==='income'?'#eaf8f2':'#fff0f0'};color:${t.type==='income'?'#0e8c60':'#d84d4d'}">${t.type.toUpperCase()}</span><div style="font-size:9px;color:#718198">${t.date} • ${t.note}</div></div><b style="color:${t.type==='income'?'#16a36f':'#d84d4d'}">${t.type==='income'?'+': '-'} ${fmt(t.amount)}</b></div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn" onclick="editTrans('${t.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteTrans('${t.id}')">Delete</button></div></div>`).join('');
+}
+
+function renderPlanning(){
+  document.getElementById('planBudgetBig').textContent=fmt(planning.budget);
+  document.getElementById('modeMonthly').classList.toggle('active', planning.mode==='monthly');
+  document.getElementById('modeYearly').classList.toggle('active', planning.mode==='yearly');
+  const spent=planning.categories.reduce((s,c)=>s+c.spent,0);
+  const rem=planning.budget-spent;
+  const perc=planning.budget>0?Math.round(spent/planning.budget*100):0;
+  document.getElementById('planSpent').textContent=fmt(spent);
+  document.getElementById('planRem').textContent=fmt(rem);
+  document.getElementById('planPerc').textContent=perc+'%';
+  document.getElementById('planProgress').style.width=Math.min(100,perc)+'%';
+  document.getElementById('planProgress').style.background=perc>100?'#ff8b8b':'#42d59e';
+  document.getElementById('catCount').textContent=planning.categories.length+' categories';
+  document.getElementById('goalCount').textContent=planning.goals.length+' goals';
+  document.getElementById('planningCatGrid').innerHTML=planning.categories.map(c=>`<div class="planning-card"><div style="display:flex;justify-content:space-between"><div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#edf5fa;font-s
