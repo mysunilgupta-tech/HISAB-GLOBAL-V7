@@ -1,311 +1,332 @@
-Favourites from Meta AI
 <!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HISAB V10 - Buttons Fixed</title>
+<title>HISAB V11.1 - Button Ultra Fixed</title>
 <style>
-:root{--bg:#f4f7fb;--card:#fff;--primary:#0a2e4a;--accent:#16a36f;--blue:#2478b8;--danger:#d84d4d;--warning:#d98a16;--text:#102338;--muted:#718198;--border:#e3ebf3;--soft:#edf5fa;--softgreen:#eaf8f2;--softred:#fff0f0;--softyellow:#fff7e8;--shadow:0 8px 24px rgba(15,45,70,.08)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-button{cursor:pointer}input,select,textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:12px;outline:none}
-.app{max-width:760px;margin:auto;padding-bottom:90px}
-.topbar{position:sticky;top:0;z-index:10;background:rgba(244,247,251,.96);backdrop-filter:blur(10px);padding:12px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
-.logo{width:40px;height:40px;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:900}
-.page{display:none;padding:10px 15px}.page.active{display:block}
-.hero{background:linear-gradient(145deg,var(--primary),#12618f);color:#fff;border-radius:20px;padding:18px;margin-bottom:12px}
-.hero-value{font-size:32px;font-weight:900;margin:6px 0}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.stat{background:#fff;border:1px solid var(--border);border-radius:14px;padding:10px}.stat-label{font-size:10px;color:var(--muted)}.stat-value{font-weight:900;margin-top:4px}
-.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:13px;margin-bottom:10px}
-.card-head{display:flex;justify-content:space-between;gap:8px}.amount{font-weight:900;font-size:16px}.amount.green{color:var(--accent)}.amount.red{color:var(--danger)}.amount.blue{color:var(--blue)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:800;background:var(--primary);color:#fff}
-.btn.green{background:var(--accent)}.btn.blue{background:var(--blue)}.btn.red{background:var(--danger)}.btn.light{background:#fff;color:var(--primary);border:1px solid var(--border)}
-.btn.small{padding:6px 9px;font-size:11px}.btn.full{width:100%}
-.filters{display:flex;gap:6px;overflow:auto;padding-bottom:4px;margin:8px 0}
-.filters button{flex:0 0 auto;border:1px solid var(--border);background:#fff;border-radius:99px;padding:6px 10px;font-size:11px;font-weight:800}
-.filters button.active{background:var(--primary);color:#fff}
-.badge{border-radius:99px;padding:3px 7px;font-size:10px;font-weight:900}.badge.pending{background:var(--softred);color:var(--danger)}.badge.partial{background:var(--softyellow);color:var(--warning)}.badge.paid{background:var(--softgreen);color:var(--accent)}
-.progress{height:6px;background:#edf1f5;border-radius:99px;margin-top:6px;overflow:hidden}.progress>div{height:100%;background:var(--accent)}
-.summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
-.summary-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px}.summary-card small{font-size:10px;color:var(--muted);display:block}.summary-card strong{font-size:15px}
-.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.quick{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;font-weight:800;color:var(--primary)}
-.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.mode-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:12px;text-align:left}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:flex-end;justify-content:center}
-.modal-overlay.active{display:flex}.modal-box{width:100%;max-width:760px;max-height:90vh;overflow:auto;background:#fff;border-radius:20px 20px 0 0;padding:16px 14px 26px}
-.modal-close{float:right;width:32px;height:32px;border:0;background:#eee;border-radius:8px;font-weight:900}
-.bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:760px;background:#fff;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
-.bottom-nav button{border:0;background:transparent;color:var(--muted);font-size:9px;font-weight:800;padding:4px;border-radius:10px}
-.bottom-nav button.active{background:var(--soft);color:var(--primary)}
-.pin-screen{position:fixed;inset:0;z-index:1000;background:#071f32;color:#fff;display:none;align-items:center;justify-content:center;padding:20px}
-.pin-screen.active{display:flex}.pin-input{text-align:center;font-size:22px;letter-spacing:8px;margin:12px 0}
-.empty{background:#fff;border:1px dashed var(--border);border-radius:14px;padding:20px;text-align:center;color:var(--muted);margin:10px 0}
-.field{margin-bottom:10px}.field label{font-size:11px;color:var(--muted);font-weight:800;display:block;margin-bottom:4px}
+:root{--bg:#f8fafc;--card:#fff;--primary:#0f172a;--accent:#0ea5e9;--green:#10b981;--red:#ef4444;--muted:#64748b;--border:#e2e8f0;--soft:#f1f5f9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--primary);font-family:Arial,sans-serif}
+button{cursor:pointer;border:0;background:transparent;font:inherit}input,select,textarea{font:inherit;width:100%;border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:85px}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(248,250,252,.95);backdrop-filter:blur(10px);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.page{display:none;padding:12px 16px}.page.active{display:block}
+.hero{background:#0f172a;color:#fff;border-radius:18px;padding:18px;margin-bottom:14px}.hero-value{font-size:30px;font-weight:800;margin:6px 0}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px}.kpi small{font-size:10px;color:var(--muted);display:block;margin-bottom:4px}.kpi strong{font-size:15px}
+.chips{display:flex;gap:8px;overflow:auto;padding-bottom:4px;margin-bottom:12px}.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;background:#fff;border:1px solid var(--border);border-radius:99px;padding:8px 12px;font-size:12px;font-weight:700;white-space:nowrap}
+.list{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.list-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f1f5f9}
+.list-item:last-child{border:0}
+.btn{border-radius:10px;padding:10px 12px;font-weight:700;background:var(--primary);color:#fff;border:0;font-size:13px}.btn.green{background:var(--green)}.btn.red{background:var(--red)}.btn.light{background:#fff;color:var(--primary);border:1px solid var(--border)}.btn.small{padding:6px 9px;font-size:11px}.btn.full{width:100%}
+.bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.bottom-nav button{color:var(--muted);font-size:9px;font-weight:700;padding:6px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px}.bottom-nav button.active{background:var(--soft);color:var(--primary)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;display:none;align-items:flex-end;justify-content:center}.modal-overlay.active{display:flex}.modal-box{width:100%;max-width:480px;max-height:90vh;overflow:auto;background:#fff;border-radius:18px 18px 0 0;padding:18px}
+.field{margin-bottom:10px}.field label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px}
 .form-actions{display:flex;gap:8px}.form-actions .btn{flex:1}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
-
-<div id="pinScreen" class="pin-screen">
-<div style="text-align:center;max-width:360px;width:100%">
-<div class="logo" style="margin:0 auto 12px;width:60px;height:60px;font-size:28px">H</div>
-<h2>HISAB V10</h2>
-<p style="font-size:11px;opacity:.7">Buttons Fixed Version</p>
-<input id="unlockPin" class="pin-input" type="password" maxlength="6" placeholder="••••">
-<div id="pinError" style="color:#ffb3b3;font-size:12px;min-height:16px"></div>
-<button class="btn full" onclick="unlockApp()" style="background:#fff;color:var(--primary)">Unlock</button>
-</div>
-</div>
-
 <div class="app">
 <header class="topbar">
-<div style="display:flex;align-items:center;gap:8px"><div class="logo">H</div><div><div style="font-weight:900">HISAB V10</div><div style="font-size:9px;color:var(--muted)">BUTTONS FIXED</div></div></div>
-<div style="display:flex;gap:6px"><button class="btn light small" onclick="openSecurity()">🔐</button><button class="btn light small" onclick="showPage('more')">•••</button></div>
+<div><div style="font-weight:800;font-size:18px">HISAB V11.1</div><div style="font-size:9px;color:var(--muted)">BUTTON ULTRA FIXED</div></div>
+<div style="display:flex;gap:6px"><button data-action="security" class="btn light small">🔐 PIN</button><button data-action="show-more" class="btn light small">•••</button></div>
 </header>
 
 <section id="home" class="page active">
-<div class="hero"><div style="font-size:11px;opacity:.8">Current Balance</div><div id="homeBalance" class="hero-value">₹ 0</div><div style="font-size:11px;opacity:.7">Income - Expense (Auto Link)</div></div>
-<div class="stats">
-<div class="stat"><div class="stat-label">Lena</div><div id="receivable" class="stat-value">₹ 0</div></div>
-<div class="stat"><div class="stat-label">Dena</div><div id="payable" class="stat-value">₹ 0</div></div>
-<div class="stat"><div class="stat-label">Net Due</div><div id="homeNet" class="stat-value">₹ 0</div></div>
+<div class="hero"><div style="font-size:11px;opacity:.6">TOTAL BALANCE</div><div id="homeBalance" class="hero-value">₹ 0</div></div>
+<div class="kpi-row">
+<div class="kpi"><small>Lena Receivable</small><strong id="receivable">₹ 0</strong></div>
+<div class="kpi"><small>Dena Payable</small><strong id="payable">₹ 0</strong></div>
 </div>
-<div class="summary-grid">
-<div class="summary-card"><small>💵 Cash</small><strong id="cashBalance">₹ 0</strong></div>
-<div class="summary-card"><small>🏦 Bank</small><strong id="bankBalance">₹ 0</strong></div>
-<div class="summary-card"><small>🧾 Biz Due</small><strong id="businessDueHome">₹ 0</strong></div>
-<div class="summary-card"><small>📒 Udhaar Due</small><strong id="personalDueHome">₹ 0</strong></div>
+<div class="kpi-row">
+<div class="kpi"><small>💵 Cash</small><strong id="cashBalance">₹ 0</strong></div>
+<div class="kpi"><small>🏦 Bank</small><strong id="bankBalance">₹ 0</strong></div>
 </div>
 
-<div style="font-weight:900;margin:14px 0 8px">Quick Actions - All Working ✅</div>
-<div class="quick-grid">
-<button class="quick" onclick="openTransForm('income')">💰<br><span>Income</span></button>
-<button class="quick" onclick="openTransForm('expense')">💸<br><span>Expense</span></button>
-<button class="quick" onclick="openKhataForm()">🤝<br><span>Udhaar</span></button>
-<button class="quick" onclick="openBusinessForm('customer')">👤<br><span>Customer</span></button>
-<button class="quick" onclick="openBusinessForm('sale')">🧾<br><span>Sale</span></button>
-<button class="quick" onclick="openBusinessForm('purchase')">📦<br><span>Purchase</span></button>
-<button class="quick" onclick="exportExcel()">📊<br><span>Excel</span></button>
-<button class="quick" onclick="showPage('reports')">📈<br><span>Reports</span></button>
-<button class="quick" onclick="showPage('planning')">🎯<br><span>Planning</span></button>
+<div style="font-weight:700;font-size:14px;margin:16px 0 8px">Quick Actions - Tap to Test</div>
+<div class="chips">
+<button class="chip" data-action="add-income">💰 Income</button>
+<button class="chip" data-action="add-expense">💸 Expense</button>
+<button class="chip" data-action="add-khata">🤝 Udhaar</button>
+<button class="chip" data-action="add-sale">🧾 Sale</button>
+<button class="chip" data-action="add-purchase">📦 Purchase</button>
+<button class="chip" data-action="excel">📊 Excel</button>
 </div>
 
-<div style="display:flex;justify-content:space-between;margin:16px 0 8px"><strong>Recent</strong><button class="btn light small" onclick="showPage('transactions')">View All</button></div>
-<div id="homeRecent"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+<button class="btn light" data-action="show-personal">📒 Personal Khata</button>
+<button class="btn light" data-action="show-business">🏪 Business</button>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px"><strong style="font-size:14px">Recent (4 max)</strong><button class="btn light small" data-action="show-transactions">View All</button></div>
+<div id="homeRecent" class="list"></div>
+
+<div style="margin-top:16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px;font-size:12px;color:#065f46">
+✅ Button Test: Agar ye dikh raha hai toh app load ho gaya. Neeche ke har chip pe tap karo - har ek ka alert aana chahiye. Agar alert nahi aaye toh batao kaunsa button fail hai.
+</div>
 </section>
 
 <section id="personal" class="page">
-<div class="row" style="margin:8px 0"><div><div style="font-weight:900;font-size:20px">Personal Udhaar</div><div style="font-size:11px;color:var(--muted)">WhatsApp + Auto Link</div></div><div style="display:flex;gap:6px"><button class="btn light small" onclick="goBack()">←</button><button class="btn green small" onclick="openKhataForm()">+ Add</button></div></div>
-<input id="personalSearch" placeholder="🔎 Search naam..." oninput="renderPersonal()" style="margin-bottom:8px">
-<div class="filters"><button class="active" data-pfilter="all" onclick="setPersonalFilter('all',this)">All</button><button data-pfilter="give" onclick="setPersonalFilter('give',this)">Dena</button><button data-pfilter="receive" onclick="setPersonalFilter('receive',this)">Lena</button><button data-pfilter="pending" onclick="setPersonalFilter('pending',this)">Pending</button><button data-pfilter="settled" onclick="setPersonalFilter('settled',this)">Settled</button></div>
-<div id="personalList"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong style="font-size:18px">Personal Khata</strong><div style="display:flex;gap:6px"><button class="btn light small" data-action="go-back">←</button><button class="btn green small" data-action="add-khata">+ Add</button></div></div>
+<div style="display:flex;gap:8px;margin-bottom:10px"><input id="personalSearch" placeholder="Search..." style="flex:1"><button class="btn small" id="personalSearchBtn">🔎</button></div>
+<div style="display:flex;gap:6px;overflow:auto;margin-bottom:10px"><button class="btn light small filter-btn active" data-filter="all" data-type="personal">All</button><button class="btn light small filter-btn" data-filter="give" data-type="personal">Dena</button><button class="btn light small filter-btn" data-filter="receive" data-type="personal">Lena</button></div>
+<div id="personalList" class="list"></div>
 </section>
 
 <section id="business" class="page">
-<div class="row" style="margin:8px 0"><div><div style="font-weight:900;font-size:20px">Business</div><div style="font-size:11px;color:var(--muted)">Customer Supplier</div></div><button class="btn light small" onclick="goBack()">← Back</button></div>
-<div class="summary-grid"><div class="summary-card"><small>Sales Total</small><strong id="businessSalesTotal">₹ 0</strong></div><div class="summary-card"><small>Purchase Total</small><strong id="businessPurchaseTotal">₹ 0</strong></div><div class="summary-card"><small>Due</small><strong id="businessDueTotal">₹ 0</strong></div><div class="summary-card"><small>Cust/Supp</small><strong id="businessPeopleTotal">0/0</strong></div></div>
-<div class="actions"><button class="btn green small" onclick="openBusinessForm('customer')">+ Customer</button><button class="btn blue small" onclick="openBusinessForm('supplier')">+ Supplier</button><button class="btn small" onclick="openBusinessForm('sale')">+ Sale</button><button class="btn small" onclick="openBusinessForm('purchase')">+ Purchase</button></div>
-<input id="businessSearch" placeholder="🔎 Search..." oninput="renderBusiness()" style="margin:10px 0">
-<div class="filters"><button class="active" data-bfilter="all" onclick="setBusinessFilter('all',this)">All</button><button data-bfilter="customer" onclick="setBusinessFilter('customer',this)">Customers</button><button data-bfilter="supplier" onclick="setBusinessFilter('supplier',this)">Suppliers</button><button data-bfilter="sales" onclick="setBusinessFilter('sales',this)">Sales</button><button data-bfilter="purchases" onclick="setBusinessFilter('purchases',this)">Purchase</button></div>
-<div id="businessList"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong style="font-size:18px">Business</strong><button class="btn light small" data-action="go-back">←</button></div>
+<div class="kpi-row"><div class="kpi"><small>Sales</small><strong id="businessSalesTotal">₹ 0</strong></div><div class="kpi"><small>Purchase</small><strong id="businessPurchaseTotal">₹ 0</strong></div></div>
+<div class="chips"><button class="chip" data-action="add-customer">👤 Customer</button><button class="chip" data-action="add-supplier">🏭 Supplier</button><button class="chip" data-action="add-sale">🧾 Sale</button><button class="chip" data-action="add-purchase">📦 Purchase</button></div>
+<div id="businessList" class="list"></div>
 </section>
 
 <section id="transactions" class="page">
-<div class="row" style="margin:8px 0"><div><div style="font-weight:900;font-size:20px">Money Flow</div><div style="font-size:11px;color:var(--muted)">Auto linked</div></div><div style="display:flex;gap:6px"><button class="btn light small" onclick="goBack()">←</button><button class="btn green small" onclick="openTransForm()">+ Add</button></div></div>
-<div class="summary-grid"><div class="summary-card"><small>Income</small><strong id="transIncome">₹ 0</strong></div><div class="summary-card"><small>Expense</small><strong id="transExpense">₹ 0</strong></div><div class="summary-card"><small>Balance</small><strong id="transBalance">₹ 0</strong></div><div class="summary-card"><small>Count</small><strong id="transCount">0</strong></div></div>
-<input id="transSearch" placeholder="🔎 Search..." oninput="renderTransactions()" style="margin-bottom:8px">
-<div class="filters"><button class="active" data-tfilter="all" onclick="setTransFilter('all',this)">All</button><button data-tfilter="income" onclick="setTransFilter('income',this)">Income</button><button data-tfilter="expense" onclick="setTransFilter('expense',this)">Expense</button></div>
-<div id="transactionsList"></div>
-</section>
-
-<section id="planning" class="page">
-<div class="row" style="margin:8px 0"><div style="font-weight:900;font-size:20px">Planning</div><button class="btn light small" onclick="goBack()">←</button></div>
-<div class="summary-grid"><div class="summary-card"><small>Budget</small><strong id="planBudgetBig">₹ 0</strong></div><div class="summary-card"><small>Spent</small><strong id="planSpent">₹ 0</strong></div><div class="summary-card"><small>Remain</small><strong id="planRem">₹ 0</strong></div><div class="summary-card"><small>%</small><strong id="planPerc">0%</strong></div></div>
-<div class="card"><div class="row"><strong>Budget</strong><button class="btn light small" onclick="openBudgetEdit()">Edit</button></div><div class="progress"><div id="planProgress" style="width:0%"></div></div><div id="budgetStatusText" style="font-size:11px;color:var(--muted);margin-top:6px"></div></div>
-<div style="display:flex;justify-content:space-between;margin:12px 0"><strong>Categories</strong><button class="btn green small" onclick="openCategoryForm()">+ Cat</button></div><div id="planningCatGrid"></div>
-<div style="display:flex;justify-content:space-between;margin:12px 0"><strong>Goals</strong><button class="btn green small" onclick="openGoalForm()">+ Goal</button></div><div id="planningGoalGrid"></div>
-</section>
-
-<section id="reports" class="page">
-<div class="row" style="margin:8px 0"><div style="font-weight:900;font-size:20px">Reports</div><button class="btn light small" onclick="goBack()">←</button></div>
-<div id="reportsContent"></div>
-<div class="actions" style="margin-top:12px"><button class="btn blue small" onclick="exportData()">⬇ Backup</button><button class="btn green small" onclick="exportExcel()">📊 Excel</button><button class="btn small" style="background:#25D366" onclick="shareWhatsAppReport()">WhatsApp Report</button><button class="btn light small" onclick="openRestore()">Restore</button><button class="btn light small" onclick="printReport()">Print</button></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong style="font-size:18px">Money Flow</strong><div style="display:flex;gap:6px"><button class="btn light small" data-action="go-back">←</button><button class="btn green small" data-action="add-income">+ Add</button></div></div>
+<div class="kpi-row"><div class="kpi"><small>Income</small><strong id="transIncome">₹ 0</strong></div><div class="kpi"><small>Expense</small><strong id="transExpense">₹ 0</strong></div></div>
+<div id="transactionsList" class="list"></div>
 </section>
 
 <section id="more" class="page">
-<div style="font-weight:900;font-size:20px;margin:8px 0">More</div>
-<div class="mode-grid">
-<button class="mode-card" onclick="showPage('reports')"><div>📊</div><strong>Reports</strong><div style="font-size:11px;color:var(--muted)">View reports</div></button>
-<button class="mode-card" onclick="openSecurity()"><div>🔐</div><strong>PIN</strong><div style="font-size:11px;color:var(--muted)">Security</div></button>
-<button class="mode-card" onclick="exportData()"><div>💾</div><strong>Backup</strong><div style="font-size:11px;color:var(--muted)">JSON backup</div></button>
-<button class="mode-card" onclick="exportExcel()"><div>📈</div><strong>Excel</strong><div style="font-size:11px;color:var(--muted)">CSV export</div></button>
-<button class="mode-card" onclick="openRestore()"><div>♻️</div><strong>Restore</strong><div style="font-size:11px;color:var(--muted)">Restore data</div></button>
-<button class="mode-card" onclick="printReport()"><div>🖨️</div><strong>Print</strong><div style="font-size:11px;color:var(--muted)">Print report</div></button>
+<div style="font-weight:800;font-size:18px;margin-bottom:12px">More</div>
+<div class="list">
+<div class="list-item" data-action="show-reports"><div>📊 Reports</div><div>›</div></div>
+<div class="list-item" data-action="backup"><div>💾 Backup JSON</div><div>›</div></div>
+<div class="list-item" data-action="excel"><div>📈 Excel CSV</div><div>›</div></div>
+<div class="list-item" data-action="security"><div>🔐 PIN Security</div><div>›</div></div>
 </div>
-<div class="card" style="margin-top:12px"><strong>V10 Buttons Fixed</strong><div style="font-size:11px;color:var(--muted);margin-top:6px">All buttons window bound • No CDN • Works on file://</div></div>
-<button class="btn red full" onclick="clearAll()">⚠ Delete All</button>
+<button class="btn red full" style="margin-top:12px" data-action="clear-all">⚠ Delete All</button>
+</section>
+
+<section id="reports" class="page">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong style="font-size:18px">Reports</strong><button class="btn light small" data-action="go-back">←</button></div>
+<div id="reportsContent" class="kpi"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+<button class="btn light" data-action="backup">Backup</button><button class="btn green" data-action="excel">Excel</button>
+</div>
 </section>
 
 </div>
 
 <nav class="bottom-nav">
-<button id="navHome" class="active" onclick="showPage('home')"><div>🏠</div>Home</button>
-<button id="navKhata" onclick="showPage('personal')"><div>📒</div>Khata</button>
-<button id="navBusiness" onclick="showPage('business')"><div>🏪</div>Business</button>
-<button id="navMoney" onclick="showPage('transactions')"><div>💰</div>Money</button>
-<button id="navMore" onclick="showPage('more')"><div>•••</div>More</button>
+<button data-action="show-home" class="active" id="navHome"><div>🏠</div>Home</button>
+<button data-action="show-personal" id="navKhata"><div>📒</div>Khata</button>
+<button data-action="show-business" id="navBusiness"><div>🏪</div>Business</button>
+<button data-action="show-transactions" id="navMoney"><div>💰</div>Money</button>
+<button data-action="show-more" id="navMore"><div>•••</div>More</button>
 </nav>
 
-<div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal-box"></div></div>
-<input id="restoreFile" type="file" accept=".json" style="display:none" onchange="restoreData(event)">
+<div id="modalOverlay" class="modal-overlay"><div id="modalBox" class="modal-box"></div></div>
 
 <script>
-// GLOBAL STATE
-var STORAGE={personal:"hisab_personal_v10",business:"hisab_business_v10",transactions:"hisab_transactions_v10",planning:"hisab_planning_v10",security:"hisab_security_v10",old_p:"hisab_personal_v9",old_b:"hisab_business_v9",old_t:"hisab_transactions_v9",old_pl:"hisab_planning_v9"};
-var personal=[],business={customers:[],suppliers:[],sales:[],purchases:[]},transactions=[],planning={budget:0,categories:[],goals:[]};
-var pFilter="all",bFilter="all",bStatus="all",tFilter="all",editingId=null,pageHistory=[],currentPage="home";
+// ULTRA SIMPLE - NO INLINE ONCLICK, ONLY DATA-ACTION DELEGATION
+var personal=[],business={customers:[],suppliers:[],sales:[],purchases:[]},transactions=[],planning={budget:0};
+var currentPage="home",pageHistory=[],pFilter="all",editingId=null;
 
-// HELPERS - attach to window
-window.num=function(v){var n=Number(v);return isFinite(n)?n:0};
-window.uid=function(){return Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(2,6)};
-window.today=function(){return new Date().toISOString().slice(0,10)};
-window.fmt=function(n){return "₹ "+window.num(n).toLocaleString("en-IN")};
-window.esc=function(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")};
-window.saveJSON=function(k,v){localStorage.setItem(k,JSON.stringify(v))};
-window.readJSON=function(k,f){try{var r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}};
-window.validPhone=function(p){if(!p)return true;return /^[0-9+\s-]{7,15}$/.test(p)};
+function uid(){return Math.random().toString(36).slice(2,7)+Date.now().toString(36).slice(2,5)}
+function today(){return new Date().toISOString().slice(0,10)}
+function fmt(n){n=Number(n)||0;return "₹ "+n.toLocaleString("en-IN")}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function read(k,f){try{var r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}}
 
-function normalize(){
-  personal=(personal||[]).map(function(x){
-    x.id=x.id||uid();x.name=x.name||"Person";x.phone=x.phone||"";x.amount=num(x.amount);x.type=x.type==="give"?"give":"receive";x.date=x.date||today();x.note=x.note||"";x.history=x.history||[];
-    x.history=x.history.map(function(p){return {id:p.id||uid(),amount:num(p.amount),date:p.date||today(),method:p.method||"Cash",note:p.note||""}}).filter(function(p){return p.amount>0});
-    var paid=x.history.reduce(function(s,p){return s+num(p.amount)},0);x.paid=Math.min(x.amount,paid);x.due=Math.max(0,x.amount-paid);x.status=x.due<=0?"settled":(paid>0?"partial":"pending");return x;
-  });
-  business.customers=(business.customers||[]).map(function(x){return {id:x.id||uid(),name:x.name||"Customer",phone:x.phone||"",note:x.note||""}});
-  business.suppliers=(business.suppliers||[]).map(function(x){return {id:x.id||uid(),name:x.name||"Supplier",phone:x.phone||"",note:x.note||""}});
-  business.sales=(business.sales||[]).map(function(x){x.id=x.id||uid();x.amount=num(x.amount);x.date=x.date||today();x.note=x.note||"";x.history=x.history||[];x.history=x.history.map(function(p){return {id:p.id||uid(),amount:num(p.amount),date:p.date||today(),method:p.method||"Cash",note:p.note||""}});var pd=x.history.reduce(function(s,p){return s+num(p.amount)},0);x.paid=Math.min(x.amount,pd);x.due=Math.max(0,x.amount-pd);x.status=x.due<=0?"paid":(pd>0?"partial":"pending");return x;});
-  business.purchases=(business.purchases||[]).map(function(x){x.id=x.id||uid();x.amount=num(x.amount);x.date=x.date||today();x.note=x.note||"";x.history=x.history||[];x.history=x.history.map(function(p){return {id:p.id||uid(),amount:num(p.amount),date:p.date||today(),method:p.method||"Cash",note:p.note||""}});var pd=x.history.reduce(function(s,p){return s+num(p.amount)},0);x.paid=Math.min(x.amount,pd);x.due=Math.max(0,x.amount-pd);x.status=x.due<=0?"paid":(pd>0?"partial":"pending");return x;});
-  transactions=(transactions||[]).map(function(x){x.id=x.id||uid();x.amount=num(x.amount);x.type=x.type==="expense"?"expense":"income";x.category=x.category||"Other";x.date=x.date||today();x.note=x.note||"";x.account=x.account||"cash";x.linkedId=x.linkedId||null;return x;});
-  planning.budget=num(planning.budget);planning.categories=planning.categories||[];planning.goals=planning.goals||[];
+function load(){
+  personal=read("hisab_p_v11",[]);business=read("hisab_b_v11",{customers:[],suppliers:[],sales:[],purchases:[]});transactions=read("hisab_t_v11",[]);
+  // migrate from older
+  if(!personal.length){var old=read("hisab_personal_v11",null)||read("hisab_personal_v10",null)||read("hisab_personal_v9",[]);if(old&&old.length)personal=old}
+  if(!business.customers.length){var oldb=read("hisab_business_v11",null)||read("hisab_business_v10",null);if(oldb){business=oldb}}
+  if(!transactions.length){var oldt=read("hisab_transactions_v11",null)||read("hisab_transactions_v10",null)||[];if(oldt.length)transactions=oldt}
+  // normalize minimal
+  personal=personal.map(function(x){x.id=x.id||uid();x.name=x.name||"Person";x.amount=Number(x.amount)||0;x.type=x.type||"receive";x.date=x.date||today();x.history=x.history||[];x.paid=(x.history||[]).reduce(function(s,p){return s+(Number(p.amount)||0)},0);x.due=Math.max(0,x.amount-x.paid);return x});
+  business.customers=(business.customers||[]).map(function(x){x.id=x.id||uid();x.name=x.name||"Customer";return x});
+  business.suppliers=(business.suppliers||[]).map(function(x){x.id=x.id||uid();x.name=x.name||"Supplier";return x});
+  business.sales=(business.sales||[]).map(function(x){x.id=x.id||uid();x.amount=Number(x.amount)||0;x.customerName=x.customerName||"Customer";x.date=x.date||today();x.history=x.history||[];x.paid=(x.history||[]).reduce(function(s,p){return s+(Number(p.amount)||0)},0);x.due=Math.max(0,x.amount-x.paid);return x});
+  business.purchases=(business.purchases||[]).map(function(x){x.id=x.id||uid();x.amount=Number(x.amount)||0;x.supplierName=x.supplierName||"Supplier";x.date=x.date||today();return x});
+  transactions=transactions.map(function(x){x.id=x.id||uid();x.amount=Number(x.amount)||0;x.type=x.type||"income";x.category=x.category||"Other";x.date=x.date||today();return x});
+  persist();
 }
+function persist(){save("hisab_p_v11",personal);save("hisab_b_v11",business);save("hisab_t_v11",transactions)}
 
-function loadAll(){
-  // migrate old
-  var op=readJSON(STORAGE.old_p,null);if(op&&!readJSON(STORAGE.personal,null))saveJSON(STORAGE.personal,op);
-  var ob=readJSON(STORAGE.old_b,null);if(ob&&!readJSON(STORAGE.business,null))saveJSON(STORAGE.business,ob);
-  var ot=readJSON(STORAGE.old_t,null);if(ot&&!readJSON(STORAGE.transactions,null))saveJSON(STORAGE.transactions,ot);
-  var opl=readJSON(STORAGE.old_pl,null);if(opl&&!readJSON(STORAGE.planning,null))saveJSON(STORAGE.planning,opl);
-  personal=readJSON(STORAGE.personal,[]);business=readJSON(STORAGE.business,{customers:[],suppliers:[],sales:[],purchases:[]});transactions=readJSON(STORAGE.transactions,[]);planning=readJSON(STORAGE.planning,{budget:0,categories:[],goals:[]});
-  normalize();persist();
-}
-function persist(){saveJSON(STORAGE.personal,personal);saveJSON(STORAGE.business,business);saveJSON(STORAGE.transactions,transactions);saveJSON(STORAGE.planning,planning)}
-window.saveAll=function(){normalize();persist();renderDashboard();renderHomeRecent();if(currentPage==="personal")renderPersonal();if(currentPage==="business")renderBusiness();if(currentPage==="transactions")renderTransactions();if(currentPage==="planning")renderPlanning();if(currentPage==="reports")renderReports();}
-
-function personalPaid(x){return (x.history||[]).reduce(function(s,p){return s+num(p.amount)},0)}
-function personalDue(x){return Math.max(0,num(x.amount)-personalPaid(x))}
-function personalStatus(x){var d=personalDue(x),p=personalPaid(x);return d<=0?"settled":(p>0?"partial":"pending")}
-function businessPaid(x){return (x.history||[]).reduce(function(s,p){return s+num(p.amount)},0)}
-function businessDue(x){return Math.max(0,num(x.amount)-businessPaid(x))}
-function businessStatus(x){var d=businessDue(x),p=businessPaid(x);return d<=0?"paid":(p>0?"partial":"pending")}
-
-// NAVIGATION - WINDOW BOUND
-window.showPage=function(page,push){
-  if(push===undefined)push=true;
-  var target=document.getElementById(page);if(!target){alert("Page not found: "+page);return;}
-  if(page!==currentPage&&push)pageHistory.push(currentPage);
+function showPage(page){
+  if(page!==currentPage)pageHistory.push(currentPage);
   currentPage=page;
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active")});
-  target.classList.add("active");
+  var t=document.getElementById(page);if(t)t.classList.add("active");
   document.querySelectorAll(".bottom-nav button").forEach(function(b){b.classList.remove("active")});
-  var navId="nav"+page.charAt(0).toUpperCase()+page.slice(1);if(page==="personal")navId="navKhata";if(page==="transactions")navId="navMoney";if(page==="more"||page==="reports"||page==="planning")navId="navMore";if(page==="home")navId="navHome";if(page==="business")navId="navBusiness";
-  var nav=document.getElementById(navId);if(nav)nav.classList.add("active");
-  window.scrollTo(0,0);
-  if(page==="personal")renderPersonal();
-  if(page==="business")renderBusiness();
-  if(page==="transactions")renderTransactions();
-  if(page==="planning")renderPlanning();
-  if(page==="reports")renderReports();
-  if(page==="home"){renderDashboard();renderHomeRecent();}
-};
-window.show=window.showPage;
-window.goBack=function(){if(pageHistory.length){var prev=pageHistory.pop();showPage(prev,false)}else showPage('home',false)};
+  var navMap={home:"navHome",personal:"navKhata",business:"navBusiness",transactions:"navMoney",more:"navMore",reports:"navMore"};
+  var nid=navMap[page]||"navMore";var nav=document.getElementById(nid);if(nav)nav.classList.add("active");
+  render();
+}
+function goBack(){if(pageHistory.length)showPage(pageHistory.pop());else showPage("home")}
 
-// FILTERS
-window.setPersonalFilter=function(f,el){pFilter=f;document.querySelectorAll("[data-pfilter]").forEach(function(b){b.classList.remove("active")});if(el)el.classList.add("active");renderPersonal()};
-window.setBusinessFilter=function(f,el){bFilter=f;document.querySelectorAll("[data-bfilter]").forEach(function(b){b.classList.remove("active")});if(el)el.classList.add("active");renderBusiness()};
-window.setBusinessStatus=function(f,el){bStatus=f;document.querySelectorAll("[data-bstatus]").forEach(function(b){b.classList.remove("active")});if(el)el.classList.add("active");renderBusiness()};
-window.setTransFilter=function(f,el){tFilter=f;document.querySelectorAll("[data-tfilter]").forEach(function(b){b.classList.remove("active")});if(el)el.classList.add("active");renderTransactions()};
-
-// MODAL
-window.openModal=function(html){document.getElementById("modalBox").innerHTML=html;document.getElementById("modalOverlay").classList.add("active");document.body.style.overflow="hidden"};
-window.closeModal=function(){document.getElementById("modalOverlay").classList.remove("active");document.getElementById("modalBox").innerHTML="";editingId=null;document.body.style.overflow=""};
-
-// DASHBOARD
-window.renderDashboard=function(){
-  var income=transactions.filter(function(x){return x.type==="income"}).reduce(function(s,x){return s+num(x.amount)},0);
-  var expense=transactions.filter(function(x){return x.type==="expense"}).reduce(function(s,x){return s+num(x.amount)},0);
-  var cash=transactions.filter(function(x){return (x.account||"cash")==="cash"}).reduce(function(s,x){return s+(x.type==="income"?num(x.amount):-num(x.amount))},0);
-  var bank=transactions.filter(function(x){return x.account==="bank"}).reduce(function(s,x){return s+(x.type==="income"?num(x.amount):-num(x.amount))},0);
-  var pRec=personal.filter(function(x){return x.type==="receive"}).reduce(function(s,x){return s+personalDue(x)},0);
-  var pPay=personal.filter(function(x){return x.type==="give"}).reduce(function(s,x){return s+personalDue(x)},0);
-  var sDue=business.sales.reduce(function(s,x){return s+businessDue(x)},0);
-  var pDue=business.purchases.reduce(function(s,x){return s+businessDue(x)},0);
+function render(){
+  var income=transactions.filter(function(x){return x.type==="income"}).reduce(function(s,x){return s+x.amount},0);
+  var expense=transactions.filter(function(x){return x.type==="expense"}).reduce(function(s,x){return s+x.amount},0);
+  var pRec=personal.filter(function(x){return x.type==="receive"}).reduce(function(s,x){return s+x.due},0);
+  var pPay=personal.filter(function(x){return x.type==="give"}).reduce(function(s,x){return s+x.due},0);
+  var sDue=business.sales.reduce(function(s,x){return s+(x.due||0)},0);
   document.getElementById("homeBalance").textContent=fmt(income-expense);
   document.getElementById("receivable").textContent=fmt(pRec+sDue);
-  document.getElementById("payable").textContent=fmt(pPay+pDue);
-  document.getElementById("homeNet").textContent=fmt((pRec+sDue)-(pPay+pDue));
-  document.getElementById("cashBalance").textContent=fmt(cash);
-  document.getElementById("bankBalance").textContent=fmt(bank);
-  document.getElementById("businessDueHome").textContent=fmt(sDue+pDue);
-  document.getElementById("personalDueHome").textContent=fmt(pRec+pPay);
-  document.getElementById("businessSalesTotal").textContent=fmt(business.sales.reduce(function(s,x){return s+num(x.amount)},0));
-  document.getElementById("businessPurchaseTotal").textContent=fmt(business.purchases.reduce(function(s,x){return s+num(x.amount)},0));
-  document.getElementById("businessDueTotal").textContent=fmt(sDue+pDue);
-  document.getElementById("businessPeopleTotal").textContent=business.customers.length+" / "+business.suppliers.length;
+  document.getElementById("payable").textContent=fmt(pPay);
+  document.getElementById("cashBalance").textContent=fmt(transactions.filter(function(x){return x.account!=="bank"}).reduce(function(s,x){return s+(x.type==="income"?x.amount:-x.amount)},0));
+  document.getElementById("bankBalance").textContent=fmt(transactions.filter(function(x){return x.account==="bank"}).reduce(function(s,x){return s+(x.type==="income"?x.amount:-x.amount)},0));
+  document.getElementById("businessSalesTotal").textContent=fmt(business.sales.reduce(function(s,x){return s+x.amount},0));
+  document.getElementById("businessPurchaseTotal").textContent=fmt(business.purchases.reduce(function(s,x){return s+x.amount},0));
   document.getElementById("transIncome").textContent=fmt(income);
   document.getElementById("transExpense").textContent=fmt(expense);
-  document.getElementById("transBalance").textContent=fmt(income-expense);
-  document.getElementById("transCount").textContent=transactions.length;
-  document.getElementById("planBudgetBig").textContent=fmt(planning.budget);
-  var spent=(planning.categories||[]).reduce(function(s,x){return s+num(x.spent)},0);
-  document.getElementById("planSpent").textContent=fmt(spent);
-  document.getElementById("planRem").textContent=fmt(Math.max(0,planning.budget-spent));
-  document.getElementById("planPerc").textContent=(planning.budget>0?Math.round(Math.min(100,spent/planning.budget*100)):0)+"%";
-  document.getElementById("planProgress").style.width=(planning.budget>0?Math.min(100,spent/planning.budget*100):0)+"%";
-  document.getElementById("budgetStatusText").textContent=planning.budget>0?"Remaining "+fmt(Math.max(0,planning.budget-spent)):"Budget set karo";
-};
+ 
+  // home recent - max 4
+  var recent=[];
+  personal.slice(-2).forEach(function(x){recent.push({name:x.name,amt:x.due,icon:"👤"})});
+  transactions.slice(-2).forEach(function(x){recent.push({name:x.category,amt:x.amount,icon:x.type==="income"?"💰":"💸"})});
+  var hr=document.getElementById("homeRecent");
+  if(recent.length)hr.innerHTML=recent.map(function(r){return '<div class="list-item"><div> '+r.icon+' '+esc(r.name)+'</div><div style="font-weight:700">'+fmt(r.amt)+'</div></div>'}).join("");
+  else hr.innerHTML='<div class="empty">No data - Add karo</div>';
+ 
+  // personal
+  var pl=document.getElementById("personalList");
+  if(pl){
+    var q=(document.getElementById("personalSearch")||{}).value||"";q=q.toLowerCase();
+    var list=personal.filter(function(x){if(pFilter==="give"&&x.type!=="give")return false;if(pFilter==="receive"&&x.type!=="receive")return false;if(q&&x.name.toLowerCase().indexOf(q)<0)return false;return true});
+    pl.innerHTML=list.length?list.map(function(x){return '<div class="list-item"><div><div style="font-weight:600">'+esc(x.name)+' '+(x.type==="give"?"(Dena)":"(Lena)")+'</div><div style="font-size:11px;color:#64748b">Due '+fmt(x.due)+' • '+esc(x.date)+'</div></div><div style="display:flex;gap:6px"><button class="btn green small" data-action="pay-personal" data-id="'+x.id+'">Pay</button><button class="btn red small" data-action="delete-personal" data-id="'+x.id+'">Del</button></div></div>'}).join(""):'<div class="empty">No khata - + Add dabao</div>';
+  }
+ 
+  // business
+  var bl=document.getElementById("businessList");
+  if(bl){
+    var html="";
+    if(business.customers.length)html+='<div style="font-weight:700;font-size:12px;margin:8px 0">Customers ('+business.customers.length+')</div><div class="list">'+business.customers.map(function(x){return '<div class="list-item"><div>👤 '+esc(x.name)+'</div><button class="btn light small" data-action="add-sale-for" data-id="'+x.id+'">+ Sale</button></div>'}).join("")+'</div>';
+    if(business.sales.length)html+='<div style="font-weight:700;font-size:12px;margin:8px 0">Sales ('+business.sales.length+')</div><div class="list">'+business.sales.map(function(x){return '<div class="list-item"><div>🧾 '+esc(x.customerName)+' • Due '+fmt(x.due||0)+'</div><button class="btn red small" data-action="delete-sale" data-id="'+x.id+'">Del</button></div>'}).join("")+'</div>';
+    bl.innerHTML=html||'<div class="empty">No business - Customer banao</div>';
+  }
+ 
+  // transactions
+  var tl=document.getElementById("transactionsList");
+  if(tl){
+    tl.innerHTML=transactions.length?transactions.map(function(x){return '<div class="list-item"><div><div style="font-weight:600">'+esc(x.category)+'</div><div style="font-size:11px;color:#64748b">'+x.type+' • '+esc(x.date)+'</div></div><div style="font-weight:700;color:'+(x.type==="income"?"#10b981":"#ef4444")+'">'+fmt(x.amount)+'</div></div>'}).join(""):'<div class="empty">No money flow</div>';
+  }
+ 
+  // reports
+  var rc=document.getElementById("reportsContent");
+  if(rc)rc.innerHTML='<div>Income: <strong>'+fmt(income)+'</strong></div><div>Expense: <strong>'+fmt(expense)+'</strong></div><div>Balance: <strong>'+fmt(income-expense)+'</strong></div>';
+}
 
-window.renderHomeRecent=function(){
-  var el=document.getElementById("homeRecent");if(!el)return;
-  var items=[];
-  personal.forEach(function(x){items.push({date:x.date,name:x.name,meta:x.type==="give"?"Dena":"Lena",amount:personalDue(x),color:x.type==="give"?"red":"green"})});
-  transactions.slice(-5).forEach(function(x){items.push({date:x.date,name:x.category,meta:x.type,amount:x.amount,color:x.type==="income"?"green":"red"})});
-  items.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
-  items=items.slice(0,5);
-  if(!items.length){el.innerHTML='<div class="empty">No activity</div>';return;}
-  el.innerHTML=items.map(function(x){return '<div class="card"><div class="row"><div><div style="font-weight:900">'+esc(x.name)+'</div><div style="font-size:11px;color:var(--muted)">'+esc(x.meta)+' • '+esc(x.date)+'</div></div><div class="amount '+x.color+'">'+fmt(x.amount)+'</div></div></div>'}).join("");
-};
+function openModal(html){document.getElementById("modalBox").innerHTML=html;document.getElementById("modalOverlay").classList.add("active")}
+function closeModal(){document.getElementById("modalOverlay").classList.remove("active");document.getElementById("modalBox").innerHTML="";editingId=null}
 
-// PERSONAL
-window.renderPersonal=function(){
-  var el=document.getElementById("personalList");if(!el)return;
-  var q=(document.getElementById("personalSearch")||{}).value||"";q=q.toLowerCase().trim();
-  var list=personal.filter(function(x){
-    var st=personalStatus(x);
-    if(pFilter==="give"&&x.type!=="give")return false;
-    if(pFilter==="receive"&&x.type!=="receive")return false;
-    if(pFilter==="pending"&&st!=="pending")return false;
-    if(pFilter==="settled"&&st!=="settled")return false;
-    if(q&& (x.name+" "+x.note).toLowerCase().indexOf(q)<0)return false;
-    return true;
-  });
-  list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
-  if(!list.length){el.innerHTML='<div class="empty">No udhaar - Add karo</div>';return;}
-  el.innerHTML=list.map(function(x){
-    var paid=personalPaid(x),due=personalDue(x),st=personalStatus(x),pct=x.amount>0?Math.min(100,paid/x.amount*100):0;
-    var wa=encodeURIComponent("Hi "+x.name+", Due "+fmt(due)+" - HISAB");
-    return '<div class="card"><div class="card-head"><div><div style="font-weight:900">'+esc(x.name)+' '+(x.phone?'('+esc(x.phone)+')':'')+'</div><div style="font-size:11px;color:var(--muted)">'+(x.type==="give"?"DENA":"LENA")+' • '+esc(x.date)+'</div></div><div><div class="amount '+(x.type==="give"?"red":"green")+'">'+fmt(due)+'</div><span class="badge '+st+'">'+st+'</span></div></div><div style="font-size:11px;color:var(--muted)">Total '+fmt(x.amount)+' • Paid '+fmt(paid)+' • Due '+fmt(due)+'</div><div class="progress"><div style="width:'+pct+'%"></div></div>'+(x.note?'<
+// GLOBAL CLICK DELEGATION - THIS FIXES ALL BUTTONS
+document.addEventListener("click", function(e){
+  var btn=e.target.closest("[data-action]");
+  if(!btn)return;
+  var action=btn.getAttribute("data-action");
+  var id=btn.getAttribute("data-id");
+  console.log("Button clicked:", action, id);
+ 
+  try{
+    if(action==="show-home")showPage("home");
+    else if(action==="show-personal")showPage("personal");
+    else if(action==="show-business")showPage("business");
+    else if(action==="show-transactions")showPage("transactions");
+    else if(action==="show-more")showPage("more");
+    else if(action==="show-reports")showPage("reports");
+    else if(action==="go-back")goBack();
+   
+    else if(action==="add-income")openTransForm("income");
+    else if(action==="add-expense")openTransForm("expense");
+    else if(action==="add-khata")openKhataForm();
+    else if(action==="add-customer")openBusinessForm("customer");
+    else if(action==="add-supplier")openBusinessForm("supplier");
+    else if(action==="add-sale")openBusinessForm("sale");
+    else if(action==="add-purchase")openBusinessForm("purchase");
+    else if(action==="add-sale-for")openBusinessForm("sale",null,id);
+   
+    else if(action==="pay-personal")openPayPersonal(id);
+    else if(action==="delete-personal"){if(confirm("Delete?")){personal=personal.filter(function(x){return x.id!==id});persist();render()}}
+    else if(action==="delete-sale"){if(confirm("Delete sale?")){business.sales=business.sales.filter(function(x){return x.id!==id});persist();render()}}
+   
+    else if(action==="excel")exportExcel();
+    else if(action==="backup")backup();
+    else if(action==="clear-all"){if(prompt("DELETE likho")==="DELETE"){localStorage.clear();personal=[];business={customers:[],suppliers:[],sales:[],purchases:[]};transactions=[];persist();render();alert("Clear done")}}
+    else if(action==="security"){alert("PIN feature - V11 me simple alert. Full PIN ke liye bolo, add kar dunga");closeModal()}
+   
+  }catch(err){
+    alert("Button error: "+err.message);
+    console.error(err);
+  }
+});
+
+function openTransForm(type){
+  openModal('<div style="font-weight:800;margin-bottom:10px">Add '+(type||"Money")+'</div><div class="field"><label>Amount *</label><input id="tAmount" type="number" placeholder="₹"></div><div class="field"><label>Category</label><input id="tCat" placeholder="Salary, Food etc"></div><div class="field"><label>Type</label><select id="tType"><option value="income" '+(type==="income"?"selected":"")+'>Income</option><option value="expense" '+(type==="expense"?"selected":"")+'>Expense</option></select></div><div class="field"><label>Date</label><input id="tDate" type="date" value="'+today()+'"></div><div style="display:flex;gap:8px"><button class="btn light" onclick="closeModal()">Cancel</button><button class="btn green" id="saveTransBtn">Save</button></div>');
+  document.getElementById("saveTransBtn").onclick=function(){
+    var amount=Number(document.getElementById("tAmount").value)||0,cat=document.getElementById("tCat").value.trim()||"Other",typ=document.getElementById("tType").value,date=document.getElementById("tDate").value||today();
+    if(amount<=0){alert("Amount >0");return}
+    transactions.push({id:uid(),amount:amount,category:cat,type:typ,date:date});persist();closeModal();render();alert("Saved: "+fmt(amount)+" "+typ);
+  };
+}
+function openKhataForm(){
+  openModal('<div style="font-weight:800;margin-bottom:10px">Add Udhaar</div><div class="field"><label>Name *</label><input id="kName" placeholder="Naam"></div><div class="field"><label>Type</label><select id="kType"><option value="receive">Lena (aapko lena)</option><option value="give">Dena (aapne diya)</option></select></div><div class="field"><label>Amount *</label><input id="kAmount" type="number"></div><div style="display:flex;gap:8px"><button class="btn light" onclick="closeModal()">Cancel</button><button class="btn green" id="saveKhataBtn">Save</button></div>');
+  document.getElementById("saveKhataBtn").onclick=function(){
+    var name=document.getElementById("kName").value.trim(),type=document.getElementById("kType").value,amount=Number(document.getElementById("kAmount").value)||0;
+    if(!name||amount<=0){alert("Name/Amount");return}
+    personal.push({id:uid(),name:name,type:type,amount:amount,due:amount,paid:0,date:today(),history:[]});persist();closeModal();render();alert("Udhaar saved: "+name+" "+fmt(amount));
+  };
+}
+function openPayPersonal(id){
+  var item=personal.find(function(x){return x.id===id});if(!item)return;
+  openModal('<div style="font-weight:800;margin-bottom:10px">Pay - '+esc(item.name)+'</div><div style="font-size:12px;color:#64748b;margin-bottom:8px">Due: '+fmt(item.due)+'</div><div class="field"><label>Amount * Max '+fmt(item.due)+'</label><input id="pAmount" type="number"></div><div style="display:flex;gap:8px"><button class="btn light" onclick="closeModal()">Cancel</button><button class="btn green" id="savePayBtn">Pay + Add to Money</button></div>');
+  document.getElementById("savePayBtn").onclick=function(){
+    var amt=Number(document.getElementById("pAmount").value)||0;if(amt<=0||amt>item.due){alert("Invalid. Max "+fmt(item.due));return}
+    item.history=item.history||[];item.history.push({id:uid(),amount:amt,date:today()});item.paid=(item.paid||0)+amt;item.due=Math.max(0,item.amount-item.paid);
+    transactions.push({id:uid(),amount:amt,type:item.type==="receive"?"income":"expense",category:item.type==="receive"?"Received "+item.name:"Paid "+item.name,date:today(),linkedId:item.id});
+    persist();closeModal();render();alert("Payment saved: "+fmt(amt)+" and added to Money Flow");
+  };
+}
+function openBusinessForm(type,editId,linkId){
+  if(type==="customer"||type==="supplier"){
+    openModal('<div style="font-weight:800;margin-bottom:10px">Add '+type+'</div><div class="field"><label>Name *</label><input id="bName" placeholder="Name"></div><div style="display:flex;gap:8px"><button class="btn light" onclick="closeModal()">Cancel</button><button class="btn green" id="saveBPersonBtn">Save</button></div>');
+    document.getElementById("saveBPersonBtn").onclick=function(){
+      var name=document.getElementById("bName").value.trim();if(!name){alert("Name");return}
+      if(type==="customer")business.customers.push({id:uid(),name:name});else business.suppliers.push({id:uid(),name:name});
+      persist();closeModal();render();alert(type+" saved: "+name);
+    };
+    return;
+  }
+  // sale/purchase
+  var isSale=type==="sale",people=isSale?business.customers:business.suppliers;
+  if(!people.length){alert("Pehle "+(isSale?"Customer":"Supplier")+" banao");openBusinessForm(isSale?"customer":"supplier");return}
+  var opts=people.map(function(p){return '<option value="'+p.id+'" '+(p.id===linkId?"selected":"")+'>'+esc(p.name)+'</option>'}).join("");
+  openModal('<div style="font-weight:800;margin-bottom:10px">Add '+(isSale?"Sale":"Purchase")+'</div><div class="field"><label>'+(isSale?"Customer":"Supplier")+'</label><select id="bPerson">'+opts+'</select></div><div class="field"><label>Amount *</label><input id="bAmount" type="number"></div><div style="display:flex;gap:8px"><button class="btn light" onclick="closeModal()">Cancel</button><button class="btn green" id="saveBEntryBtn">Save</button></div>');
+  document.getElementById("saveBEntryBtn").onclick=function(){
+    var pid=document.getElementById("bPerson").value,amount=Number(document.getElementById("bAmount").value)||0;
+    if(!pid||amount<=0){alert("Select/Amount");return}
+    var person=people.find(function(x){return x.id===pid});
+    if(isSale)business.sales.push({id:uid(),amount:amount,customerId:pid,customerName:person.name,due:amount,paid:0,date:today(),history:[]});
+    else business.purchases.push({id:uid(),amount:amount,supplierId:pid,supplierName:person.name,due:amount,paid:0,date:today()});
+    persist();closeModal();render();alert((isSale?"Sale":"Purchase")+" saved: "+fmt(amount));
+  };
+}
+function backup(){
+  var data={personal:personal,business:business,transactions:transactions};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="HISAB-backup-"+today()+".json";a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+function exportExcel(){
+  var csv="Type,Name,Amount,Due,Date\n";
+  personal.forEach(function(x){csv+='Personal,'+x.name.replace(/,/g,' ')+','+x.amount+','+x.due+','+x.date+'\n'});
+  business.sales.forEach(function(x){csv+='Sale,'+x.customerName.replace(/,/g,' ')+','+x.amount+','+x.due+','+x.date+'\n'});
+  var blob=new Blob([csv],{type:"text/csv"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="HISAB-"+today()+".csv";a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+
+document.getElementById("modalOverlay").addEventListener("click",function(e){if(e.target===this)closeModal()});
+document.getElementById("personalSearch")?.addEventListener("input",function(){render()});
+document.getElementById("personalSearchBtn")?.addEventListener("click",function(){render()});
+document.querySelectorAll(".filter-btn").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll('[data-type="personal"]').forEach(function(x){x.classList.remove("active")});b.classList.add("active");pFilter=b.getAttribute("data-filter");render()})});
+
+function init(){load();render();console.log("HISAB V11.1 ULTRA FIXED loaded - delegation mode");}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>
