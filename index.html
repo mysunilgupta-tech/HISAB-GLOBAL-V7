@@ -2,328 +2,251 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a2e4a">
-<title>HISAB V9.1 - Fixed</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>HISAB V9.1</title>
+
 <style>
-:root{--bg:#f4f7fb;--card:#fff;--primary:#0a2e4a;--primary2:#145b8d;--accent:#16a36f;--accent2:#0e8c60;--blue:#2478b8;--danger:#d84d4d;--text:#102338;--muted:#718198;--border:#e3ebf3;--soft:#edf5fa;--softgreen:#eaf8f2;--softred:#fff0f0;--shadow:0 8px 24px rgba(15,45,70,.08);--shadow2:0 3px 12px rgba(15,45,70,.06);--radius:18px}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+:root{
+  --bg:#f4f7fb;--card:#fff;--primary:#0a2e4a;--primary2:#145b8d;
+  --accent:#16a36f;--blue:#2478b8;--danger:#d84d4d;--orange:#e89025;
+  --text:#102338;--muted:#718198;--border:#e3ebf3;
+  --soft:#edf5fa;--greenbg:#eaf8f2;--redbg:#fff0f0;
+  --shadow:0 8px 24px rgba(15,45,70,.08);--shadow2:0 3px 12px rgba(15,45,70,.06);
+  --radius:18px
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent
+}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
-.app{width:100%;max-width:720px;min-height:100vh;margin:auto;background:var(--bg)}
-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:13px 16px}
-.brand{display:flex;align-items:center;gap:11px}
-.logo{width:45px;height:45px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:900;background:linear-gradient(145deg,#0a2e4a,#1978b5)}
-.brand-name{font-size:20px;font-weight:900;letter-spacing:.5px}
-.brand-tag{color:var(--muted);font-size:9px;font-weight:800;letter-spacing:1.5px}
-main{padding:14px 14px 90px}
-.page{display:none}.page.active{display:block}
-.hero{border-radius:24px;padding:22px 20px;color:#fff;background:linear-gradient(135deg,#082d4a,#176d9e);box-shadow:var(--shadow);margin-bottom:14px}
-.hero-label{font-size:10px;font-weight:800;letter-spacing:1.2px;opacity:.8}
-.hero-amount{font-size:34px;font-weight:900;margin-top:5px}
-.hero-sub{font-size:11px;opacity:.75;margin-top:4px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow2)}
-.stat{padding:13px 10px}
-.stat-label{font-size:8px;color:var(--muted);font-weight:900;letter-spacing:.5px}
-.stat-value{font-size:15px;font-weight:900;margin-top:6px;word-break:break-word}
-.green{color:var(--accent)}.red{color:var(--danger)}.blue{color:var(--blue)}
-.section-title{display:flex;align-items:end;justify-content:space-between;margin:18px 2px 10px}
-.section-title h2,.planning-section h2{margin:0;font-size:16px;font-weight:900}
-.section-title span,.planning-section span{color:var(--muted);font-size:9px;font-weight:700}
-.option-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.option{border:1px solid var(--border);background:#fff;border-radius:18px;padding:16px 13px;text-align:left;box-shadow:var(--shadow2);color:var(--text);min-height:125px;width:100%}
-.option:active,.quick-card:active,.business-action:active{transform:scale(.98)}
-.option-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--soft);font-size:21px;margin-bottom:11px}
-.option-title{font-size:13px;font-weight:900}.option-sub{font-size:9px;color:var(--muted);margin-top:4px;line-height:1.4}
-.activity{padding:7px;min-height:65px}
-.report-card{width:100%;display:flex;align-items:center;gap:12px;padding:15px;border:1px solid var(--border);background:#fff;border-radius:18px;box-shadow:var(--shadow2)}
-.report-icon{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--soft);font-size:20px}
-.footer{text-align:center;color:#9aa8b8;font-size:8px;font-weight:800;letter-spacing:1.5px;padding:28px 0 5px}
-.page-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}
-.page-head h1{margin:0;font-size:20px;font-weight:900}
-.back-btn{border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 12px;font-size:11px;font-weight:800;color:var(--primary)}
-.home-btn{border:1px solid var(--border);background:var(--soft);color:var(--primary2);border-radius:12px;padding:9px 11px;font-size:10px;font-weight:900;margin-left:auto}
-.mode-pill{margin-left:auto;background:var(--soft);color:var(--primary2);border-radius:20px;padding:7px 10px;font-size:9px;font-weight:900}
-.filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;margin-bottom:10px}
-.filter-btn{white-space:nowrap;border:1px solid var(--border);background:#fff;color:var(--muted);padding:9px 12px;border-radius:12px;font-size:10px;font-weight:800}
-.filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.search-row{display:flex;gap:8px;margin-bottom:10px}
-.input,select,textarea,input{width:100%;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:12px;padding:11px 12px;outline:none}
-.textarea{min-height:80px;resize:vertical}
-.primary-btn,.secondary-btn,.danger-btn{border:0;border-radius:12px;padding:11px 14px;font-size:11px;font-weight:900}
-.primary-btn{background:var(--primary);color:#fff}
-.secondary-btn{background:var(--soft);color:var(--primary2)}
-.danger-btn{background:var(--softred);color:var(--danger)}
-.form-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:15px;box-shadow:var(--shadow2)}
-.label{display:block;font-size:9px;color:var(--muted);font-weight:900;margin:0 0 5px 2px}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.app{max-width:720px;margin:auto;min-height:100vh;padding-bottom:82px}
+header{
+  position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  padding:12px 15px
+}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{
+  width:44px;height:44px;border-radius:14px;background:linear-gradient(145deg,#0a2e4a,#1975ad);
+  color:#fff;display:grid;place-items:center;font-size:25px;font-weight:900;
+  box-shadow:0 5px 14px rgba(10,46,74,.2)
+}
+.brand h1{font-size:20px;margin:0;font-weight:900}
+.brand small{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:1.2px}
+.top-actions{display:flex;gap:7px}
+.iconbtn{
+  border:1px solid var(--border);background:#fff;border-radius:12px;
+  width:40px;height:40px;font-size:18px
+}
+main{padding:15px}
+.page{display:none;animation:fade .18s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.hero{
+  background:linear-gradient(135deg,#0a2e4a,#145b8d);
+  color:#fff;border-radius:24px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px
+}
+.hero h2{margin:0 0 4px;font-size:24px}
+.hero p{margin:0;color:#d9e8f4;font-size:13px}
+.hero-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+.hero-balance{font-size:28px;font-weight:900}
+.modebar{display:flex;background:#eaf0f5;border-radius:14px;padding:4px;margin-bottom:14px}
+.modebar button{
+  flex:1;border:0;background:transparent;padding:11px;border-radius:11px;
+  color:var(--muted);font-weight:800
+}
+.modebar button.active{background:#fff;color:var(--primary);box-shadow:var(--shadow2)}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:15px;box-shadow:var(--shadow2)
+}
+.stat{min-height:95px}
+.stat small{display:block;color:var(--muted);font-weight:700;font-size:11px}
+.stat strong{display:block;font-size:21px;margin-top:7px}
+.green strong{color:var(--accent)}
+.red strong{color:var(--danger)}
+.blue strong{color:var(--blue)}
+.section-title{
+  display:flex;justify-content:space-between;align-items:center;margin:18px 2px 9px
+}
+.section-title h3{margin:0;font-size:17px}
+.section-title button{border:0;background:none;color:var(--primary2);font-weight:800}
+
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.action{
+  background:#fff;border:1px solid var(--border);border-radius:16px;padding:13px 8px;
+  text-align:center;box-shadow:var(--shadow2);font-weight:800;color:var(--text)
+}
+.action span{display:block;font-size:23px;margin-bottom:5px}
+.action small{font-size:11px}
+
 .list{display:grid;gap:9px}
-.hisab-entry-card{background:#fff;border:1px solid var(--border);border-radius:17px;padding:13px;box-shadow:var(--shadow2)}
-.empty-state{text-align:center;padding:28px 15px;color:var(--muted);background:#fff;border:1px dashed var(--border);border-radius:17px;font-size:11px}
-.btn{border:1px solid var(--border);background:#f8fafc;color:var(--primary);padding:7px 9px;border-radius:9px;font-size:9px;font-weight:800}
-.business-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
-.summary-box{background:#fff;border:1px solid var(--border);border-radius:15px;padding:11px 9px}
-.summary-label{color:var(--muted);font-size:8px;font-weight:900}
-.summary-value{font-size:12px;font-weight:900;margin-top:5px}
-.business-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.business-action{border:1px solid var(--border);background:#fff;border-radius:15px;padding:12px;text-align:left;box-shadow:var(--shadow2);width:100%}
-.business-action strong{display:block;font-size:11px}
-.business-action span{display:block;color:var(--muted);font-size:8px;margin-top:3px}
-.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
-.quick-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:13px;box-shadow:var(--shadow2)}
-.modal-overlay{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center;padding:12px;background:rgba(5,24,40,.48)}
-.modal-overlay.active{display:flex}
-.modal-box{width:min(100%,560px);max-height:90vh;overflow:auto;background:#fff;border-radius:23px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-.modal-box h3{margin:0 0 14px;font-size:17px}
-.m-actions{display:flex;gap:8px;margin-top:12px}
-.btn-cancel,.btn-save{flex:1;border:0;border-radius:12px;padding:12px;font-weight:900}
-.btn-cancel{background:#eef2f6;color:var(--text)}
-.btn-save{background:var(--primary);color:#fff}
-.planning-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.planning-mode button{border:1px solid var(--border);background:#fff;border-radius:13px;padding:11px;font-size:10px;font-weight:900;color:var(--muted)}
-.planning-mode button.active{background:var(--primary);border-color:var(--primary);color:#fff}
-.planning-budget{color:#fff;border-radius:22px;padding:17px;background:linear-gradient(135deg,#0a2e4a,#126d9f);box-shadow:var(--shadow)}
-.planning-budget-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.planning-label{font-size:8px;letter-spacing:1px;opacity:.75;font-weight:900}
-.planning-big{font-size:26px;font-weight:900;margin-top:4px}
-.planning-edit{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;border-radius:10px;padding:8px 10px;font-size:9px;font-weight:800}
-.planning-budget-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:16px}
-.planning-mini{background:rgba(255,255,255,.10);border-radius:12px;padding:9px}
-.planning-mini span{display:block;font-size:7px;opacity:.7;font-weight:900}
-.planning-mini b{display:block;font-size:10px;margin-top:4px}
-.planning-progress{height:8px;background:rgba(255,255,255,.18);border-radius:10px;overflow:hidden;margin-top:14px}
-.planning-progress-fill{height:100%;background:#42d59e;border-radius:10px}
-.planning-section{display:flex;align-items:end;justify-content:space-between;margin:19px 2px 10px}
-.planning-grid{display:grid;grid-template-columns:1fr;gap:10px}
-.planning-card{background:#fff;border:1px solid var(--border);border-radius:19px;padding:15px;box-shadow:var(--shadow2)}
-.bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,720px);z-index:30;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.97);border-top:1px solid var(--border);backdrop-filter:blur(12px);padding:7px 8px calc(7px + env(safe-area-inset-bottom))}
-.bottom-nav button{border:0;background:transparent;color:var(--muted);font-size:8px;font-weight:900;padding:7px 2px}
-.bottom-nav button span{display:block;font-size:18px;margin-bottom:2px}
-.bottom-nav button.active{color:var(--primary2)}
+.item{
+  background:#fff;border:1px solid var(--border);border-radius:16px;padding:13px;
+  box-shadow:var(--shadow2)
+}
+.item-head{display:flex;justify-content:space-between;gap:10px}
+.item-title{font-weight:900}
+.item-sub{color:var(--muted);font-size:12px;margin-top:4px}
+.amount{font-weight:900;font-size:17px}
+.receive{color:var(--accent)}.give{color:var(--danger)}
+.pending{color:var(--orange)}.paid{color:var(--accent)}
+.partial{color:var(--blue)}
+.item-actions{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.btn{
+  border:0;border-radius:11px;padding:9px 12px;font-weight:800;
+  background:var(--primary);color:#fff
+}
+.btn.green{background:var(--accent)}
+.btn.blue{background:var(--blue)}
+.btn.red{background:var(--danger)}
+.btn.light{background:var(--soft);color:var(--primary)}
+.btn.gray{background:#eef1f4;color:#44566a}
+.btn.small{padding:7px 9px;font-size:12px}
+.btn.full{width:100%;padding:12px}
+
+.backbar{display:flex;gap:8px;margin-bottom:12px}
+.backbar button{flex:1}
+
+.form{display:grid;gap:11px}
+label{font-size:12px;font-weight:800;color:#506277}
+input,select,textarea{
+  width:100%;border:1px solid var(--border);background:#fff;border-radius:12px;
+  padding:12px;color:var(--text);outline:none
+}
+input:focus,select:focus,textarea:focus{border-color:var(--primary2)}
+textarea{min-height:75px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+.tabs{display:flex;gap:7px;overflow:auto;padding-bottom:3px;margin-bottom:12px}
+.tabs button{
+  white-space:nowrap;border:1px solid var(--border);background:#fff;
+  color:var(--muted);border-radius:12px;padding:9px 12px;font-weight:800
+}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.search{margin-bottom:10px}
+.progress{height:8px;background:#e9eef3;border-radius:20px;overflow:hidden;margin-top:8px}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:20px}
+.badge{
+  display:inline-block;border-radius:20px;padding:4px 8px;font-size:10px;
+  font-weight:900;background:#edf1f5;color:#58697a
+}
+.badge.green{background:var(--greenbg);color:#08794f}
+.badge.red{background:var(--redbg);color:#b72f2f}
+.badge.blue{background:#eaf3fb;color:#17679f}
+.badge.orange{background:#fff4df;color:#a96400}
+
+.bottom{
+  position:fixed;z-index:30;bottom:0;left:50%;transform:translateX(-50%);
+  width:min(720px,100%);background:#fff;border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(4,1fr);padding:7px 5px calc(7px + env(safe-area-inset-bottom))
+}
+.bottom button{border:0;background:none;color:#738196;font-size:10px;font-weight:800;padding:5px}
+.bottom button b{display:block;font-size:20px;margin-bottom:2px}
+.bottom button.active{color:var(--primary)}
+
+.overlay{
+  position:fixed;inset:0;background:rgba(8,28,43,.48);z-index:100;
+  display:none;align-items:flex-end;justify-content:center
+}
+.overlay.show{display:flex}
+.modal{
+  width:min(720px,100%);max-height:92vh;overflow:auto;background:#fff;
+  border-radius:24px 24px 0 0;padding:18px
+}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.modal-head h3{margin:0}
+.close{border:0;background:#eef2f5;border-radius:10px;width:38px;height:38px;font-size:20px}
+hr{border:0;border-top:1px solid var(--border);margin:14px 0}
+.empty{text-align:center;padding:25px 10px;color:var(--muted)}
+.pin-screen{
+  position:fixed;inset:0;background:linear-gradient(145deg,#0a2e4a,#145b8d);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:20px
+}
+.pin-screen.show{display:flex}
+.pinbox{
+  background:#fff;border-radius:24px;padding:24px;width:min(390px,100%);text-align:center
+}
+.pinbox .logo{margin:0 auto 12px}
+.pin-dots{font-size:25px;letter-spacing:7px;margin:15px}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.keypad button{height:55px;border:0;background:#eef3f7;border-radius:14px;font-size:19px;font-weight:900}
+.toast{
+  position:fixed;z-index:300;left:50%;bottom:90px;transform:translateX(-50%);
+  background:#102338;color:#fff;padding:11px 16px;border-radius:12px;
+  display:none;max-width:90%;font-size:13px
+}
+.toast.show{display:block}
+@media(max-width:390px){
+  .actions{grid-template-columns:repeat(2,1fr)}
+  .grid3{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
+
 <body>
+
+<div id="pinScreen" class="pin-screen">
+  <div class="pinbox">
+    <div class="logo">H</div>
+    <h2>HISAB</h2>
+    <p id="pinTitle">Security PIN</p>
+    <div id="pinDots" class="pin-dots">○○○○</div>
+    <div id="pinError" style="color:#d84d4d;font-size:12px;min-height:18px"></div>
+    <div class="keypad">
+      <button onclick="pinKey('1')">1</button>
+      <button onclick="pinKey('2')">2</button>
+      <button onclick="pinKey('3')">3</button>
+      <button onclick="pinKey('4')">4</button>
+      <button onclick="pinKey('5')">5</button>
+      <button onclick="pinKey('6')">6</button>
+      <button onclick="pinKey('7')">7</button>
+      <button onclick="pinKey('8')">8</button>
+      <button onclick="pinKey('9')">9</button>
+      <button onclick="pinClear()">⌫</button>
+      <button onclick="pinKey('0')">0</button>
+      <button onclick="pinCancel()">×</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
-<header><div class="brand"><div class="logo">H</div><div><div class="brand-name">HISAB</div><div class="brand-tag">TRACK • PLAN • GROW</div></div></div></header>
+
+<header>
+  <div class="top">
+    <div class="brand">
+      <div class="logo">H</div>
+      <div>
+        <h1>HISAB</h1>
+        <small>TRACK • PLAN • GROW</small>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="iconbtn" onclick="openBackup()">💾</button>
+      <button class="iconbtn" onclick="openSecurity()">🔐</button>
+    </div>
+  </div>
+</header>
+
 <main>
-<section id="home" class="page active">
-  <div class="hero"><div class="hero-label">CURRENT BALANCE</div><div id="homeBalance" class="hero-amount">₹ 0</div><div class="hero-sub">Selected mode • Personal + Business</div></div>
-  <div class="stats">
-    <div class="card stat"><div class="stat-label">RECEIVABLE</div><div id="receivable" class="stat-value green">₹ 0</div></div>
-    <div class="card stat"><div class="stat-label">PAYABLE</div><div id="payable" class="stat-value red">₹ 0</div></div>
-    <div class="card stat"><div class="stat-label">NET MONEY</div><div id="homeNet" class="stat-value blue">₹ 0</div></div>
-  </div>
-  <div class="section-title"><h2>HISAB Options</h2><span>Choose what you need</span></div>
-  <div class="option-grid">
-    <button class="option" onclick="show('personal')"><div class="option-icon">🤝</div><div class="option-title">Personal Udhaar</div><div class="option-sub">Dena • Lena • Payment • History</div></button>
-    <button class="option" onclick="show('business')"><div class="option-icon">🏪</div><div class="option-title">Business</div><div class="option-sub">Customer • Supplier • Sales • Purchase</div></button>
-    <button class="option" onclick="show('transactions')"><div class="option-icon">💰</div><div class="option-title">Money Flow</div><div class="option-sub">Income • Expense</div></button>
-    <button class="option" onclick="show('planning')"><div class="option-icon">📋</div><div class="option-title">Planning</div><div class="option-sub">Budget • Goals • Savings</div></button>
-  </div>
-  <div class="section-title"><h2>Recent Activity</h2><span>Latest entries</span></div>
-  <div id="homeRecent" class="activity card"></div>
-  <div class="section-title"><h2>Reports & Analytics</h2></div>
-  <button class="report-card" onclick="show('reports')"><div class="report-icon">📊</div><div style="flex:1;text-align:left"><strong>Reports & Analytics</strong><br><span style="font-size:10px;color:var(--muted)">Money, Udhaar and Business summary</span></div><div>›</div></button>
-  <div class="footer">HISAB • TRACK • PLAN • GROW • V9.1 FIXED</div>
-</section>
 
-<section id="personal" class="page">
-  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Personal Udhaar</h1><div class="mode-pill">PERSONAL</div></div>
-  <div class="search-row"><input id="personalSearch" placeholder="Search person, note..." oninput="renderPersonal()"><button class="primary-btn" onclick="openKhataForm()">+ Add</button></div>
-  <div class="filters">
-    <button class="filter-btn active" data-f="all" onclick="setPersonalFilter('all',this)">All</button>
-    <button class="filter-btn" data-f="give" onclick="setPersonalFilter('give',this)">Dena</button>
-    <button class="filter-btn" data-f="receive" onclick="setPersonalFilter('receive',this)">Lena</button>
-    <button class="filter-btn" data-f="pending" onclick="setPersonalFilter('pending',this)">Pending</button>
-    <button class="filter-btn" data-f="settled" onclick="setPersonalFilter('settled',this)">Settled</button>
-  </div>
-  <div id="personalList" class="list"></div>
-</section>
-
-<section id="business" class="page">
-  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Business</h1><div class="mode-pill">BUSINESS</div></div>
-  <div class="business-summary">
-    <div class="summary-box"><div class="summary-label">SALES</div><div id="businessSalesTotal" class="summary-value green">₹ 0</div></div>
-    <div class="summary-box"><div class="summary-label">PURCHASE</div><div id="businessPurchaseTotal" class="summary-value blue">₹ 0</div></div>
-    <div class="summary-box"><div class="summary-label">TOTAL DUE</div><div id="businessDueTotal" class="summary-value red">₹ 0</div></div>
-  </div>
-  <div class="business-actions">
-    <button class="business-action" onclick="openBusinessForm('customer')"><strong>👤 Add Customer</strong><span>Customer master</span></button>
-    <button class="business-action" onclick="openBusinessForm('supplier')"><strong>🚚 Add Supplier</strong><span>Supplier master</span></button>
-    <button class="business-action" onclick="openBusinessForm('sale')"><strong>🧾 Add Sale</strong><span>Customer sale entry</span></button>
-    <button class="business-action" onclick="openBusinessForm('purchase')"><strong>📦 Add Purchase</strong><span>Supplier purchase entry</span></button>
-  </div>
-  <div class="filters">
-    <button class="filter-btn active" onclick="setBusinessFilter('all',this)">All</button>
-    <button class="filter-btn" onclick="setBusinessFilter('customer',this)">Customer</button>
-    <button class="filter-btn" onclick="setBusinessFilter('supplier',this)">Supplier</button>
-    <button class="filter-btn" onclick="setBusinessFilter('sales',this)">Sales</button>
-    <button class="filter-btn" onclick="setBusinessFilter('purchases',this)">Purchases</button>
-  </div>
-  <div id="businessList" class="list"></div>
-</section>
-
-<section id="transactions" class="page">
-  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Money Flow</h1><div class="mode-pill" id="transTotalPill">₹ 0</div></div>
-  <div class="search-row"><input id="transSearch" placeholder="Search..." oninput="renderTransactions()"><button class="primary-btn" onclick="openTransForm()">+ Add</button></div>
-  <div class="filters">
-    <button class="filter-btn active" onclick="setTransFilter('all',this)">All</button>
-    <button class="filter-btn" onclick="setTransFilter('income',this)">Income</button>
-    <button class="filter-btn" onclick="setTransFilter('expense',this)">Expense</button>
-  </div>
-  <div id="transactionsList" class="list"></div>
-</section>
-
-<section id="planning" class="page">
-  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Planning</h1><button class="home-btn" onclick="show('home')">Home</button></div>
-  <div class="planning-mode"><button id="modeMonthly" class="active" onclick="setPlanMode('monthly')">Monthly</button><button id="modeYearly" onclick="setPlanMode('yearly')">Yearly</button></div>
-  <div class="planning-budget">
-    <div class="planning-budget-top"><div><div class="planning-label">TOTAL BUDGET</div><div id="planBudgetBig" class="planning-big">₹ 30,000</div></div><button class="planning-edit" onclick="openBudgetEdit()">Edit</button></div>
-    <div class="planning-budget-stats"><div class="planning-mini"><span>SPENT</span><b id="planSpent">₹ 0</b></div><div class="planning-mini"><span>REMAINING</span><b id="planRem">₹ 0</b></div><div class="planning-mini"><span>% USED</span><b id="planPerc">0%</b></div></div>
-    <div class="planning-progress"><div id="planProgress" class="planning-progress-fill" style="width:10%"></div></div>
-  </div>
-  <div class="planning-section"><h2>Budget Categories</h2><span id="catCount"></span></div>
-  <div style="margin-bottom:8px"><button class="secondary-btn" onclick="openCategoryForm()">+ Add Category</button></div>
-  <div id="planningCatGrid" class="planning-grid"></div>
-  <div class="planning-section"><h2>Savings Goals</h2><span id="goalCount"></span></div>
-  <div style="margin-bottom:8px"><button class="secondary-btn" onclick="openGoalForm()">+ Add Goal</button></div>
-  <div id="planningGoalGrid" class="planning-grid"></div>
-</section>
-
-<section id="reports" class="page">
-  <div class="page-head"><button class="back-btn" onclick="show('home')">← Home</button><h1>Reports</h1></div>
-  <div id="reportsContent"></div>
-  <div style="display:grid;gap:8px;margin-top:12px">
-    <button class="primary-btn" onclick="exportData()">Export JSON Backup</button>
-    <button class="danger-btn" onclick="clearAll()">Clear All Data</button>
-  </div>
-</section>
-</main>
-<div class="bottom-nav">
-  <button class="active" id="navHome" onclick="show('home')"><span>🏠</span>Home</button>
-  <button id="navPersonal" onclick="show('personal')"><span>🤝</span>Khata</button>
-  <button id="navTrans" onclick="show('transactions')"><span>💰</span>Dhan</button>
-  <button id="navPlan" onclick="show('planning')"><span>📋</span>Yojana</button>
-</div>
-</div>
-
-<!-- MODAL -->
-<div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this) closeModal()">
-  <div class="modal-box" id="modalBox"></div>
-</div>
-
-<script>
-let personal = JSON.parse(localStorage.getItem('hisab_personal_v9')||'null') || [
-  {id:'p1',name:'Ramesh Sharma',amount:5000,type:'receive',date:'2025-05-10',note:'Dukaan udhaar',status:'pending'},
-  {id:'p2',name:'Amit Verma',amount:2000,type:'give',date:'2025-05-12',note:'Friend loan',status:'pending'}
-];
-let business = JSON.parse(localStorage.getItem('hisab_business_v9')||'null') || {customers:[{id:'c1',name:'Gupta Traders',phone:'98765XXXXX'}],suppliers:[{id:'s1',name:'Shree Suppliers',phone:'98765'}],sales:[{id:'sl1',customerId:'c1',customerName:'Gupta Traders',amount:15000,due:12000,date:'2025-05-11',note:'Material'}],purchases:[{id:'pu1',supplierId:'s1',supplierName:'Shree Suppliers',amount:10000,due:8000,date:'2025-05-09',note:'Stock'}]};
-let transactions = JSON.parse(localStorage.getItem('hisab_transactions_v9')||'null') || [
-  {id:'t1',amount:25000,type:'income',category:'Sales',date:'2025-05-08',note:'Week income'},
-  {id:'t2',amount:7000,type:'expense',category:'Rent',date:'2025-05-09',note:'Shop rent'}
-];
-let planning = JSON.parse(localStorage.getItem('hisab_planning_v9')||'null') || {mode:'monthly',budget:30000,categories:[{id:'bc1',name:'Khana',limit:8000,spent:3200,icon:'🍛'},{id:'bc2',name:'Kiraya',limit:7000,spent:7000,icon:'🏠'}],goals:[{id:'g1',name:'New Bike',target:80000,saved:24000,icon:'🏍️'}]};
-
-let pFilter='all', bFilter='all', tFilter='all', editingId=null, modalType=null;
-
-function saveAll(){
-  localStorage.setItem('hisab_personal_v9', JSON.stringify(personal));
-  localStorage.setItem('hisab_business_v9', JSON.stringify(business));
-  localStorage.setItem('hisab_transactions_v9', JSON.stringify(transactions));
-  localStorage.setItem('hisab_planning_v9', JSON.stringify(planning));
-  renderAll();
-}
-function fmt(n){return '₹ '+(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:0});}
-function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(2,4);}
-function today(){return new Date().toISOString().slice(0,10);}
-
-function show(page){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(page).classList.add('active');
-  document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.remove('active'));
-  const map={home:'navHome',personal:'navPersonal',business:'navPersonal',transactions:'navTrans',planning:'navPlan',reports:'navHome'};
-  const navId=map[page]; if(navId) document.getElementById(navId).classList.add('active');
-  window.scrollTo(0,0);
-  renderAll();
-}
-window.show=show;
-
-function setPersonalFilter(f,el){pFilter=f; el.parentElement.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderPersonal();}
-function setBusinessFilter(f,el){bFilter=f; el.parentElement.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderBusiness();}
-function setTransFilter(f,el){tFilter=f; el.parentElement.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderTransactions();}
-window.setPersonalFilter=setPersonalFilter; window.setBusinessFilter=setBusinessFilter; window.setTransFilter=setTransFilter;
-
-function renderAll(){
-  const inc=transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const exp=transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const bal=inc-exp;
-  document.getElementById('homeBalance').textContent=fmt(bal);
-  document.getElementById('transTotalPill').textContent=fmt(bal);
-  const rec=personal.filter(e=>e.type==='receive'&&e.status==='pending').reduce((s,e)=>s+e.amount,0) + business.sales.reduce((s,x)=>s+x.due,0);
-  const pay=personal.filter(e=>e.type==='give'&&e.status==='pending').reduce((s,e)=>s+e.amount,0) + business.purchases.reduce((s,x)=>s+x.due,0);
-  document.getElementById('receivable').textContent=fmt(rec);
-  document.getElementById('payable').textContent=fmt(pay);
-  document.getElementById('homeNet').textContent=fmt(rec-pay);
-  document.getElementById('businessSalesTotal').textContent=fmt(business.sales.reduce((s,x)=>s+x.amount,0));
-  document.getElementById('businessPurchaseTotal').textContent=fmt(business.purchases.reduce((s,x)=>s+x.amount,0));
-  document.getElementById('businessDueTotal').textContent=fmt(pay);
-  renderPersonal(); renderBusiness(); renderTransactions(); renderPlanning(); renderReports(); renderHomeRecent();
-}
-function renderHomeRecent(){
-  const all=[...personal.map(p=>({t:'personal',d:p.date,n:`${p.type==='give'?'Dena: ':'Lena: '}${p.name}`,a:p.amount})),...transactions.slice(-3).map(t=>({t:'trans',d:t.date,n:`${t.type} - ${t.category}`,a:t.amount})),...business.sales.slice(-2).map(s=>({t:'sale',d:s.date,n:`Sale: ${s.customerName}`,a:s.amount}))].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,5);
-  const el=document.getElementById('homeRecent');
-  if(all.length===0){el.innerHTML='<div class="empty-state">No activity yet</div>';return;}
-  el.innerHTML=all.map(x=>`<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef2f6;font-size:11px"><div><b>${x.n}</b><br><span style="color:#718198;font-size:9px">${x.d}</span></div><b>${fmt(x.a)}</b></div>`).join('');
-}
-
-function renderPersonal(){
-  const search=(document.getElementById('personalSearch').value||'').toLowerCase();
-  let list=[...personal];
-  if(pFilter==='give'||pFilter==='receive') list=list.filter(e=>e.type===pFilter);
-  if(pFilter==='pending'||pFilter==='settled') list=list.filter(e=>e.status===pFilter);
-  if(search) list=list.filter(e=>e.name.toLowerCase().includes(search)||e.note.toLowerCase().includes(search));
-  list.sort((a,b)=>b.date.localeCompare(a.date));
-  const el=document.getElementById('personalList');
-  if(list.length===0){el.innerHTML='<div class="empty-state">Koi entry nahi hai<br><button class="primary-btn" style="margin-top:8px" onclick="openKhataForm()">+ Add Udhaar</button></div>';return;}
-  el.innerHTML=list.map(e=>`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-weight:900;font-size:13px">${e.name} <span style="font-size:9px;padding:2px 6px;border-radius:20px;background:${e.type==='give'?'#fff0f0':'#eaf8f2'};color:${e.type==='give'?'#d84d4d':'#0e8c60'}">${e.type==='give'?'DENA':'LENA'}</span> <span style="font-size:8px;padding:2px 6px;border-radius:20px;background:#edf5fa">${e.status}</span></div><div style="font-size:10px;color:#718198;margin-top:3px">${e.date} • ${e.note||'No note'}</div></div><div style="text-align:right"><div style="font-weight:900;color:${e.type==='give'?'#d84d4d':'#16a36f'}">${fmt(e.amount)}</div></div></div><div style="display:flex;gap:6px;margin-top:10px"><button class="btn" onclick="toggleStatus('${e.id}')">${e.status==='pending'?'✓ Settle':'↩ Pending'}</button><button class="btn" onclick="editKhata('${e.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteKhata('${e.id}')">Delete</button></div></div>`).join('');
-}
-
-function renderBusiness(){
-  const el=document.getElementById('businessList');
-  let items=[];
-  if(bFilter==='all'||bFilter==='customer') business.customers.forEach(c=>items.push({kind:'customer',date:'',html:`<div class="hisab-entry-card"><b>👤 ${c.name}</b><div style="font-size:10px;color:#718198">${c.phone}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editCustomer('${c.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteCustomer('${c.id}')">Delete</button></div></div>`}));
-  if(bFilter==='all'||bFilter==='supplier') business.suppliers.forEach(s=>items.push({kind:'supplier',date:'',html:`<div class="hisab-entry-card"><b>🚚 ${s.name}</b><div style="font-size:10px;color:#718198">${s.phone}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editSupplier('${s.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteSupplier('${s.id}')">Delete</button></div></div>`}));
-  if(bFilter==='all'||bFilter==='sales') business.sales.forEach(s=>items.push({kind:'sale',date:s.date,html:`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between"><b>🧾 ${s.customerName}</b><b class="green">${fmt(s.amount)}</b></div><div style="font-size:9px;color:#718198">${s.date} • Due ${fmt(s.due)} • ${s.note}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editSale('${s.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteSale('${s.id}')">Delete</button></div></div>`}));
-  if(bFilter==='all'||bFilter==='purchases') business.purchases.forEach(p=>items.push({kind:'purchase',date:p.date,html:`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between"><b>📦 ${p.supplierName}</b><b class="blue">${fmt(p.amount)}</b></div><div style="font-size:9px;color:#718198">${p.date} • Due ${fmt(p.due)} • ${p.note}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" onclick="editPurchase('${p.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deletePurchase('${p.id}')">Delete</button></div></div>`}));
-  if(items.length===0){el.innerHTML='<div class="empty-state">No business data. Add customer/supplier first.</div>';return;}
-  el.innerHTML=items.map(i=>i.html).join('');
-}
-
-function renderTransactions(){
-  const search=(document.getElementById('transSearch').value||'').toLowerCase();
-  let list=[...transactions];
-  if(tFilter!=='all') list=list.filter(t=>t.type===tFilter);
-  if(search) list=list.filter(t=>t.category.toLowerCase().includes(search)||t.note.toLowerCase().includes(search));
-  list.sort((a,b)=>b.date.localeCompare(a.date));
-  const el=document.getElementById('transactionsList');
-  if(list.length===0){el.innerHTML='<div class="empty-state">No transactions</div>';return;}
-  el.innerHTML=list.map(t=>`<div class="hisab-entry-card"><div style="display:flex;justify-content:space-between"><div><b style="font-size:12px">${t.category}</b> <span style="font-size:8px;padding:2px 6px;border-radius:20px;background:${t.type==='income'?'#eaf8f2':'#fff0f0'};color:${t.type==='income'?'#0e8c60':'#d84d4d'}">${t.type.toUpperCase()}</span><div style="font-size:9px;color:#718198">${t.date} • ${t.note}</div></div><b style="color:${t.type==='income'?'#16a36f':'#d84d4d'}">${t.type==='income'?'+': '-'} ${fmt(t.amount)}</b></div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn" onclick="editTrans('${t.id}')">Edit</button><button class="btn" style="color:#d84d4d" onclick="deleteTrans('${t.id}')">Delete</button></div></div>`).join('');
-}
-
-function renderPlanning(){
-  document.getElementById('planBudgetBig').textContent=fmt(planning.budget);
-  document.getElementById('modeMonthly').classList.toggle('active', planning.mode==='monthly');
-  document.getElementById('modeYearly').classList.toggle('active', planning.mode==='yearly');
-  const spent=planning.categories.reduce((s,c)=>s+c.spent,0);
-  const rem=planning.budget-spent;
-  const perc=planning.budget>0?Math.round(spent/planning.budget*100):0;
-  document.getElementById('planSpent').textContent=fmt(spent);
-  document.getElementById('planRem').textContent=fmt(rem);
-  document.getElementById('planPerc').textContent=perc+'%';
-  document.getElementById('planProgress').style.width=Math.min(100,perc)+'%';
-  document.getElementById('planProgress').style.background=perc>100?'#ff8b8b':'#42d59e';
-  document.getElementById('catCount').textContent=planning.categories.length+' categories';
-  document.getElementById('goalCount').textContent=planning.goals.length+' goals';
-  document.getElementById('planningCatGrid').innerHTML=planning.categories.map(c=>`<div class="planning-card"><div style="display:flex;justify-content:space-between"><div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#edf5fa;font-s
+<!-- HOME -->
+<section id="page-home" class="page active">
+  <div class="hero">
+    <h2>Namaste 👋</h2>
+    <p>Apna paisa aur hisaab ek jagah manage karein.</p>
+    <div class="hero-row">
+      <div>
+        <small>Net Balance
