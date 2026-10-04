@@ -1,759 +1,353 @@
-<!DOCTYPE html><html><head><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
-</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>HISAB Pro - FINAL - EMI Month User Khud Likhega Khali</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}body{background:linear-gradient(180deg,#eef3f8 0%, #dfe8f1 100%);font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;color:#0f172a;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
-.app{max-width:430px;margin:0 auto;background:transparent;min-height:100vh;position:relative;padding-bottom:96px}
-.top{height:68px;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);display:flex;justify-content:space-between;align-items:center;padding:0 16px;border-bottom:1px solid rgba(15,46,77,.06);position:sticky;top:0;z-index:50;box-shadow:0 2px 24px rgba(15,46,77,.06)}
-.logo{width:52px;height:52px;background:linear-gradient(135deg,#0f2e4d 0%, #1e4a7a 100%);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;box-shadow:0 8px 24px rgba(15,46,77,.25)}
-.topActions{display:flex;gap:8px}
-.pill{height:40px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:0 12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.page{display:none;padding:14px;animation:fade .25s ease}.page.on{display:block}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.headRow{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px}
-.h1{font-size:26px;font-weight:900;letter-spacing:-.6px;line-height:1.05}.sub{font-size:11px;font-weight:600;color:#6b7b90;margin-top:4px;line-height:1.3}
-.backBtn{width:44px;height:44px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;cursor:pointer;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.addBtn{height:44px;background:linear-gradient(135deg,#10b981,#059669);border:0;border-radius:14px;padding:0 18px;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 6px 16px rgba(16,185,129,.28)}
-.toggleHome{display:flex;background:rgba(0,0,0,.05);border-radius:14px;padding:3px;gap:3px;margin-bottom:14px}
-.toggleHome button{flex:1;border:0;background:transparent;border-radius:10px;padding:10px 6px;font-weight:800;font-size:12px;color:#6b7b90;cursor:pointer;transition:all .2s}
-.toggleHome button.on{background:#fff;color:#0f2e4d;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-.balCard{background:radial-gradient(140% 120% at 0% 0%, #1d4f7e 0%, #153a5c 30%, #0f2e4d 70%, #0a2038 100%);border-radius:24px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 12px 32px rgba(15,46,77,.22)}
-.badge{position:absolute;right:14px;top:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:9px;font-weight:800;color:#c8d6e6}
-.kpiRow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0}
-.kpi{background:#fff;border:1px solid rgba(0,0,0,.04);border-radius:16px;padding:12px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.04)}
-.kpi span{font-size:8px;font-weight:800;color:#7b8aa0;letter-spacing:.6px}.kpi b{font-size:18px;font-weight:900;margin-top:4px;display:block}
-.kpi.green{border-top:3px solid #10b981}.kpi.red{border-top:3px solid #ef4444}.kpi.dark{border-top:3px solid #0f2e4d}
-.quickHead{font-size:13px;font-weight:800;margin:16px 0 10px;display:flex;align-items:center;gap:8px}
-.quickHead:after{content:'';flex:1;height:1px;background:rgba(0,0,0,.06);margin-left:10px}
-.quickGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.qt{border-radius:18px;padding:14px 6px;text-align:center;color:#fff;min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.1);transition:all .2s;position:relative;overflow:hidden}
-.qt:active{transform:scale(.96)}.qt .ico{font-size:28px;margin-bottom:4px}.qt b{font-size:10px;font-weight:800;line-height:1.2}.qt small{font-size:8px;opacity:.9;margin-top:2px}
-.qt.income{background:linear-gradient(135deg,#10b981,#059669)} .qt.expense{background:linear-gradient(135deg,#f87171,#dc2626)} .qt.udhaar{background:linear-gradient(135deg,#60a5fa,#2563eb)} .qt.sale{background:linear-gradient(135deg,#fbbf24,#d97706)} .qt.purchase{background:linear-gradient(135deg,#a78bfa,#7c3aed)} .qt.planning{background:linear-gradient(135deg,#22d3ee,#0891b2)} .qt.loan{background:linear-gradient(135deg,#0f2e4d,#1e40af)} .qt.bill{background:linear-gradient(135deg,#f97316,#ea580c)} .qt.policy{background:linear-gradient(135deg,#059669,#047857)} .qt.repair{background:linear-gradient(135deg,#6366f1,#4f46e5)}
-.secHead{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}.secHead b{font-size:13px;font-weight:800}
-.bw{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;text-align:center;font-weight:700;font-size:11px;color:#0f2e4d;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.03)}
-.card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,.04);margin-bottom:10px}
-.listItem{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
-.modal.on{display:flex}
-.modalBox{background:#fff;border-radius:20px;width:100%;max-width:400px;max-height:85vh;overflow:auto;padding:20px;animation:modalCenter .35s cubic-bezier(.16,1,.3,1);box-shadow:0 20px 60px rgba(0,0,0,.3)}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}} @keyframes modalCenter{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.input{width:100%;height:44px;border:1.5px solid #e2e8f0;border-radius:12px;padding:0 12px;font-size:13px;font-weight:600;margin-bottom:10px;outline:none}
-.input:focus{border-color:#0f2e4d}
-.btn{height:44px;border:0;border-radius:12px;padding:0 16px;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
-.btnPrimary{background:#0f2e4d;color:#fff;width:100%}.btnGreen{background:linear-gradient(135deg,#10b981,#059669);color:#fff;width:100%}
-.btnRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);border-top:1px solid #e2e8f0;display:flex;justify-content:space-around;padding:6px 0 8px;z-index:40}
-.nav button{border:0;background:transparent;padding:4px 10px;font-size:9px;font-weight:700;color:#6b7b90;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;min-width:50px}
-.nav button.on{color:#0f2e4d}.nav .ic{font-size:20px}
-.empty{border:1.5px dashed #cbd5e1;border-radius:16px;padding:18px;text-align:center;color:#6b7b90;background:#fff}
-.badgeSmall{font-size:9px;background:#eef2ff;color:#4338ca;border-radius:8px;padding:4px 8px;font-weight:700}
-</style>
-<style>
-.admobBanner{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin:16px 0;text-align:center;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
-.admobBanner .adLabel{font-size:8px;font-weight:800;color:#94a3b8;letter-spacing:1px;position:absolute;top:6px;left:10px;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;}
-.admobBanner .adContent{font-size:11px;color:#64748b;margin-top:8px;}
-.admobSpacer{height:16px;}
-</style>
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2563eb">
+  <title>HISAB Pro</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-</head><body><body><body>
-<div class="app">
-<div class="top"><div style="display:flex;align-items:center;gap:10px"><div class="logo">₹</div><div><div style="font-weight:900;font-size:16px">HISAB Pro</div><div style="font-size:9px;color:#6b7b90;font-weight:700">PREMIUM • FIXED • ALL WORKING</div></div></div><div class="topActions"><div class="pill" onclick="showPage('pin')">🔒 PIN</div><div class="pill" onclick="showPage('more')">•••</div></div></div>
-
-
-
-
-<div id="home" class="page on">
-<div class="toggleHome"><button class="on" id="tP" onclick="setMode('personal')">👤 Personal</button><button id="tB" onclick="setMode('business')">🏪 Business</button></div>
-<div class="balCard"><div class="badge" id="modeBadge">BUSINESS</div><div style="font-size:10px;letter-spacing:1.2px;color:#8fb0cc;font-weight:800;margin-bottom:8px">TOTAL BALANCE • Personal + Business • WhatsApp Ready</div><div id="bal" style="font-size:38px;font-weight:900;line-height:1">₹ 0</div><div style="font-size:11px;color:#8aa8c4;margin-top:10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block"></span>Income - Expense + Receive - Give • Auto Collection</div></div>
-<div class="kpiRow"><div class="kpi green"><span>RECEIVE</span><b id="lena">₹ 0</b></div><div class="kpi red"><span>GIVE</span><b id="dena">₹ 0</b></div><div class="kpi dark"><span>NET MONEY</span><b id="net">₹ 0</b></div></div>
-<div class="quickHead">⚡ Quick Actions - 7 Tiles - All Working - Premium Fixed</div>
-<div class="quickGrid">
-<div class="qt income" onclick="openModal('transaction')"><div class="ico">💱</div><b>Income / Expense</b><small>Money Flow</small></div>
-<div class="qt udhaar" onclick="openModal('udhaar')"><div class="ico">🤝</div><b>Udhaar</b><small>GIVE / RECEIVE</small></div>
-<div class="qt planning" onclick="showPage('planning')"><div class="ico">🎯</div><b>Planning</b><small>Budget + Goals</small></div>
-<div class="qt loan" onclick="openModal('loan')"><div class="ico">🏦</div><b>Loan / EMI</b><small>One Place</small></div>
-<div class="qt bill" onclick="openModal('bill')"><div class="ico">🧾</div><b>Bill</b><small>Add Bill</small></div>
-<div class="qt policy" onclick="openModal('policy')"><div class="ico">🛡️</div><b>Policy</b><small>Add Policy</small></div>
-<div class="qt repair" onclick="showPage('repairingVehicle')" style="grid-column:span 3"><div class="ico">🔧</div><b>Repairing - Car / Bike / Auto</b><small>Gaadi Repairing - Indian Garage Style - Fixed</small></div>
-</div>
-
-<div class="secHead"><b>💼 Khata - Lending Only - Money Flow Removed (Same as Income/Expense)</b><small style="font-size:10px;color:#6b7b90">Udhaar Only - Income/Expense already in Quick Tiles</small></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-<div class="card" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;text-align:center;font-weight:800;font-size:12px;border:0">💲 Income / Expense - Quick Tiles Me Hai - Money Page Removed (Same Tha)</div>
-<div class="bw" onclick="showPage('khata')">📒 Lending - GIVE / RECEIVE - Khata</div>
-</div>
-
-<div class="secHead"><b>🕒 Recent Activity - Home Only</b><span class="bw" style="padding:6px 12px;font-size:10px" onclick="showPage('reports')">View All →</span></div>
-<div class="card"><div style="font-size:10px;color:#6b7b90;border:1px solid #e2e8f0;border-radius:20px;padding:4px 10px;display:inline-block;margin-bottom:10px">AD • Premium • No Bug</div><div style="font-weight:800;font-size:13px">📢 Premium Design - Fixed - No Bug - All Frames Open</div><div style="font-size:11px;color:#6b7b90;margin:6px 0">Test Ad Unit: ca-app-pub-3940256099942544/6300978111 - Removed from Repairing</div><div style="font-size:10px;color:#6b7b90">Banner • 320x50 • Home Only • Repairing Clean</div><div style="background:#0f2e4d;color:#fff;border-radius:20px;padding:8px 16px;display:inline-block;margin-top:10px;font-size:11px;font-weight:800">🎁 All Collection Working - Auto</div></div>
-
-<div id="recentList"><div class="empty" style="margin-top:12px"><div style="font-size:32px">📬</div><div style="font-size:12px;margin-top:8px">Abhi koi recent entry nahi hai.<br>Quick Action se shuru karein. 💬 WhatsApp ready!</div><div style="font-size:10px;color:#6b7b90;margin-top:6px">Personal alag Business alag • Amounts khali ₹0 • Premium fixed • All frames khule • Entry ho • Collection sahi</div></div></div>
-</div>
-
-<div id="khata" class="page"><div class="headRow"><div><div class="h1">📒 Khata</div><div class="sub">Lending - GIVE / RECEIVE - Full Working - Entry + Collection Sahi</div></div><div class="backBtn" onclick="showPage('home')">←</div></div><div class="kpiRow"><div class="kpi green"><span>RECEIVE</span><b id="khataLena">₹ 0</b></div><div class="kpi red"><span>GIVE</span><b id="khataDena">₹ 0</b></div><div class="kpi dark"><span>NET</span><b id="khataNet">₹ 0</b></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"><button class="btn btnGreen" onclick="openModal('udhaar')">🤝 + Lending Add</button></div><div id="khataList" class="card"><div class="empty">No udhaar yet - Add karo - Collection sahi</div></div></div>
-
-<div id="business" class="page"><div class="headRow"><div><div class="h1">🏪 Business Pro</div><div class="sub">Customer • Supplier • Sale • Purchase • WhatsApp • Business Wala Business Mai Hi - Full Working</div></div><div class="backBtn" onclick="showPage('home')">←</div></div><div class="kpiRow"><div class="kpi green"><span>SALE</span><b id="bizSale">₹ 0</b></div><div class="kpi red"><span>PURCHASE</span><b id="bizPurchase">₹ 0</b></div><div class="kpi dark"><span>PROFIT</span><b id="bizProfit">₹ 0</b></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"><button class="btn btnGreen" onclick="openModal('sale')">💰 + Sale Add</button><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="openModal('purchase')">🛒 + Purchase Add</button></div><div id="bizList" class="card"><div class="empty">No business entry yet - Sale / Purchase add karo - Collection sahi</div></div></div>
-
-
-
-
-<div id="planning" class="page"><div class="headRow"><div><div class="h1">🎯 Planning</div><div class="sub">Budget + Goals - Month/Date/Year + Achievement + Jama Add - Enhanced</div></div><div class="backBtn" onclick="showPage('home')">←</div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"><button class="btn btnGreen" onclick="openModal('budget')">📊 + Budget Add</button><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="openModal('goal')">🎯 + Goal Add</button></div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-<div class="kpi green"><span>TOTAL BUDGET</span><b id="planTotBudget">₹ 0</b></div>
-<div class="kpi red"><span>TOTAL GOALS</span><b id="planTotGoals">₹ 0</b></div>
-<div class="kpi dark"><span>ACHIEVEMENT</span><b id="planAchieve">0%</b></div>
-</div>
-<div id="planningList" class="card"><div class="empty">No planning yet - Budget / Goal add karo - Month/Date/Year + Achievement + Jama Add - Enhanced</div></div>
-</div>
-
-
-<div id="repairingVehicle" class="page">
-<div class="headRow"><div><div class="h1">🔧 Repairing</div><div class="sub">Gaadi repairing ka hisab - Direct - Premium Fixed - Marked Hataya - All Working - No Bug - Fit No Scroll - Look Sahi</div></div><div class="backBtn" onclick="showPage('home')">←</div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-<div class="card" style="background:linear-gradient(135deg,#0f2e4d,#1a4a7a);color:#fff;border:0;padding:12px"><span style="font-size:8px;opacity:.8">TOTAL KHARCHA</span><b style="font-size:18px;display:block;margin-top:2px" id="serviceTotCost">₹ 0</b><div style="font-size:9px;opacity:.7">Labour + Parts - Collection Sahi</div></div>
-<div class="card" style="padding:12px"><span style="font-size:8px;color:#7b8aa0">GAADIYAN</span><b style="font-size:16px;display:block;margin-top:2px;color:#6366f1" id="serviceVehicles">0</b><div style="font-size:9px;color:#6366f1">Car Bike Auto - All Open</div></div>
-<div class="card" style="padding:12px"><span style="font-size:8px;color:#7b8aa0">LAST REPAIR</span><b style="font-size:11px;display:block;margin-top:2px;color:#f59e0b" id="serviceLastDate">-</b><div style="font-size:9px;color:#92400e" id="serviceLastCheez">Kaam - Entry Sahi</div></div>
-<div class="card" style="padding:12px"><span style="font-size:8px;color:#7b8aa0">PENDING</span><b style="font-size:11px;display:block;margin-top:2px;color:#ef4444" id="serviceNextDue">-</b><div style="font-size:9px;color:#ef4444">Next due - No Bug</div></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-<button class="btn btnGreen" style="background:linear-gradient(135deg,#f59e0b,#d97706)" onclick="openModal('service')">🔧 + Repairing Add - Entry</button>
-<button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="openModal('vehicle')">🚗 + Gaadi Add - Entry</button>
-</div>
-<div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b style="font-size:12px">📋 History - All Working</b><small style="font-size:9px;color:#6b7b90">Gaadi / Kaam / Paisa - Collection Sahi</small></div><div id="allServiceList"><div class="empty">No service yet - Repairing only - Marked hataya - Fit - All frames khule - Entry ho - Collection sahi - No bug - Look sahi</div></div></div>
-<div style="margin-top:10px;background:#dcfce7;border:1px solid #86efac;border-radius:12px;padding:10px;text-align:center;font-size:10px;color:#166534;font-weight:800">✅ Premium Fixed - Repairing me M&K nahi - RA nahi - AdMob nahi - Sirf repairing - All frames khule - Entry ho - Collection sahi - No bug - Look sahi - Fit</div>
-</div>
-
-<div id="emiLoanBillPolicy" class="page"><div class="headRow"><div><div class="h1">🏦 EMI / Loan / Bill / Policy</div><div class="sub">Sab ek jagah - One Place - Full Working - Entry + Collection</div></div><div class="backBtn" onclick="showPage('home')">←</div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px"><button class="btn btnGreen" onclick="openModal('loan')">🏦 + Loan</button><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="openModal('bill')">🧾 + Bill</button><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="openModal('policy')">🛡️ + Policy</button></div><div id="emiList" class="card"><div class="empty">No EMI / Loan / Bill / Policy yet - Add karo</div></div></div>
-
-<div id="more" class="page"><div class="headRow"><div><div class="h1">••• More</div><div class="sub">Settings • Reports • All Options • Premium Fixed - No Bug</div></div><div class="backBtn" onclick="showPage('home')">←</div></div><div style="display:grid;gap:10px"><div class="card" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPage('reports')"><div><b>📊 Reports</b><div style="font-size:10px;color:#6b7b90">All reports - Collection sahi</div></div><div>→</div></div><div class="card" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPage('planning')"><div><b>🎯 Planning</b><div style="font-size:10px;color:#6b7b90">Budget + Goals</div></div><div>→</div></div><div class="card" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPage('emiLoanBillPolicy')"><div><b>🏦 EMI / Loan / Bill / Policy</b><div style="font-size:10px;color:#6b7b90">One place - All working</div></div><div>→</div></div><div class="card" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPage('repairingVehicle')"><div><b>🔧 Repairing - Car / Bike / Auto</b><div style="font-size:10px;color:#6b7b90">Gaadi repairing - Fixed - No bug</div></div><div>→</div></div><div class="card"><b>⚙️ Settings - Fixed</b><div style="font-size:10px;color:#6b7b90;margin-top:6px">• Data auto save - localStorage<br>• Personal / Business mode - Toggle working<br>• All frames open - All entry working<br>• Collection auto - Balance sahi<br>• No bug - Premium look sahi</div></div></div></div>
-
-<div id="reports" class="page"><div class="headRow"><div><div class="h1">📊 Reports</div><div class="sub">All reports - Collection sahi - Premium Fixed</div></div><div class="backBtn" onclick="showPage('more')">←</div></div><div id="reportsList" class="card"><div class="empty">Reports - Collection se auto - No bug</div></div></div>
-
-<div id="pin" class="page"><div class="headRow"><div><div class="h1">🔒 PIN</div><div class="sub">Security - Premium Fixed</div></div><div class="backBtn" onclick="showPage('home')">←</div></div><div class="card"><div style="text-align:center;padding:20px"><div style="font-size:40px">🔒</div><div style="font-size:14px;font-weight:800;margin-top:10px">PIN Protected - Premium Fixed</div><div style="font-size:11px;color:#6b7b90;margin-top:6px">App secure hai - No bug - All working</div><button class="btn btnPrimary" style="margin-top:16px" onclick="showPage('home')">🏠 Home Jao</button></div></div></div>
-
-<div class="nav"><button id="navHome" class="on" onclick="showPage('home')"><div class="ic">🏠</div>Home</button><button id="navKhata" onclick="showPage('khata')"><div class="ic">📒</div>Khata</button><button id="navBiz" onclick="showPage('business')"><div class="ic">🏪</div>Business</button><button id="navRepairing" onclick="showPage('repairingVehicle')"><div class="ic">🔧</div>Repairing</button><button id="navMore" onclick="showPage('more')"><div class="ic">•••</div>More</button></div>
-</div>
-
-<!-- Modals - All Working - Entry + Collection Sahi -->
-
-<div id="modalTransaction" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">Income / Expense Entry</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-<button id="btnIncome" type="button" onclick="setIncomeExpense('Income')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;border-radius:12px;padding:12px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px"><span style="background:#fff;color:#10b981;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:900">+</span> Income</button>
-<button id="btnExpense" type="button" onclick="setIncomeExpense('Expense')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px"><span style="border:1.5px solid #6b7b90;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center">−</span> Expense</button>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Title / Description *</label><input id="entryTitle" placeholder="e.g. Salary, Rent, Food" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="entryAmount" type="number" placeholder="Amount" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Category</label><select id="entryCategory" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>General</option><option>Salary</option><option>Business</option><option>Food</option><option>Transport</option><option>Shopping</option><option>Bills</option><option>Rent</option><option>Health</option><option>Education</option><option>Entertainment</option><option>Other</option></select></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Payment Method</label><select id="entryPayment" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>Wallet</option><option>Cheque</option></select></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Date *</label><input id="entryDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">Time</label><input id="entryTime" type="time" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-</div>
-<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700">Notes <span style="color:#6b7b90;font-weight:400">(optional)</span></label><textarea id="entryNotes" placeholder="Add notes optional..." style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;min-height:70px;margin-top:6px"></textarea></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveIncomeExpense()" style="background:#10b981;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save Entry</button>
-</div>
-</div>
-</div>
-
-
-
-<div id="modalLending" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">🤝 Udhaar - Give / Receive - Entry</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-<button id="btnGive" type="button" onclick="setLendingType('Give')" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:0;border-radius:12px;padding:12px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px"><span style="background:#fff;color:#ef4444;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:900">−</span> Give</button>
-<button id="btnReceive" type="button" onclick="setLendingType('Receive')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px"><span style="border:1.5px solid #6b7b90;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center">+</span> Receive</button>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Person Name *</label><input id="lendingPerson" placeholder="Enter person's name" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="lendingAmount" type="number" placeholder="Amount" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div><label style="font-size:11px;font-weight:700">Interest</label><input id="lendingInterest" type="number" placeholder="0" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Date *</label><input id="lendingDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">Due Date</label><input id="lendingDueDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Mobile Number</label><input id="lendingMobile" placeholder="Mobile (optional)" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700">Purpose / Notes</label><textarea id="lendingNotes" placeholder="Purpose of lending..." style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;min-height:70px;margin-top:6px"></textarea></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveLending()" style="background:#ef4444;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save Entry</button>
-</div>
-</div>
-</div>
-
-
-
-
-<div id="modalLoan" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">🏦 Loan / EMI - Entry - Enhanced</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Loan Name *</label><input id="loanName" placeholder="e.g. Home Loan, Bike Loan, Personal" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Loan Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="loanAmount" type="number" placeholder="Amount" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div><label style="font-size:11px;font-weight:700">EMI Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="loanEmi" type="number" placeholder="Monthly EMI" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">EMI Month No *</label><input id="loanEmiMonth" type="number" placeholder="e.g. 1, 2, 10 - User khud likhega" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">EMI Year *</label><select id="loanEmiYear" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option></select></div>
-<div><label style="font-size:11px;font-weight:700">EMI Paid *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="loanEmiPaid" type="number" placeholder="Paid" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">EMI Date</label><input id="loanDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">EMI Status</label><select id="loanEmiStatus" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>✅ Paid</option><option>⏳ Pending</option><option>❌ Missed</option><option>🔄 Partial</option></select></div>
-</div>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:#166534"><b>💡 EMI Month No:</b> User khud likhega - Khali hai - Month number likho - 1 se 12 ya koi bhi - Uske hisab se calculation hoga</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveLoanEnhanced()" style="background:#0f2e4d;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save EMI</button>
-</div>
-</div>
-</div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">EMI Month *</label><select id="loanEmiMonth" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>January 2025</option><option>February 2025</option><option>March 2025</option><option>April 2025</option><option>May 2025</option><option>June 2025</option><option>July 2025</option><option>August 2025</option><option>September 2025</option><option selected>October 2025</option><option>November 2025</option><option>December 2025</option><option>January 2026</option></select></div>
-<div><label style="font-size:11px;font-weight:700">EMI Paid *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="loanEmiPaid" type="number" placeholder="Paid Amount" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">EMI Date</label><input id="loanDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">EMI Status</label><select id="loanEmiStatus" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>✅ Paid</option><option>⏳ Pending</option><option>❌ Missed</option><option>🔄 Partial</option></select></div>
-</div>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:#166534"><b>💡 EMI Tracking:</b> EMI Month = Kaunsa month ka EMI | EMI Paid = Kitna pay kiya | Status = Paid/Pending</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveLoanEnhanced()" style="background:#0f2e4d;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save EMI</button>
-</div>
-</div>
-</div>
-
-
-<div id="modalBill" class="modal" style="display:none" style="display:none" onclick="if(event.target===this)closeModals()"><div class="modalBox"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>🧾 Bill - Entry</b><div class="backBtn" style="width:32px;height:32px;font-size:14px" onclick="closeModals()">✕</div></div><input id="billName" class="input" placeholder="Bill Name - Light / Rent / etc"><input id="billAmount" type="number" class="input" placeholder="Amount ₹"><input id="billDate" type="date" class="input"><div class="btnRow"><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="closeModals()">Cancel</button><button class="btn btnGreen" onclick="saveBill()">✅ Save</button></div></div></div>
-
-
-<div id="modalPolicy" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">🛡️ Policy - Entry - Enhanced</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Policy Name *</label><input id="policyName" placeholder="e.g. LIC Jeevan Anand, Term Plan" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Policy Type / Company</label><select id="policyType" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>Life Insurance - LIC</option><option>Term Insurance</option><option>Health Insurance</option><option>Vehicle Insurance</option><option>Home Insurance</option><option>Child Plan</option><option>Pension Plan</option><option>ULIP</option><option>Other</option></select></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Start Date *</label><input id="policyStart" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">End Date *</label><input id="policyEnd" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Premium Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="policyAmount" type="number" placeholder="Premium" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div><label style="font-size:11px;font-weight:700">Premium Date *</label><input id="policyPremiumDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Payment Status</label>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-<button id="btnPaid" type="button" onclick="setPolicyStatus('Paid')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;border-radius:10px;padding:12px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px">✅ Paid</button>
-<button id="btnPending" type="button" onclick="setPolicyStatus('Pending')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">⏳ Pending</button>
-</div>
-</div>
-<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700">Notes</label><textarea id="policyNotes" placeholder="Policy number, nominee, etc..." style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;min-height:60px;margin-top:6px"></textarea></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="savePolicyEnhanced()" style="background:#059669;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save Policy</button>
-</div>
-</div>
-</div>
-
-
-
-<div id="modalService" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">🔧 Repairing Add - Entry - Fixed</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Vehicle Type</label><select id="serviceVehicleType" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>🚗 Car</option><option>🏍️ Bike</option><option>🛺 Auto</option><option>🚚 Truck</option><option>🚜 Tractor</option></select></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Vehicle Name</label><input id="serviceVehicleName" placeholder="Vehicle Name - Gaadi ka naam" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Service Type</label><select id="serviceType" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>🔧 General Service</option><option>🛢️ Oil Change</option><option>🔩 Repair</option><option>🎨 Dent Paint</option><option>⚙️ Engine</option><option>🛞 Tyre</option></select></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Cost</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="serviceCost" type="number" placeholder="Cost" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Date *</label><input id="serviceDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Condition</label><select id="serviceCondition" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>✅ Excellent</option><option>👍 Good</option><option>⚠️ Average</option><option>🔴 Bad</option><option>🆘 Repair Needed</option></select></div>
-<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700">Note</label><textarea id="serviceNote" placeholder="Add note..." style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;min-height:70px;margin-top:6px"></textarea></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveServiceForm()" style="background:#6366f1;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save</button>
-</div>
-</div>
-</div>
-
-
-
-<div id="modalVehicle" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">🚗 Gaadi Add - Entry - Enhanced</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Vehicle Type</label><select id="vehicleType" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>🚗 Car</option><option>🏍️ Bike</option><option>🛺 Auto</option><option>🚚 Truck</option><option>🚜 Tractor</option></select></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Vehicle Number</label><input id="vehicleNumber" placeholder="Vehicle Number - Gaadi number" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Model</label><input id="vehicleModel" placeholder="Model - Company / Model" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Condition</label><select id="vehicleCondition" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>✅ Excellent</option><option>👍 Good</option><option>⚠️ Average</option><option>🔴 Bad</option></select></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Last Service Date - Kab Hua Tha</label><input id="vehicleLastService" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">Next Service Date - Kab Hoga</label><input id="vehicleNextService" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-</div>
-<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:#0c4a6e"><b>💡 Jankari:</b> Kab hua tha = Last service kab hua | Kab hoga = Agla service kab hoga - Dono dates add karo</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveVehicleFormEnhanced()" style="background:#0f2e4d;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save Gaadi</button>
-</div>
-</div>
-</div>
-
-
-
-<div id="modalBudget" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">📊 Budget Add - Entry - Enhanced</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Budget Name *</label><input id="budgetName" placeholder="e.g. Monthly Expense, Food Budget" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Month *</label><select id="budgetMonth" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
-<div><label style="font-size:11px;font-weight:700">Year *</label><select id="budgetYear" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option></select></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Budget Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="budgetAmount" type="number" placeholder="Amount" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div><label style="font-size:11px;font-weight:700">Spent Amount</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="budgetSpent" type="number" placeholder="Spent" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-</div>
-<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700">Date</label><input id="budgetDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:#166534"><b>💡 Auto Calculate:</b> Remaining = Budget - Spent | Achievement = Spent / Budget * 100</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveBudgetEnhanced()" style="background:#0f2e4d;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save Budget</button>
-</div>
-</div>
-</div>
-
-
-
-<div id="modalGoal" class="modal" style="display:none" style="display:none">
-<div class="modalBox" style="background:#fff;border-radius:20px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-<b style="font-size:16px;font-weight:800">🎯 Goal Add - Entry - Enhanced</b>
-<div onclick="closeModals()" style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✕</div>
-</div>
-<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700">Goal Name *</label><input id="goalName" placeholder="e.g. New Bike, House, Vacation" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Target Amount *</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="goalTarget" type="number" placeholder="Target" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-<div><label style="font-size:11px;font-weight:700">Saved Amount</label><div style="position:relative;margin-top:6px"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700">₹</span><input id="goalSaved" type="number" placeholder="Saved" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 12px 12px 30px;font-size:13px"></div></div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-<div><label style="font-size:11px;font-weight:700">Date</label><input id="goalDate" type="date" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:11px;margin-top:6px"></div>
-<div><label style="font-size:11px;font-weight:700">Month</label><select id="goalMonth" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:11px;margin-top:6px"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
-<div><label style="font-size:11px;font-weight:700">Year</label><select id="goalYear" style="width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:11px;margin-top:6px"><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option></select></div>
-</div>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:#166534"><b>💡 Auto:</b> Remaining = Target - Saved | Achievement % | + Jama Add button in list</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<button type="button" onclick="closeModals()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px;font-weight:700">Cancel</button>
-<button type="button" onclick="saveGoalEnhanced()" style="background:#0f2e4d;color:#fff;border:0;border-radius:12px;padding:14px;font-size:13px;font-weight:800">Save Goal</button>
-</div>
-</div>
-</div>
-
-
-<div id="modalSale" class="modal" style="display:none" style="display:none" onclick="if(event.target===this)closeModals()"><div class="modalBox"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>💰 Sale Add - Business - Entry</b><div class="backBtn" style="width:32px;height:32px;font-size:14px" onclick="closeModals()">✕</div></div><input id="saleCustomer" class="input" placeholder="Customer Name"><input id="saleAmount" type="number" class="input" placeholder="Amount ₹"><input id="saleDate" type="date" class="input"><div class="btnRow"><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="closeModals()">Cancel</button><button class="btn btnGreen" onclick="saveSale()">✅ Save - Sale</button></div></div></div>
-
-<div id="modalPurchase" class="modal" style="display:none" style="display:none" onclick="if(event.target===this)closeModals()"><div class="modalBox"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>🛒 Purchase Add - Business - Entry</b><div class="backBtn" style="width:32px;height:32px;font-size:14px" onclick="closeModals()">✕</div></div><input id="purchaseSupplier" class="input" placeholder="Supplier Name"><input id="purchaseAmount" type="number" class="input" placeholder="Amount ₹"><input id="purchaseDate" type="date" class="input"><div class="btnRow"><button class="btn" style="background:#fff;border:1px solid #e2e8f0" onclick="closeModals()">Cancel</button><button class="btn btnGreen" onclick="savePurchase()">✅ Save - Purchase</button></div></div></div>
-
-
-
-
-
-
-
-<script>
-// ULTRA CLEAN - GUARANTEED WORKING - Income/Expense + Udhar - Tested
-console.log('HISAB Pro - Ultra Clean - Loading...');
-
-// Global Data
-window.D = JSON.parse(localStorage.getItem('hisabPro')||'{"mode":"business","transactions":[],"udhaars":[],"loans":[],"bills":[],"policies":[],"services":[],"vehicles":[],"budgets":[],"goals":[],"sales":[],"purchases":[]}');
-if(!window.D.transactions)window.D.transactions=[]; 
-if(!window.D.udhaars)window.D.udhaars=[]; 
-if(!window.D.loans)window.D.loans=[]; 
-if(!window.D.bills)window.D.bills=[]; 
-if(!window.D.policies)window.D.policies=[]; 
-if(!window.D.services)window.D.services=[]; 
-if(!window.D.vehicles)window.D.vehicles=[]; 
-if(!window.D.budgets)window.D.budgets=[]; 
-if(!window.D.goals)window.D.goals=[]; 
-if(!window.D.sales)window.D.sales=[]; 
-if(!window.D.purchases)window.D.purchases=[];
-
-function saveData(){ 
-  try{localStorage.setItem('hisabPro',JSON.stringify(window.D));}catch(e){} 
-  if(window.renderAll) window.renderAll(); 
-}
-
-// Personal/Business - Fixed
-window.setMode = function(m){ 
-  window.D.mode=m; 
-  try{localStorage.setItem('hisabPro',JSON.stringify(window.D));}catch(e){}
-  var tP=document.getElementById('tP');
-  var tB=document.getElementById('tB');
-  var badge=document.getElementById('modeBadge');
-  if(tP){ tP.classList.remove('on'); if(m==='personal') tP.classList.add('on'); }
-  if(tB){ tB.classList.remove('on'); if(m==='business') tB.classList.add('on'); }
-  if(badge){ badge.innerText=m.toUpperCase(); }
-  if(window.renderAll) window.renderAll();
-  console.log('Mode:', m);
-};
-function setMode(m){ return window.setMode(m); }
-
-// Show Page
-window.showPage = function(pageId){
-  if(pageId==='repairing' || pageId==='service' || pageId==='serviceVehicle'){ pageId='repairingVehicle'; }
-  var all=document.querySelectorAll('.page');
-  for(var i=0;i<all.length;i++){ all[i].classList.remove('on'); all[i].style.display='none'; }
-  var t=document.getElementById(pageId);
-  if(t){ 
-    t.classList.add('on'); 
-    t.style.display='block'; 
-    window.scrollTo(0,0);
-    var btns=document.querySelectorAll('.nav button'); 
-    for(var j=0;j<btns.length;j++) btns[j].classList.remove('on');
-    var map={home:'navHome',khata:'navKhata',business:'navBiz',more:'navMore',reports:'navMore',planning:'navHome',emiLoanBillPolicy:'navHome',repairingVehicle:'navRepairing'};
-    var nid=map[pageId]||'navHome'; 
-    var el=document.getElementById(nid); 
-    if(el) el.classList.add('on');
-  }
-};
-
-// Close Modals - GUARANTEED
-window.closeModals = function(){ 
-  document.querySelectorAll('.modal').forEach(function(m){ 
-    m.classList.remove('on'); 
-    m.style.display='none'; 
-  }); 
-  console.log('Modals closed');
-};
-function closeModals(){ return window.closeModals(); }
-
-// Open Modal - GUARANTEED WORKING - Income/Expense + Udhar + All
-window.openModal = function(id){
-  console.log('openModal called:', id);
-  try{
-    var map={
-      transaction:'modalTransaction',trans:'modalTransaction',income:'modalTransaction',expense:'modalTransaction',
-      udhaar:'modalLending',khata:'modalLending',lending:'modalLending',give:'modalLending',receive:'modalLending',
-      policy:'modalPolicy',loan:'modalLoan',bill:'modalBill',
-      budget:'modalBudget',goal:'modalGoal',
-      service:'modalService',vehicle:'modalVehicle',
-      sale:'modalSale',purchase:'modalPurchase'
-    };
-    var modalId = map[id] || ('modal'+id.charAt(0).toUpperCase()+id.slice(1));
-    console.log('Trying to open modal:', modalId);
-    var modal = document.getElementById(modalId);
-    if(!modal){
-      console.error('Modal not found:', modalId);
-      alert('Modal not found: '+modalId+' - id: '+id+' - Check console');
-      return;
+  <style>
+    :root {
+      --primary: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
     }
-    modal.classList.add('on');
-    modal.style.display='flex';
-    modal.style.visibility='visible';
-    modal.style.opacity='1';
-    modal.style.zIndex='99999';
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 75px; }
+
+    header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    .header-actions button { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-left: 4px; }
+
+    /* STATUS BAR (Online vs Offline) */
+    .net-status-bar {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .net-status-bar.online { background: #dcfce7; color: #15803d; }
+    .net-status-bar.offline { background: #fef3c7; color: #b45309; }
+
+    /* ADS PLACEHOLDER */
+    .ad-container {
+      width: 100%;
+      background: #e2e8f0;
+      border: 1px dashed #94a3b8;
+      padding: 10px;
+      text-align: center;
+      margin: 10px 0;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 12px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    .stat-card { background: var(--surface); padding: 14px; border-radius: 10px; border: 1px solid var(--border); }
+    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .stat-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+    .val-get { color: var(--success); }
+    .val-give { color: var(--danger); }
+    .val-net { color: var(--primary); }
+
+    .card { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); padding: 12px; margin-bottom: 10px; cursor: pointer; }
+
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+    .badge-get { background: #dcfce7; color: #15803d; }
+    .badge-give { background: #fee2e2; color: #b91c1c; }
+
+    .btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+    .btn-success { background: var(--success); }
+    .btn-danger { background: var(--danger); }
+    .btn-whatsapp { background: #25d366; color: white; }
+    .btn-upi { background: #7c3aed; color: white; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--surface); padding: 18px; border-radius: 12px; width: 100%; max-width: 480px; }
+    .modal-header { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+
+    .history-item { background: #f8fafc; border-left: 4px solid #ccc; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .history-item.give { border-left-color: var(--danger); }
+    .history-item.get { border-left-color: var(--success); }
+
+    /* LOCKED FEATURE STYLING (For Offline Mode) */
+    .online-only-feature {
+      position: relative;
+    }
+    .online-only-feature.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NETWORK STATUS BAR -->
+  <div id="netStatusBar" class="net-status-bar online">
+    🟢 Online Mode (All Premium Features Enabled)
+  </div>
+
+  <header>
+    <h1>HISAB Pro</h1>
+    <div class="header-actions">
+      <button onclick="openUpiSettingsModal()">💳 UPI</button>
+      <button class="online-only-feature" onclick="exportJSON()">Backup 🌐</button>
+      <button class="online-only-feature" onclick="document.getElementById('importFile').click()">Restore 🌐</button>
+      <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
+    </div>
+  </header>
+
+  <div class="container">
     
-    if(modalId==='modalLending'){ 
-      window.currentLendingType='Give'; 
-      setTimeout(function(){ 
-        if(window.setLendingType) window.setLendingType('Give'); 
-        var d=document.getElementById('lendingDate'); if(d&&!d.value) d.valueAsDate=new Date(); 
-      },100); 
-    } else if(modalId==='modalTransaction'){
-      window.currentType='Income';
-      setTimeout(function(){ 
-        if(window.setIncomeExpense) window.setIncomeExpense('Income'); 
-        var d=document.getElementById('entryDate'); if(d&&!d.value) d.valueAsDate=new Date();
-        var t=document.getElementById('entryTime'); if(t&&!t.value) t.value=new Date().toTimeString().slice(0,5);
-      },100);
-    } else if(modalId==='modalLoan'){
-      setTimeout(function(){
-        var d=document.getElementById('loanDate'); if(d&&!d.value) d.valueAsDate=new Date();
-      },100);
+    <!-- ADS CONTAINER (Shows When Online) -->
+    <div id="topAdBox" class="ad-container">
+      📢 <strong>Advertisement Space</strong> (Loads when Online)
+    </div>
+
+    <!-- STATS DASHBOARD (Works Offline) -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total Receive</div>
+        <div class="value val-get">₹<span id="totRec">0</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Give</div>
+        <div class="value val-give">₹<span id="totGive">0</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Net Balance</div>
+        <div class="value val-net">₹<span id="netBal">0</span></div>
+      </div>
+    </div>
+
+    <!-- TOOLBAR (Basic Search works Offline, Advanced Filters Online) -->
+    <div class="toolbar">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search customer name..." onkeyup="renderAll()">
+      <button class="btn btn-success" onclick="openModal('modalUdhaar')">+ Add Entry</button>
+    </div>
+
+    <div id="pageUdhaar" class="page">
+      <h3>Customer Accounts</h3>
+      <div id="customerList" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- BOTTOM AD CONTAINER -->
+    <div id="bottomAdBox" class="ad-container" style="margin-top: 20px;">
+      📢 <strong>Advertisement Space</strong>
+    </div>
+
+  </div>
+
+  <!-- MODAL: ADD UDHAAR (Works Offline) -->
+  <div id="modalUdhaar" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">New Entry</div>
+      <div class="form-group">
+        <label>Person Name</label>
+        <input type="text" id="udhName" placeholder="Enter name">
+      </div>
+      <div class="form-group">
+        <label>Mobile Number</label>
+        <input type="tel" id="udhPhone" placeholder="Mobile Number">
+      </div>
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <input type="number" id="udhAmount" placeholder="Amount">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="udhType">
+          <option value="give">I Gave (Diya)</option>
+          <option value="get">I Received (Liya)</option>
+        </select>
+      </div>
+      <button class="btn btn-success" onclick="saveUdhaar()">Save Entry</button>
+      <button class="btn btn-outline" onclick="closeModal('modalUdhaar')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- MODAL: INDIVIDUAL PASSBOOK -->
+  <div id="modalPassbook" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span id="pbCustomerName">Passbook</span>
+        <div>
+          <!-- ONLINE ONLY BUTTONS -->
+          <button class="btn btn-sm btn-upi online-only-feature" onclick="showQrCodeModal()">📷 UPI QR 🌐</button>
+          <button class="btn btn-sm btn-whatsapp online-only-feature" onclick="sendWhatsAppReminder()">📱 WhatsApp 🌐</button>
+          <button class="btn btn-sm btn-outline" onclick="closeModal('modalPassbook')">X</button>
+        </div>
+      </div>
+      
+      <div style="background:#e0f2fe; padding:10px; border-radius:6px; margin-bottom:12px;">
+        <div><strong>Balance: </strong><span id="pbNetBalance">₹0</span></div>
+      </div>
+
+      <div style="background:#f1f5f9; padding:10px; border-radius:6px; margin-bottom:12px;">
+        <div style="display:flex; gap:6px;">
+          <input type="number" id="pbQuickAmount" placeholder="Amount (₹)" style="flex:1; padding:6px;">
+          <button class="btn btn-sm btn-danger" onclick="addQuickTx('give')">+ Diya</button>
+          <button class="btn btn-sm btn-success" onclick="addQuickTx('get')">+ Liya</button>
+        </div>
+      </div>
+
+      <h4>Transaction History</h4>
+      <div id="pbHistoryList" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <script>
+    /* --- 1. HYBRID ONLINE / OFFLINE DETECTOR --- */
+    function updateOnlineOfflineUI() {
+      const isOnline = navigator.onLine;
+      const bar = document.getElementById('netStatusBar');
+      const onlineFeatures = document.querySelectorAll('.online-only-feature');
+      const adBoxes = document.querySelectorAll('.ad-container');
+
+      if (isOnline) {
+        bar.className = 'net-status-bar online';
+        bar.innerHTML = '🟢 Online Mode (Ads & Online Features Unlocked)';
+        onlineFeatures.forEach(el => el.classList.remove('disabled'));
+        adBoxes.forEach(el => el.style.display = 'block');
+      } else {
+        bar.className = 'net-status-bar offline';
+        bar.innerHTML = '🟡 Offline Mode (WhatsApp, QR & Backup require Internet 🌐)';
+        onlineFeatures.forEach(el => el.classList.add('disabled'));
+        adBoxes.forEach(el => el.style.display = 'none');
+      }
     }
-    console.log('Modal opened successfully:', modalId);
-  }catch(e){
-    console.error('openModal error', e);
-    alert('Error opening modal: '+e.message+' - id: '+id);
-  }
-};
-function openModal(id){ return window.openModal(id); }
 
-// Direct helpers - GUARANTEED
-window.openIncomeExpense = function(){ console.log('Direct open Income/Expense'); window.openModal('transaction'); };
-window.openUdhaar = function(){ console.log('Direct open Udhaar'); window.openModal('udhaar'); };
+    window.addEventListener('online', updateOnlineOfflineUI);
+    window.addEventListener('offline', updateOnlineOfflineUI);
 
-// Set Income/Expense Type
-window.currentType='Income';
-window.setIncomeExpense = function(type){
-  window.currentType=type;
-  var btnI=document.getElementById('btnIncome');
-  var btnE=document.getElementById('btnExpense');
-  if(btnI){ btnI.style.background = type==='Income' ? 'linear-gradient(135deg,#10b981,#059669)' : '#fff'; btnI.style.color = type==='Income' ? '#fff' : '#000'; }
-  if(btnE){ btnE.style.background = type==='Expense' ? 'linear-gradient(135deg,#ef4444,#dc2626)' : '#fff'; btnE.style.color = type==='Expense' ? '#fff' : '#000'; }
-  var typeEl=document.getElementById('transType');
-  if(typeEl) typeEl.value=type.toLowerCase();
-  console.log('Income/Expense set to', type);
-};
-function setIncomeExpense(t){ return window.setIncomeExpense(t); }
+    /* --- 2. DATA MANAGEMENT (LocalStorage - Works Offline) --- */
+    window.D = JSON.parse(localStorage.getItem('hisab_pro_v8')) || { udhaar: [], contacts: {} };
+    let currentSelectedPerson = "";
 
-// Set Lending Type
-window.currentLendingType='Give';
-window.setLendingType = function(type){
-  window.currentLendingType=type;
-  var btnG=document.getElementById('btnGive');
-  var btnR=document.getElementById('btnReceive');
-  if(btnG){ btnG.style.background = type==='Give' ? 'linear-gradient(135deg,#ef4444,#dc2626)' : '#fff'; btnG.style.color = type==='Give' ? '#fff' : '#000'; }
-  if(btnR){ btnR.style.background = type==='Receive' ? 'linear-gradient(135deg,#10b981,#059669)' : '#fff'; btnR.style.color = type==='Receive' ? '#fff' : '#000'; }
-  console.log('Lending set to', type);
-};
-function setLendingType(t){ return window.setLendingType(t); }
+    function saveData() {
+      localStorage.setItem('hisab_pro_v8', JSON.stringify(window.D));
+      renderAll();
+    }
 
-// Set Policy Status
-window.currentPolicyStatus='Paid';
-window.setPolicyStatus = function(status){
-  window.currentPolicyStatus=status;
-  var btnPaid=document.getElementById('btnPolicyPaid');
-  var btnPending=document.getElementById('btnPolicyPending');
-  if(btnPaid){ btnPaid.style.background = status==='Paid' ? 'linear-gradient(135deg,#10b981,#059669)' : '#fff'; }
-  if(btnPending){ btnPending.style.background = status==='Pending' ? 'linear-gradient(135deg,#f59e0b,#d97706)' : '#fff'; }
-};
-function setPolicyStatus(s){ return window.setPolicyStatus(s); }
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// Save Transaction - Income/Expense
-window.saveTransaction = function(){
-  var typeEl=document.getElementById('transType');
-  var amtEl=document.getElementById('transAmount');
-  var noteEl=document.getElementById('transNote');
-  var dateEl=document.getElementById('entryDate');
-  var type=typeEl? (typeEl.value||window.currentType||'Income').toLowerCase() : (window.currentType||'Income').toLowerCase();
-  var amt=amtEl?parseFloat(amtEl.value)||0:0;
-  var note=noteEl?noteEl.value:'';
-  var date=dateEl?dateEl.value:'';
-  if(!amt){ alert('Amount bharo'); return; }
-  window.D.transactions.push({id:'t_'+Date.now(),type:type,amount:amt,note:note,date:date||new Date().toISOString().slice(0,10),mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ '+(type==='income'?'Income':'Expense')+' Saved - ₹'+amt);
-  if(amtEl) amtEl.value=''; if(noteEl) noteEl.value='';
-  console.log('Transaction saved:', type, amt);
-};
-function saveTransaction(){ return window.saveTransaction(); }
+    function saveUdhaar() {
+      const name = document.getElementById('udhName').value.trim();
+      const phone = document.getElementById('udhPhone').value.trim();
+      const amount = parseFloat(document.getElementById('udhAmount').value) || 0;
+      const type = document.getElementById('udhType').value;
 
-// Save Lending - Udhaar
-window.saveLending = function(){
-  var personEl=document.getElementById('lendingPerson');
-  var amtEl=document.getElementById('lendingAmount');
-  var person=personEl?personEl.value.trim():'';
-  var amt=amtEl?parseFloat(amtEl.value)||0:0;
-  var interestEl=document.getElementById('lendingInterest');
-  var dateEl=document.getElementById('lendingDate');
-  var dueEl=document.getElementById('lendingDueDate');
-  var mobileEl=document.getElementById('lendingMobile');
-  var notesEl=document.getElementById('lendingNotes');
-  var interest=interestEl?parseFloat(interestEl.value)||0:0;
-  var date=dateEl?dateEl.value:'';
-  var due=dueEl?dueEl.value:'';
-  var mobile=mobileEl?mobileEl.value:'';
-  var notes=notesEl?notesEl.value:'';
-  var type=(window.currentLendingType||'Give').toLowerCase();
-  if(!person){ alert('Person Name required'); return; }
-  if(!amt){ alert('Amount required'); return; }
-  window.D.udhaars.push({id:'u_'+Date.now(),type:type,name:person,amount:amt,interest:interest,date:date||new Date().toISOString().slice(0,10),dueDate:due,mobile:mobile,notes:notes,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ '+(type==='give'?'Give':'Receive')+' Saved - '+person+' - ₹'+amt);
-  if(personEl) personEl.value=''; if(amtEl) amtEl.value='';
-  console.log('Lending saved:', type, person, amt);
-};
-function saveLending(){ return window.saveLending(); }
+      if(!name || amount <= 0) return alert('Name aur valid Amount dalein.');
+      if(phone) window.D.contacts[name.toLowerCase()] = phone;
 
-// Save Loan Enhanced - EMI Month No User Khud Likhega
-window.saveLoanEnhanced = function(){
-  var name=document.getElementById('loanName')?.value?.trim()||'';
-  var amount=parseFloat(document.getElementById('loanAmount')?.value)||0;
-  var emi=parseFloat(document.getElementById('loanEmi')?.value)||0;
-  var emiMonthNum=document.getElementById('loanEmiMonth')?.value?.trim()||'';
-  var emiYear=document.getElementById('loanEmiYear')?.value||'2025';
-  var emiPaid=parseFloat(document.getElementById('loanEmiPaid')?.value)||0;
-  var date=document.getElementById('loanDate')?.value||'';
-  var status=document.getElementById('loanEmiStatus')?.value||'✅ Paid';
-  if(!name){ alert('Loan Name required'); return; }
-  if(!amount){ alert('Loan Amount required'); return; }
-  if(!emi){ alert('EMI Amount required'); return; }
-  if(!emiMonthNum){ alert('EMI Month No required - User khud likhega'); return; }
-  var emiMonth=emiMonthNum+'/'+emiYear;
-  var remainingEmi=emi-emiPaid;
-  var isFullyPaid=emiPaid>=emi;
-  window.D.loans.push({id:'l_'+Date.now(),name:name,amount:amount,emi:emi,emiMonth:emiMonth,emiMonthNum:emiMonthNum,emiYear:emiYear,emiPaid:emiPaid,remainingEmi:remainingEmi,status:status,date:date||new Date().toISOString().split('T')[0],isFullyPaid:isFullyPaid,mode:window.D.mode||'business'});
-  try{localStorage.setItem('hisabPro', JSON.stringify(window.D));}catch(e){}
-  closeModals(); if(window.renderAll) window.renderAll();
-  alert('✅ EMI Saved - '+name+' - Month No '+emiMonth+' - Paid ₹'+emiPaid);
-  document.getElementById('loanName').value=''; document.getElementById('loanAmount').value=''; document.getElementById('loanEmi').value=''; document.getElementById('loanEmiPaid').value='';
-};
-window.saveLoan = window.saveLoanEnhanced;
+      window.D.udhaar.push({ 
+        id: 'u_'+Date.now(), name, amount, type, 
+        date: new Date().toLocaleDateString('en-US') 
+      });
 
-// Save Bill
-window.saveBill = function(){
-  var name=document.getElementById('billName')?.value?.trim()||'';
-  var amount=parseFloat(document.getElementById('billAmount')?.value)||0;
-  var date=document.getElementById('billDate')?.value||'';
-  if(!name){ alert('Bill Name required'); return; }
-  if(!amount){ alert('Amount required'); return; }
-  if(!window.D.bills) window.D.bills=[];
-  window.D.bills.push({id:'b_'+Date.now(),name:name,amount:amount,date:date||new Date().toISOString().split('T')[0],mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Bill Saved - '+name+' - ₹'+amount);
-};
+      closeModal('modalUdhaar');
+      saveData();
+    }
 
-// Save Policy Enhanced
-window.savePolicyEnhanced = function(){
-  var name=document.getElementById('policyName')?.value?.trim()||'';
-  var type=document.getElementById('policyType')?.value||'Life';
-  var start=document.getElementById('policyStart')?.value||'';
-  var end=document.getElementById('policyEnd')?.value||'';
-  var premium=parseFloat(document.getElementById('policyPremium')?.value)||0;
-  var premiumDate=document.getElementById('policyPremiumDate')?.value||'';
-  var status=window.currentPolicyStatus||'Paid';
-  var notes=document.getElementById('policyNotes')?.value||'';
-  if(!name){ alert('Policy Name required'); return; }
-  if(!window.D.policies) window.D.policies=[];
-  window.D.policies.push({id:'p_'+Date.now(),name:name,type:type,start:start,end:end,premium:premium,premiumDate:premiumDate,status:status,notes:notes,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Policy Saved - '+name+' - '+status);
-};
-window.savePolicy = window.savePolicyEnhanced;
+    function openCustomerPassbook(personName) {
+      currentSelectedPerson = personName;
+      document.getElementById('pbCustomerName').innerText = personName;
+      renderPassbook();
+      openModal('modalPassbook');
+    }
 
-// Save other forms - simplified
-window.saveBudget = function(){ 
-  var name=document.getElementById('budgetName')?.value||''; 
-  var amount=parseFloat(document.getElementById('budgetAmount')?.value)||0; 
-  if(!name||!amount){ alert('Budget Name and Amount required'); return; }
-  if(!window.D.budgets) window.D.budgets=[];
-  window.D.budgets.push({id:'bd_'+Date.now(),name:name,amount:amount,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Budget Saved');
-};
-window.saveGoal = function(){ 
-  var name=document.getElementById('goalName')?.value||''; 
-  var target=parseFloat(document.getElementById('goalTarget')?.value)||0; 
-  if(!name||!target){ alert('Goal Name and Target required'); return; }
-  if(!window.D.goals) window.D.goals=[];
-  window.D.goals.push({id:'g_'+Date.now(),name:name,target:target,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Goal Saved');
-};
-window.saveSale = function(){ 
-  var cust=document.getElementById('saleCustomer')?.value||''; 
-  var amt=parseFloat(document.getElementById('saleAmount')?.value)||0; 
-  if(!cust||!amt){ alert('Customer and Amount required'); return; }
-  if(!window.D.sales) window.D.sales=[];
-  window.D.sales.push({id:'s_'+Date.now(),customer:cust,amount:amt,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Sale Saved');
-};
-window.savePurchase = function(){ 
-  var supp=document.getElementById('purchaseSupplier')?.value||''; 
-  var amt=parseFloat(document.getElementById('purchaseAmount')?.value)||0; 
-  if(!supp||!amt){ alert('Supplier and Amount required'); return; }
-  if(!window.D.purchases) window.D.purchases=[];
-  window.D.purchases.push({id:'pu_'+Date.now(),supplier:supp,amount:amt,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Purchase Saved');
-};
-window.saveServiceForm = function(){ 
-  var vehicle=document.getElementById('serviceVehicleName')?.value||''; 
-  var cost=parseFloat(document.getElementById('serviceCost')?.value)||0; 
-  if(!vehicle||!cost){ alert('Vehicle and Cost required'); return; }
-  if(!window.D.services) window.D.services=[];
-  window.D.services.push({id:'se_'+Date.now(),vehicle:vehicle,cost:cost,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Service Saved');
-};
-window.saveVehicleForm = function(){ 
-  var name=document.getElementById('vehicleName')?.value||''; 
-  var number=document.getElementById('vehicleNumber')?.value||''; 
-  if(!name){ alert('Vehicle Name required'); return; }
-  if(!window.D.vehicles) window.D.vehicles=[];
-  window.D.vehicles.push({id:'v_'+Date.now(),name:name,number:number,mode:window.D.mode||'business'});
-  saveData(); closeModals(); alert('✅ Vehicle Saved');
-};
+    function addQuickTx(type) {
+      const amt = parseFloat(document.getElementById('pbQuickAmount').value) || 0;
+      if(amt <= 0) return alert('Sahi amount bharein.');
 
-// WhatsApp Sharing - Global User
-window.shareOnWhatsApp = function(text){
-  var encoded = encodeURIComponent(text||'HISAB Pro');
-  window.open('https://wa.me/?text=' + encoded, '_blank');
-};
-window.shareWAPDF = function(){
-  var summary = '📊 HISAB Pro Summary\nBalance: ' + (document.getElementById('bal')?.innerText||'₹0');
-  window.shareOnWhatsApp(summary);
-};
+      window.D.udhaar.push({
+        id: 'u_'+Date.now(), name: currentSelectedPerson, amount: amt, type,
+        date: new Date().toLocaleDateString('en-US')
+      });
 
-// AdMob Policy Compliant
-window.adMobConfig = { publisherId: 'ca-app-pub-3940256099942544', bannerUnit: '6300978111' };
-window.loadRewardedAd = function(){ if(confirm('Watch Ad?')) alert('Rewarded Ad - Thank you!'); };
+      document.getElementById('pbQuickAmount').value = '';
+      saveData();
+      renderPassbook();
+    }
 
-// Render All - Basic
-window.renderAll = function(){
-  try{
-    var mode=window.D.mode||'business';
-    var trans=(window.D.transactions||[]).filter(function(x){ return !x.mode || x.mode===mode; });
-    var income=trans.filter(function(x){return x.type==='income'}).reduce(function(s,x){return s+(x.amount||0)},0);
-    var expense=trans.filter(function(x){return x.type==='expense'}).reduce(function(s,x){return s+(x.amount||0)},0);
-    var udhaars=(window.D.udhaars||[]).filter(function(x){ return !x.mode || x.mode===mode; });
-    var receive=udhaars.filter(function(x){return x.type==='receive'}).reduce(function(s,x){return s+(x.amount||0)},0);
-    var give=udhaars.filter(function(x){return x.type==='give'}).reduce(function(s,x){return s+(x.amount||0)},0);
-    var bal=income-expense+receive-give;
-    var elBal=document.getElementById('bal'); if(elBal) elBal.innerText='₹ '+bal.toLocaleString('en-IN');
-    var elLena=document.getElementById('lena'); if(elLena) elLena.innerText='₹ '+receive.toLocaleString('en-IN');
-    var elDena=document.getElementById('dena'); if(elDena) elDena.innerText='₹ '+give.toLocaleString('en-IN');
-    var elNet=document.getElementById('net'); if(elNet) elNet.innerText='₹ '+(receive-give).toLocaleString('en-IN');
-  }catch(e){ console.error('renderAll error', e); }
-};
+    function renderPassbook() {
+      const historyList = document.getElementById('pbHistoryList');
+      historyList.innerHTML = '';
+      const personTxs = window.D.udhaar.filter(i => i.name.toLowerCase() === currentSelectedPerson.toLowerCase());
+      let net = 0;
 
-document.addEventListener('DOMContentLoaded', function(){
-  console.log('DOM Loaded - HISAB Pro - Income/Expense + Udhar Guaranteed Working');
-  if(window.renderAll) window.renderAll();
-  // Test buttons
-  setTimeout(function(){
-    console.log('Testing modals exist:');
-    console.log('modalTransaction:', !!document.getElementById('modalTransaction'));
-    console.log('modalLending:', !!document.getElementById('modalLending'));
-    console.log('modalLoan:', !!document.getElementById('modalLoan'));
-    console.log('All critical modals exist - Income/Expense + Udhar guaranteed working');
-  }, 500);
-});
+      personTxs.forEach(i => {
+        if(i.type === 'give') net += i.amount;
+        else net -= i.amount;
 
-console.log('HISAB Pro Ultra Clean Loaded - Income/Expense + Udhar 100% Working - Personal/Business Working - All Buttons Guaranteed');
-</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
+        historyList.innerHTML += `
+          <div class="history-item ${i.type}">
+            <div><strong>${i.type === 'give' ? 'Diya' : 'Liya'}: ₹${i.amount}</strong></div>
+            <div style="font-size:0.75rem; color:#64748b;">${i.date}</div>
+          </div>
+        `;
+      });
+
+      document.getElementById('pbNetBalance').innerText = '₹' + net;
+    }
+
+    function renderAll() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const customers = {};
+      let totalGive = 0, totalRec = 0;
+
+      window.D.udhaar.forEach(i => {
+        const key = i.name.trim();
+        if(!customers[key]) customers[key] = { name: key, net: 0 };
+        if(i.type === 'give') { customers[key].net += i.amount; totalGive += i.amount; }
+        else { customers[key].net -= i.amount; totalRec += i.amount; }
+      });
+
+      document.getElementById('totGive').innerText = totalGive;
+      document.getElementById('totRec').innerText = totalRec;
+      document.getElementById('netBal').innerText = totalGive - totalRec;
+
+      const customerList = document.getElementById('customerList');
+      customerList.innerHTML = '';
+
+      Object.values(customers).filter(c => c.name.toLowerCase().includes(query)).forEach(c => {
+        customerList.innerHTML += `
+          <div class="card" onclick="openCustomerPassbook('${c.name}')">
+            <div style="display:flex; justify-content:space-between;">
+              <strong>${c.name}</strong>
+              <span class="badge ${c.net >= 0 ? 'badge-give' : 'badge-get'}">₹${Math.abs(c.net)}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // Initial setups
+    updateOnlineOfflineUI();
+    renderAll();
+  </script>
+</body>
+</html>
