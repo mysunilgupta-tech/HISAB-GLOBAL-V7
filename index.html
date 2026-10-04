@@ -13,7 +13,6 @@
       --primary: #2563eb;
       --success: #16a34a;
       --danger: #dc2626;
-      --warning: #d97706;
       --bg: #f8fafc;
       --surface: #ffffff;
       --text: #0f172a;
@@ -22,24 +21,40 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 75px; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 30px; }
 
-    header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    header { 
+      background: var(--primary); 
+      color: white; 
+      padding: 12px 16px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      flex-wrap: wrap;
+      gap: 10px;
+    }
     header h1 { font-size: 1.2rem; font-weight: 700; }
-    .header-actions button { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-left: 4px; }
+    .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .header-actions button { 
+      background: rgba(255,255,255,0.2); 
+      color: white; 
+      border: 1px solid rgba(255,255,255,0.4); 
+      padding: 6px 10px; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-size: 0.8rem; 
+      white-space: nowrap;
+    }
 
-    /* STATUS BAR (Online vs Offline) */
     .net-status-bar {
       padding: 6px 12px;
       font-size: 0.8rem;
       font-weight: 600;
       text-align: center;
-      transition: all 0.3s ease;
     }
     .net-status-bar.online { background: #dcfce7; color: #15803d; }
     .net-status-bar.offline { background: #fef3c7; color: #b45309; }
 
-    /* ADS PLACEHOLDER */
     .ad-container {
       width: 100%;
       background: #e2e8f0;
@@ -54,7 +69,7 @@
 
     .container { max-width: 800px; margin: 0 auto; padding: 12px; }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px; }
     .stat-card { background: var(--surface); padding: 14px; border-radius: 10px; border: 1px solid var(--border); }
     .stat-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     .stat-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
@@ -69,15 +84,15 @@
     .badge-give { background: #fee2e2; color: #b91c1c; }
 
     .btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
-    .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+    .btn-sm { padding: 5px 9px; font-size: 0.75rem; }
     .btn-success { background: var(--success); }
     .btn-danger { background: var(--danger); }
     .btn-whatsapp { background: #25d366; color: white; }
     .btn-upi { background: #7c3aed; color: white; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
-    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .search-input { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
     .modal.active { display: flex; }
@@ -91,10 +106,6 @@
     .history-item.give { border-left-color: var(--danger); }
     .history-item.get { border-left-color: var(--success); }
 
-    /* LOCKED FEATURE STYLING (For Offline Mode) */
-    .online-only-feature {
-      position: relative;
-    }
     .online-only-feature.disabled {
       opacity: 0.5;
       pointer-events: none;
@@ -104,15 +115,14 @@
 </head>
 <body>
 
-  <!-- NETWORK STATUS BAR -->
   <div id="netStatusBar" class="net-status-bar online">
-    🟢 Online Mode (All Premium Features Enabled)
+    🟢 Online Mode (All Features Enabled)
   </div>
 
   <header>
     <h1>HISAB Pro</h1>
     <div class="header-actions">
-      <button onclick="openUpiSettingsModal()">💳 UPI</button>
+      <button onclick="openUpiSettingsModal()">💳 UPI Setup</button>
       <button class="online-only-feature" onclick="exportJSON()">Backup 🌐</button>
       <button class="online-only-feature" onclick="document.getElementById('importFile').click()">Restore 🌐</button>
       <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
@@ -120,13 +130,10 @@
   </header>
 
   <div class="container">
-    
-    <!-- ADS CONTAINER (Shows When Online) -->
     <div id="topAdBox" class="ad-container">
       📢 <strong>Advertisement Space</strong> (Loads when Online)
     </div>
 
-    <!-- STATS DASHBOARD (Works Offline) -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Total Receive</div>
@@ -142,25 +149,22 @@
       </div>
     </div>
 
-    <!-- TOOLBAR (Basic Search works Offline, Advanced Filters Online) -->
     <div class="toolbar">
       <input type="text" id="searchInput" class="search-input" placeholder="Search customer name..." onkeyup="renderAll()">
       <button class="btn btn-success" onclick="openModal('modalUdhaar')">+ Add Entry</button>
     </div>
 
-    <div id="pageUdhaar" class="page">
+    <div>
       <h3>Customer Accounts</h3>
       <div id="customerList" style="margin-top:10px;"></div>
     </div>
 
-    <!-- BOTTOM AD CONTAINER -->
     <div id="bottomAdBox" class="ad-container" style="margin-top: 20px;">
       📢 <strong>Advertisement Space</strong>
     </div>
-
   </div>
 
-  <!-- MODAL: ADD UDHAAR (Works Offline) -->
+  <!-- MODAL: ADD UDHAAR -->
   <div id="modalUdhaar" class="modal">
     <div class="modal-content">
       <div class="modal-header">New Entry</div>
@@ -183,8 +187,10 @@
           <option value="get">I Received (Liya)</option>
         </select>
       </div>
-      <button class="btn btn-success" onclick="saveUdhaar()">Save Entry</button>
-      <button class="btn btn-outline" onclick="closeModal('modalUdhaar')">Cancel</button>
+      <div style="display:flex; gap:8px; margin-top:15px;">
+        <button class="btn btn-success" style="flex:1;" onclick="saveUdhaar()">Save Entry</button>
+        <button class="btn btn-outline" onclick="closeModal('modalUdhaar')">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -193,21 +199,21 @@
     <div class="modal-content">
       <div class="modal-header">
         <span id="pbCustomerName">Passbook</span>
-        <div>
-          <!-- ONLINE ONLY BUTTONS -->
-          <button class="btn btn-sm btn-upi online-only-feature" onclick="showQrCodeModal()">📷 UPI QR 🌐</button>
-          <button class="btn btn-sm btn-whatsapp online-only-feature" onclick="sendWhatsAppReminder()">📱 WhatsApp 🌐</button>
-          <button class="btn btn-sm btn-outline" onclick="closeModal('modalPassbook')">X</button>
-        </div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('modalPassbook')">✕</button>
       </div>
       
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <button class="btn btn-sm btn-upi online-only-feature" style="flex:1;" onclick="showQrCodeModal()">📷 UPI QR 🌐</button>
+        <button class="btn btn-sm btn-whatsapp online-only-feature" style="flex:1;" onclick="sendWhatsAppReminder()">📱 WhatsApp 🌐</button>
+      </div>
+
       <div style="background:#e0f2fe; padding:10px; border-radius:6px; margin-bottom:12px;">
         <div><strong>Balance: </strong><span id="pbNetBalance">₹0</span></div>
       </div>
 
       <div style="background:#f1f5f9; padding:10px; border-radius:6px; margin-bottom:12px;">
         <div style="display:flex; gap:6px;">
-          <input type="number" id="pbQuickAmount" placeholder="Amount (₹)" style="flex:1; padding:6px;">
+          <input type="number" id="pbQuickAmount" placeholder="Amount (₹)" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
           <button class="btn btn-sm btn-danger" onclick="addQuickTx('give')">+ Diya</button>
           <button class="btn btn-sm btn-success" onclick="addQuickTx('get')">+ Liya</button>
         </div>
@@ -218,8 +224,37 @@
     </div>
   </div>
 
+  <!-- MODAL: UPI SETTINGS -->
+  <div id="modalUpi" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">UPI Settings</div>
+      <div class="form-group">
+        <label>Your UPI ID (e.g. mobile@upi)</label>
+        <input type="text" id="upiIdInput" placeholder="example@upi">
+      </div>
+      <div style="display:flex; gap:8px; margin-top:15px;">
+        <button class="btn btn-success" style="flex:1;" onclick="saveUpiId()">Save UPI</button>
+        <button class="btn btn-outline" onclick="closeModal('modalUpi')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: QR CODE DISPLAY -->
+  <div id="modalQr" class="modal">
+    <div class="modal-content" style="text-align:center;">
+      <div class="modal-header">
+        <span>Scan & Pay</span>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('modalQr')">✕</button>
+      </div>
+      <p id="qrText" style="font-size:0.9rem; margin-bottom:10px;"></p>
+      <div id="qrcodeContainer" style="display:flex; justify-content:center; margin:15px 0;"></div>
+    </div>
+  </div>
+
   <script>
-    /* --- 1. HYBRID ONLINE / OFFLINE DETECTOR --- */
+    window.D = JSON.parse(localStorage.getItem('hisab_pro_v9')) || { udhaar: [], contacts: {}, upiId: '' };
+    let currentSelectedPerson = "";
+
     function updateOnlineOfflineUI() {
       const isOnline = navigator.onLine;
       const bar = document.getElementById('netStatusBar');
@@ -228,12 +263,12 @@
 
       if (isOnline) {
         bar.className = 'net-status-bar online';
-        bar.innerHTML = '🟢 Online Mode (Ads & Online Features Unlocked)';
+        bar.innerText = '🟢 Online Mode (Ads & Online Features Unlocked)';
         onlineFeatures.forEach(el => el.classList.remove('disabled'));
         adBoxes.forEach(el => el.style.display = 'block');
       } else {
         bar.className = 'net-status-bar offline';
-        bar.innerHTML = '🟡 Offline Mode (WhatsApp, QR & Backup require Internet 🌐)';
+        bar.innerText = '🟡 Offline Mode (WhatsApp, QR & Backup require Internet 🌐)';
         onlineFeatures.forEach(el => el.classList.add('disabled'));
         adBoxes.forEach(el => el.style.display = 'none');
       }
@@ -242,12 +277,8 @@
     window.addEventListener('online', updateOnlineOfflineUI);
     window.addEventListener('offline', updateOnlineOfflineUI);
 
-    /* --- 2. DATA MANAGEMENT (LocalStorage - Works Offline) --- */
-    window.D = JSON.parse(localStorage.getItem('hisab_pro_v8')) || { udhaar: [], contacts: {} };
-    let currentSelectedPerson = "";
-
     function saveData() {
-      localStorage.setItem('hisab_pro_v8', JSON.stringify(window.D));
+      localStorage.setItem('hisab_pro_v9', JSON.stringify(window.D));
       renderAll();
     }
 
@@ -265,9 +296,12 @@
 
       window.D.udhaar.push({ 
         id: 'u_'+Date.now(), name, amount, type, 
-        date: new Date().toLocaleDateString('en-US') 
+        date: new Date().toLocaleDateString('en-IN') 
       });
 
+      document.getElementById('udhName').value = '';
+      document.getElementById('udhPhone').value = '';
+      document.getElementById('udhAmount').value = '';
       closeModal('modalUdhaar');
       saveData();
     }
@@ -285,12 +319,22 @@
 
       window.D.udhaar.push({
         id: 'u_'+Date.now(), name: currentSelectedPerson, amount: amt, type,
-        date: new Date().toLocaleDateString('en-US')
+        date: new Date().toLocaleDateString('en-IN')
       });
 
       document.getElementById('pbQuickAmount').value = '';
       saveData();
       renderPassbook();
+    }
+
+    function getCurrentPersonBalance() {
+      const personTxs = window.D.udhaar.filter(i => i.name.toLowerCase() === currentSelectedPerson.toLowerCase());
+      let net = 0;
+      personTxs.forEach(i => {
+        if(i.type === 'give') net += i.amount;
+        else net -= i.amount;
+      });
+      return net;
     }
 
     function renderPassbook() {
@@ -333,10 +377,18 @@
       const customerList = document.getElementById('customerList');
       customerList.innerHTML = '';
 
-      Object.values(customers).filter(c => c.name.toLowerCase().includes(query)).forEach(c => {
+      const listKeys = Object.keys(customers).filter(k => k.toLowerCase().includes(query));
+
+      if(listKeys.length === 0) {
+        customerList.innerHTML = '<p style="color:#64748b; font-size:0.9rem; margin-top:10px;">Koi entry nahi mili. Naya add karein!</p>';
+        return;
+      }
+
+      listKeys.forEach(k => {
+        const c = customers[k];
         customerList.innerHTML += `
           <div class="card" onclick="openCustomerPassbook('${c.name}')">
-            <div style="display:flex; justify-content:space-between;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
               <strong>${c.name}</strong>
               <span class="badge ${c.net >= 0 ? 'badge-give' : 'badge-get'}">₹${Math.abs(c.net)}</span>
             </div>
@@ -345,7 +397,70 @@
       });
     }
 
-    // Initial setups
+    /* UPI & WHATSAPP FUNCTIONS */
+    function openUpiSettingsModal() {
+      document.getElementById('upiIdInput').value = window.D.upiId || '';
+      openModal('modalUpi');
+    }
+
+    function saveUpiId() {
+      window.D.upiId = document.getElementById('upiIdInput').value.trim();
+      saveData();
+      closeModal('modalUpi');
+      alert('UPI ID saved!');
+    }
+
+    function showQrCodeModal() {
+      if(!window.D.upiId) return alert('Pehle header me UPI Setup button par click karke apni UPI ID save karein.');
+      const net = getCurrentPersonBalance();
+      if(net <= 0) return alert('Baki amount 0 ya minus me hai, QR ki zarurat nahi hai.');
+
+      const upiUrl = `upi://pay?pa=${window.D.upiId}&pn=Store&am=${net}&cu=INR`;
+      document.getElementById('qrText').innerText = `${currentSelectedPerson} se ₹${net} collect karne ke liye QR scan karein:`;
+      
+      const container = document.getElementById('qrcodeContainer');
+      container.innerHTML = '';
+      new QRCode(container, { text: upiUrl, width: 180, height: 180 });
+
+      openModal('modalQr');
+    }
+
+    function sendWhatsAppReminder() {
+      const phone = window.D.contacts[currentSelectedPerson.toLowerCase()] || '';
+      const net = getCurrentPersonBalance();
+      const msg = encodeURIComponent(`Namaste ${currentSelectedPerson}, aapke HISAB ka kul baki balance ₹${net} hai. Kripya samay par bhugtan karein.`);
+      
+      if(phone) {
+        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank');
+      } else {
+        window.open(`https://wa.me/?text=${msg}`, '_blank');
+      }
+    }
+
+    function exportJSON() {
+      const blob = new Blob([JSON.stringify(window.D)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `hisab_backup_${Date.now()}.json`;
+      a.click();
+    }
+
+    function importJSON(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          window.D = JSON.parse(evt.target.result);
+          saveData();
+          alert('Backup restored successfully!');
+        } catch(err) {
+          alert('Invalid Backup File');
+        }
+      };
+      reader.readAsText(file);
+    }
+
     updateOnlineOfflineUI();
     renderAll();
   </script>
