@@ -1,468 +1,287 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#2563eb">
-  <title>HISAB Pro</title>
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <style>
-    :root {
-      --primary: #2563eb;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --text: #0f172a;
-      --text-muted: #64748b;
-      --border: #e2e8f0;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 30px; }
-
-    header { 
-      background: var(--primary); 
-      color: white; 
-      padding: 12px 16px; 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    header h1 { font-size: 1.2rem; font-weight: 700; }
-    .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .header-actions button { 
-      background: rgba(255,255,255,0.2); 
-      color: white; 
-      border: 1px solid rgba(255,255,255,0.4); 
-      padding: 6px 10px; 
-      border-radius: 6px; 
-      cursor: pointer; 
-      font-size: 0.8rem; 
-      white-space: nowrap;
-    }
-
-    .net-status-bar {
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-align: center;
-    }
-    .net-status-bar.online { background: #dcfce7; color: #15803d; }
-    .net-status-bar.offline { background: #fef3c7; color: #b45309; }
-
-    .ad-container {
-      width: 100%;
-      background: #e2e8f0;
-      border: 1px dashed #94a3b8;
-      padding: 10px;
-      text-align: center;
-      margin: 10px 0;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      color: #475569;
-    }
-
-    .container { max-width: 800px; margin: 0 auto; padding: 12px; }
-
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px; }
-    .stat-card { background: var(--surface); padding: 14px; border-radius: 10px; border: 1px solid var(--border); }
-    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-    .stat-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
-    .val-get { color: var(--success); }
-    .val-give { color: var(--danger); }
-    .val-net { color: var(--primary); }
-
-    .card { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); padding: 12px; margin-bottom: 10px; cursor: pointer; }
-
-    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
-    .badge-get { background: #dcfce7; color: #15803d; }
-    .badge-give { background: #fee2e2; color: #b91c1c; }
-
-    .btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
-    .btn-sm { padding: 5px 9px; font-size: 0.75rem; }
-    .btn-success { background: var(--success); }
-    .btn-danger { background: var(--danger); }
-    .btn-whatsapp { background: #25d366; color: white; }
-    .btn-upi { background: #7c3aed; color: white; }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-
-    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
-    .search-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
-
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
-    .modal.active { display: flex; }
-    .modal-content { background: var(--surface); padding: 18px; border-radius: 12px; width: 100%; max-width: 480px; }
-    .modal-header { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
-    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
-
-    .history-item { background: #f8fafc; border-left: 4px solid #ccc; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-    .history-item.give { border-left-color: var(--danger); }
-    .history-item.get { border-left-color: var(--success); }
-
-    .online-only-feature.disabled {
-      opacity: 0.5;
-      pointer-events: none;
-      filter: grayscale(1);
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>All Khata Pro - Global Edition</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
-  <div id="netStatusBar" class="net-status-bar online">
-    🟢 Online Mode (All Features Enabled)
-  </div>
-
-  <header>
-    <h1>HISAB Pro</h1>
-    <div class="header-actions">
-      <button onclick="openUpiSettingsModal()">💳 UPI Setup</button>
-      <button class="online-only-feature" onclick="exportJSON()">Backup 🌐</button>
-      <button class="online-only-feature" onclick="document.getElementById('importFile').click()">Restore 🌐</button>
-      <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
+  <!-- App Header -->
+  <header class="app-hdr">
+    <div class="hdr-top">
+      <div>
+        <div class="title" id="hdrTitle">All Khata Pro</div>
+        <div class="subtitle" id="hdrSub">📍 <span id="userCity">Detecting Location...</span></div>
+      </div>
+      <div class="hdr-btns">
+        <button class="icon-btn" onclick="openCalc()">🧮 Calc</button>
+        <button class="icon-btn" onclick="toggleDarkMode()" id="darkBtn">🌙</button>
+        <select class="icon-btn-select" id="langSelect" onchange="changeLanguage(this.value)">
+          <option value="auto">🌐 Auto (Detect)</option>
+          <option value="en">English</option>
+          <option value="hi">हिंदी (Hindi)</option>
+          <option value="es">Español (Spanish)</option>
+          <option value="ar">العربية (Arabic)</option>
+          <option value="fr">Français (French)</option>
+          <option value="de">Deutsch (German)</option>
+          <option value="zh">中文 (Chinese)</option>
+          <option value="ja">日本語 (Japanese)</option>
+          <option value="ru">Русский (Russian)</option>
+          <option value="mr">मराठी (Marathi)</option>
+          <option value="gu">ગુજરાતી (Gujarati)</option>
+          <option value="bn">বাংলা (Bengali)</option>
+          <option value="ta">தமிழ் (Tamil)</option>
+          <option value="te">తెలుగు (Telugu)</option>
+        </select>
+      </div>
+    </div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="🔍 Search name, amount, note..." oninput="render()">
     </div>
   </header>
 
-  <div class="container">
-    <div id="topAdBox" class="ad-container">
-      📢 <strong>Advertisement Space</strong> (Loads when Online)
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="label">Total Receive</div>
-        <div class="value val-get">₹<span id="totRec">0</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Total Give</div>
-        <div class="value val-give">₹<span id="totGive">0</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Net Balance</div>
-        <div class="value val-net">₹<span id="netBal">0</span></div>
-      </div>
-    </div>
-
-    <div class="toolbar">
-      <input type="text" id="searchInput" class="search-input" placeholder="Search customer name..." onkeyup="renderAll()">
-      <button class="btn btn-success" onclick="openModal('modalUdhaar')">+ Add Entry</button>
-    </div>
-
-    <div>
-      <h3>Customer Accounts</h3>
-      <div id="customerList" style="margin-top:10px;"></div>
-    </div>
-
-    <div id="bottomAdBox" class="ad-container" style="margin-top: 20px;">
-      📢 <strong>Advertisement Space</strong>
-    </div>
+  <!-- Undo Toast -->
+  <div class="undo-toast" id="undoToast">
+    <span id="txt-deleted">Entry Deleted</span>
+    <button onclick="undoDelete()">Undo</button>
   </div>
 
-  <!-- MODAL: ADD UDHAAR -->
-  <div id="modalUdhaar" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">New Entry</div>
-      <div class="form-group">
-        <label>Person Name</label>
-        <input type="text" id="udhName" placeholder="Enter name">
+  <!-- Main Views Container -->
+  <main id="appBody">
+
+    <!-- 👤 PERSONAL TAB VIEW -->
+    <section id="view-personal" class="tab-view active-view">
+      <div class="summary-card">
+        <div class="summary-item"><small id="lbl-pDiya">Given (Diya)</small><b class="red" id="pDiya">$0</b></div>
+        <div class="summary-item"><small id="lbl-pLiya">Got (Liya)</small><b class="green" id="pLiya">$0</b></div>
+        <div class="summary-item"><small id="lbl-pBal">Net Balance</small><b id="pBal">$0</b></div>
       </div>
-      <div class="form-group">
-        <label>Mobile Number</label>
-        <input type="tel" id="udhPhone" placeholder="Mobile Number">
+      <div class="analytics-box">
+        <div class="analytics-label"><span id="lbl-pRatio">Given vs Got Ratio</span><span id="pRatio">0%</span></div>
+        <div class="analytics-bar"><div class="red-bar" id="pRedBar"></div><div class="green-bar" id="pGreenBar"></div></div>
       </div>
-      <div class="form-group">
-        <label>Amount (₹)</label>
-        <input type="number" id="udhAmount" placeholder="Amount">
-      </div>
-      <div class="form-group">
-        <label>Type</label>
-        <select id="udhType">
-          <option value="give">I Gave (Diya)</option>
-          <option value="get">I Received (Liya)</option>
+
+      <div class="ctrl-bar">
+        <div class="df-group">
+          <button class="df-btn active" onclick="setDateFilter('all', this)" id="btn-all">All Time</button>
+          <button class="df-btn" onclick="setDateFilter('today', this)" id="btn-today">Today</button>
+          <button class="df-btn" onclick="setDateFilter('month', this)" id="btn-month">This Month</button>
+        </div>
+        <select class="sort-select" onchange="setSort(this.value)">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="high">Highest Amount</option>
+          <option value="low">Lowest Amount</option>
         </select>
       </div>
-      <div style="display:flex; gap:8px; margin-top:15px;">
-        <button class="btn btn-success" style="flex:1;" onclick="saveUdhaar()">Save Entry</button>
-        <button class="btn btn-outline" onclick="closeModal('modalUdhaar')">Cancel</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- MODAL: INDIVIDUAL PASSBOOK -->
-  <div id="modalPassbook" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <span id="pbCustomerName">Passbook</span>
-        <button class="btn btn-sm btn-outline" onclick="closeModal('modalPassbook')">✕</button>
+      <div class="sec-title" id="lbl-secPersonal">Personal Ledger</div>
+      <div class="grid" id="pGrid"></div>
+
+      <div class="filter-bar">
+        <span class="filter-tag" id="pFilterTag" onclick="clearFilter('p')">Show All</span>
+        <button class="btn-print" onclick="window.print()">📄 Print / PDF</button>
       </div>
-      
-      <div style="display:flex; gap:6px; margin-bottom:10px;">
-        <button class="btn btn-sm btn-upi online-only-feature" style="flex:1;" onclick="showQrCodeModal()">📷 UPI QR 🌐</button>
-        <button class="btn btn-sm btn-whatsapp online-only-feature" style="flex:1;" onclick="sendWhatsAppReminder()">📱 WhatsApp 🌐</button>
+      <div class="list" id="pList"></div>
+    </section>
+
+    <!-- 💼 BUSINESS TAB VIEW -->
+    <section id="view-business" class="tab-view">
+      <div class="summary-card">
+        <div class="summary-item"><small id="lbl-bDiya">Given (Diya)</small><b class="red" id="bDiya">$0</b></div>
+        <div class="summary-item"><small id="lbl-bLiya">Got (Liya)</small><b class="green" id="bLiya">$0</b></div>
+        <div class="summary-item"><small id="lbl-bBal">Net Balance</small><b id="bBal">$0</b></div>
+      </div>
+      <div class="analytics-box">
+        <div class="analytics-label"><span id="lbl-bRatio">Sales vs Expense Ratio</span><span id="bRatio">0%</span></div>
+        <div class="analytics-bar"><div class="red-bar" id="bRedBar"></div><div class="green-bar" id="bGreenBar"></div></div>
       </div>
 
-      <div style="background:#e0f2fe; padding:10px; border-radius:6px; margin-bottom:12px;">
-        <div><strong>Balance: </strong><span id="pbNetBalance">₹0</span></div>
-      </div>
-
-      <div style="background:#f1f5f9; padding:10px; border-radius:6px; margin-bottom:12px;">
-        <div style="display:flex; gap:6px;">
-          <input type="number" id="pbQuickAmount" placeholder="Amount (₹)" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
-          <button class="btn btn-sm btn-danger" onclick="addQuickTx('give')">+ Diya</button>
-          <button class="btn btn-sm btn-success" onclick="addQuickTx('get')">+ Liya</button>
+      <div class="ctrl-bar">
+        <div class="df-group">
+          <button class="df-btn active" onclick="setDateFilter('all', this)">All Time</button>
+          <button class="df-btn" onclick="setDateFilter('today', this)">Today</button>
+          <button class="df-btn" onclick="setDateFilter('month', this)">This Month</button>
         </div>
+        <select class="sort-select" onchange="setSort(this.value)">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="high">Highest Amount</option>
+          <option value="low">Lowest Amount</option>
+        </select>
       </div>
 
-      <h4>Transaction History</h4>
-      <div id="pbHistoryList" style="margin-top:8px; max-height:200px; overflow-y:auto;"></div>
+      <div class="sec-title" id="lbl-secBusiness">Business Ledger</div>
+      <div class="grid" id="bGrid"></div>
+
+      <div class="filter-bar">
+        <span class="filter-tag" id="bFilterTag" onclick="clearFilter('b')">Show All</span>
+        <button class="btn-print" onclick="window.print()">📄 Print / PDF</button>
+      </div>
+      <div class="list" id="bList"></div>
+    </section>
+
+    <!-- ⚙️ MORE / SETTINGS TAB VIEW -->
+    <section id="view-more" class="tab-view">
+      <div class="sec-title" style="margin-top:16px" id="lbl-moreSettings">Settings & Preferences</div>
+      <div class="setting-card">
+        <span>💱 Currency Symbol</span>
+        <select id="currencySelect" onchange="changeCurrency(this.value)" style="border:1px solid var(--border);padding:6px;border-radius:6px;background:var(--bg);color:var(--text-main)">
+          <option value="$">USD ($)</option>
+          <option value="₹">INR (₹)</option>
+          <option value="€">EUR (€)</option>
+          <option value="£">GBP (£)</option>
+          <option value="AED">AED (د.إ)</option>
+          <option value="¥">JPY/CNY (¥)</option>
+          <option value="C$">CAD (C$)</option>
+          <option value="A$">AUD (A$)</option>
+          <option value="रु">NPR (रु)</option>
+          <option value="৳">BDT (৳)</option>
+        </select>
+      </div>
+      <div class="setting-card">
+        <span id="lbl-setPin">🔐 Security PIN Lock</span>
+        <input id="pin" placeholder="4 Digits" maxlength="4" onchange="saveSettings()">
+      </div>
+      <div class="setting-card">
+        <span id="lbl-setName">🏢 Business / Shop Name</span>
+        <input id="bname" placeholder="Name" onchange="saveSettings()">
+      </div>
+      <div class="setting-card">
+        <span id="lbl-setGst">🧾 Tax / VAT / GST Number</span>
+        <input id="gst" placeholder="Tax ID" onchange="saveSettings()">
+      </div>
+      <div class="setting-card" onclick="exportData()">
+        <span id="lbl-setBackup">📤 Backup Data (Export JSON)</span>
+        <span>➔</span>
+      </div>
+      <div class="setting-card" onclick="document.getElementById('importFile').click()">
+        <span id="lbl-setRestore">📥 Restore Data (Import JSON)</span>
+        <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+        <span>➔</span>
+      </div>
+      <div class="setting-card danger-card" onclick="clearData()">
+        <span id="lbl-setClear">🗑️ Clear All App Data</span>
+        <span>➔</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="tabs">
+    <button class="tab-btn on" onclick="switchTab('personal', this)">
+      <span class="tab-icon">👤</span>
+      <span id="tab-personal">Personal</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('business', this)">
+      <span class="tab-icon">💼</span>
+      <span id="tab-business">Business</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('more', this)">
+      <span class="tab-icon">⚙️</span>
+      <span id="tab-more">More</span>
+    </button>
+  </nav>
+
+  <!-- Modals & Form Popups -->
+  <div class="modal" id="modal">
+    <div class="box">
+      <h3 id="mTitle">Add Entry</h3>
+      <input id="editId" type="hidden">
+      <label>Customer / Name</label><input id="cname" placeholder="Enter name">
+      <label>Mobile / Phone Number (Optional)</label><input id="phone" type="tel" placeholder="With country code">
+      <label>Amount (<span class="curr-sym">$</span>)</label><input id="amt" type="number" placeholder="0.00">
+      <label>Quantity / Stock (Optional)</label><input id="qty" placeholder="e.g. 5 Pcs / 10 Kg">
+      <label>Transaction Type</label>
+      <select id="type">
+        <option value="Diya">Diya / Gave (Red)</option>
+        <option value="Liya">Liya / Got (Green)</option>
+      </select>
+      <label>Payment Mode</label>
+      <select id="payMode">
+        <option value="Cash">Cash</option>
+        <option value="Card">Credit/Debit Card</option>
+        <option value="Online">Online / Digital</option>
+        <option value="Bank">Bank Transfer</option>
+        <option value="Cheque">Cheque</option>
+      </select>
+      <label>Date</label><input id="date" type="date">
+      <label>Due Date (Optional)</label><input id="dueDate" type="date">
+      <label>Note / Remarks</label><input id="note" placeholder="Description...">
+      <button class="btn-submit" onclick="save()">Save Entry</button>
+      <button class="btn-cancel" onclick="closeM()">Cancel</button>
     </div>
   </div>
 
-  <!-- MODAL: UPI SETTINGS -->
-  <div id="modalUpi" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">UPI Settings</div>
-      <div class="form-group">
-        <label>Your UPI ID (e.g. mobile@upi)</label>
-        <input type="text" id="upiIdInput" placeholder="example@upi">
+  <div class="modal" id="ledgerModal">
+    <div class="box">
+      <div class="ledger-hdr">
+        <h3 id="ledgerTitle">Customer Passbook</h3>
+        <button class="btn-print" onclick="window.print()">📄 Statement</button>
       </div>
-      <div style="display:flex; gap:8px; margin-top:15px;">
-        <button class="btn btn-success" style="flex:1;" onclick="saveUpiId()">Save UPI</button>
-        <button class="btn btn-outline" onclick="closeModal('modalUpi')">Cancel</button>
+      <div class="summary-card" style="margin:10px 0">
+        <div class="summary-item"><small>Total Given</small><b class="red" id="lDiya">$0</b></div>
+        <div class="summary-item"><small>Total Got</small><b class="green" id="lLiya">$0</b></div>
+        <div class="summary-item"><small>Net Balance</small><b id="lBal">$0</b></div>
       </div>
+      <div id="ledgerList" class="ledger-list-box"></div>
+      <button class="btn-submit" id="ledgerAddBtn">+ Add New Entry</button>
+      <button class="btn-cancel" onclick="document.getElementById('ledgerModal').style.display='none'">Close</button>
     </div>
   </div>
 
-  <!-- MODAL: QR CODE DISPLAY -->
-  <div id="modalQr" class="modal">
-    <div class="modal-content" style="text-align:center;">
-      <div class="modal-header">
-        <span>Scan & Pay</span>
-        <button class="btn btn-sm btn-outline" onclick="closeModal('modalQr')">✕</button>
-      </div>
-      <p id="qrText" style="font-size:0.9rem; margin-bottom:10px;"></p>
-      <div id="qrcodeContainer" style="display:flex; justify-content:center; margin:15px 0;"></div>
+  <div class="modal" id="receiptModal">
+    <div class="box">
+      <div class="receipt-card" id="receiptBody"></div>
+      <button class="btn-submit" onclick="window.print()">📄 Print / Save Invoice PDF</button>
+      <button class="btn-cancel" onclick="document.getElementById('receiptModal').style.display='none'">Close</button>
     </div>
   </div>
 
+  <div class="modal" id="calcModal">
+    <div class="box">
+      <h3>🧮 Quick Calculator</h3>
+      <input id="calcDisplay" readonly value="0">
+      <div class="calc-grid">
+        <button class="calc-btn" onclick="cIn('C')">C</button>
+        <button class="calc-btn" onclick="cIn('/')">/</button>
+        <button class="calc-btn" onclick="cIn('*')">*</button>
+        <button class="calc-btn op" onclick="cIn('-')">-</button>
+        <button class="calc-btn" onclick="cIn('7')">7</button>
+        <button class="calc-btn" onclick="cIn('8')">8</button>
+        <button class="calc-btn" onclick="cIn('9')">9</button>
+        <button class="calc-btn op" onclick="cIn('+')">+</button>
+        <button class="calc-btn" onclick="cIn('4')">4</button>
+        <button class="calc-btn" onclick="cIn('5')">5</button>
+        <button class="calc-btn" onclick="cIn('6')">6</button>
+        <button class="calc-btn op" onclick="cEq()">=</button>
+        <button class="calc-btn" onclick="cIn('1')">1</button>
+        <button class="calc-btn" onclick="cIn('2')">2</button>
+        <button class="calc-btn" onclick="cIn('3')">3</button>
+        <button class="calc-btn" onclick="cIn('0')">0</button>
+      </div>
+      <button class="btn-cancel" onclick="document.getElementById('calcModal').style.display='none'">Close</button>
+    </div>
+  </div>
+
+  <div id="lockScreen" class="modal" style="align-items:center;">
+    <div class="box text-center">
+      <h3>🔐 App Locked</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Enter 4-digit PIN</p>
+      <input id="inputPin" type="password" placeholder="PIN" maxlength="4" class="pin-input">
+      <button class="btn-submit" onclick="unlockApp()">Unlock</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
   <script>
-    window.D = JSON.parse(localStorage.getItem('hisab_pro_v9')) || { udhaar: [], contacts: {}, upiId: '' };
-    let currentSelectedPerson = "";
-
-    function updateOnlineOfflineUI() {
-      const isOnline = navigator.onLine;
-      const bar = document.getElementById('netStatusBar');
-      const onlineFeatures = document.querySelectorAll('.online-only-feature');
-      const adBoxes = document.querySelectorAll('.ad-container');
-
-      if (isOnline) {
-        bar.className = 'net-status-bar online';
-        bar.innerText = '🟢 Online Mode (Ads & Online Features Unlocked)';
-        onlineFeatures.forEach(el => el.classList.remove('disabled'));
-        adBoxes.forEach(el => el.style.display = 'block');
-      } else {
-        bar.className = 'net-status-bar offline';
-        bar.innerText = '🟡 Offline Mode (WhatsApp, QR & Backup require Internet 🌐)';
-        onlineFeatures.forEach(el => el.classList.add('disabled'));
-        adBoxes.forEach(el => el.style.display = 'none');
-      }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
     }
-
-    window.addEventListener('online', updateOnlineOfflineUI);
-    window.addEventListener('offline', updateOnlineOfflineUI);
-
-    function saveData() {
-      localStorage.setItem('hisab_pro_v9', JSON.stringify(window.D));
-      renderAll();
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    function saveUdhaar() {
-      const name = document.getElementById('udhName').value.trim();
-      const phone = document.getElementById('udhPhone').value.trim();
-      const amount = parseFloat(document.getElementById('udhAmount').value) || 0;
-      const type = document.getElementById('udhType').value;
-
-      if(!name || amount <= 0) return alert('Name aur valid Amount dalein.');
-      if(phone) window.D.contacts[name.toLowerCase()] = phone;
-
-      window.D.udhaar.push({ 
-        id: 'u_'+Date.now(), name, amount, type, 
-        date: new Date().toLocaleDateString('en-IN') 
-      });
-
-      document.getElementById('udhName').value = '';
-      document.getElementById('udhPhone').value = '';
-      document.getElementById('udhAmount').value = '';
-      closeModal('modalUdhaar');
-      saveData();
-    }
-
-    function openCustomerPassbook(personName) {
-      currentSelectedPerson = personName;
-      document.getElementById('pbCustomerName').innerText = personName;
-      renderPassbook();
-      openModal('modalPassbook');
-    }
-
-    function addQuickTx(type) {
-      const amt = parseFloat(document.getElementById('pbQuickAmount').value) || 0;
-      if(amt <= 0) return alert('Sahi amount bharein.');
-
-      window.D.udhaar.push({
-        id: 'u_'+Date.now(), name: currentSelectedPerson, amount: amt, type,
-        date: new Date().toLocaleDateString('en-IN')
-      });
-
-      document.getElementById('pbQuickAmount').value = '';
-      saveData();
-      renderPassbook();
-    }
-
-    function getCurrentPersonBalance() {
-      const personTxs = window.D.udhaar.filter(i => i.name.toLowerCase() === currentSelectedPerson.toLowerCase());
-      let net = 0;
-      personTxs.forEach(i => {
-        if(i.type === 'give') net += i.amount;
-        else net -= i.amount;
-      });
-      return net;
-    }
-
-    function renderPassbook() {
-      const historyList = document.getElementById('pbHistoryList');
-      historyList.innerHTML = '';
-      const personTxs = window.D.udhaar.filter(i => i.name.toLowerCase() === currentSelectedPerson.toLowerCase());
-      let net = 0;
-
-      personTxs.forEach(i => {
-        if(i.type === 'give') net += i.amount;
-        else net -= i.amount;
-
-        historyList.innerHTML += `
-          <div class="history-item ${i.type}">
-            <div><strong>${i.type === 'give' ? 'Diya' : 'Liya'}: ₹${i.amount}</strong></div>
-            <div style="font-size:0.75rem; color:#64748b;">${i.date}</div>
-          </div>
-        `;
-      });
-
-      document.getElementById('pbNetBalance').innerText = '₹' + net;
-    }
-
-    function renderAll() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      const customers = {};
-      let totalGive = 0, totalRec = 0;
-
-      window.D.udhaar.forEach(i => {
-        const key = i.name.trim();
-        if(!customers[key]) customers[key] = { name: key, net: 0 };
-        if(i.type === 'give') { customers[key].net += i.amount; totalGive += i.amount; }
-        else { customers[key].net -= i.amount; totalRec += i.amount; }
-      });
-
-      document.getElementById('totGive').innerText = totalGive;
-      document.getElementById('totRec').innerText = totalRec;
-      document.getElementById('netBal').innerText = totalGive - totalRec;
-
-      const customerList = document.getElementById('customerList');
-      customerList.innerHTML = '';
-
-      const listKeys = Object.keys(customers).filter(k => k.toLowerCase().includes(query));
-
-      if(listKeys.length === 0) {
-        customerList.innerHTML = '<p style="color:#64748b; font-size:0.9rem; margin-top:10px;">Koi entry nahi mili. Naya add karein!</p>';
-        return;
-      }
-
-      listKeys.forEach(k => {
-        const c = customers[k];
-        customerList.innerHTML += `
-          <div class="card" onclick="openCustomerPassbook('${c.name}')">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong>${c.name}</strong>
-              <span class="badge ${c.net >= 0 ? 'badge-give' : 'badge-get'}">₹${Math.abs(c.net)}</span>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    /* UPI & WHATSAPP FUNCTIONS */
-    function openUpiSettingsModal() {
-      document.getElementById('upiIdInput').value = window.D.upiId || '';
-      openModal('modalUpi');
-    }
-
-    function saveUpiId() {
-      window.D.upiId = document.getElementById('upiIdInput').value.trim();
-      saveData();
-      closeModal('modalUpi');
-      alert('UPI ID saved!');
-    }
-
-    function showQrCodeModal() {
-      if(!window.D.upiId) return alert('Pehle header me UPI Setup button par click karke apni UPI ID save karein.');
-      const net = getCurrentPersonBalance();
-      if(net <= 0) return alert('Baki amount 0 ya minus me hai, QR ki zarurat nahi hai.');
-
-      const upiUrl = `upi://pay?pa=${window.D.upiId}&pn=Store&am=${net}&cu=INR`;
-      document.getElementById('qrText').innerText = `${currentSelectedPerson} se ₹${net} collect karne ke liye QR scan karein:`;
-      
-      const container = document.getElementById('qrcodeContainer');
-      container.innerHTML = '';
-      new QRCode(container, { text: upiUrl, width: 180, height: 180 });
-
-      openModal('modalQr');
-    }
-
-    function sendWhatsAppReminder() {
-      const phone = window.D.contacts[currentSelectedPerson.toLowerCase()] || '';
-      const net = getCurrentPersonBalance();
-      const msg = encodeURIComponent(`Namaste ${currentSelectedPerson}, aapke HISAB ka kul baki balance ₹${net} hai. Kripya samay par bhugtan karein.`);
-      
-      if(phone) {
-        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank');
-      } else {
-        window.open(`https://wa.me/?text=${msg}`, '_blank');
-      }
-    }
-
-    function exportJSON() {
-      const blob = new Blob([JSON.stringify(window.D)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `hisab_backup_${Date.now()}.json`;
-      a.click();
-    }
-
-    function importJSON(e) {
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        try {
-          window.D = JSON.parse(evt.target.result);
-          saveData();
-          alert('Backup restored successfully!');
-        } catch(err) {
-          alert('Invalid Backup File');
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    updateOnlineOfflineUI();
-    renderAll();
   </script>
 </body>
 </html>
